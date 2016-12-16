@@ -15,7 +15,7 @@ Font Licenses:
 Project Status
 --------------
 
-[Version changelog and milestones](https://github.com/TES3MP/openmw-tes3mp/blob/master/OpenMW-mp%20changelog)
+[Version changelog and milestones](https://github.com/TES3MP/openmw-tes3mp/blob/master/CHANGELOG.md)
 
 We are still in a very early phase of development, at the moment we have synchronization of character appearance, character skills, stats, attributes and death as well as movement on interiors and exteriors, melee and ranged combat.
 
