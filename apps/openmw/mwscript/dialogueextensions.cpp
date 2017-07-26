@@ -7,6 +7,7 @@
 */
 #include "../mwmp/Main.hpp"
 #include "../mwmp/LocalPlayer.hpp"
+#include "../mwbase/windowmanager.hpp"
 /*
     End of tes3mp addition
 */
@@ -177,6 +178,17 @@ namespace MWScript
 
                     if (!ptr.getRefData().isEnabled())
                         return;
+
+                    /*
+                        Start of tes3mp addition
+
+                        Don't ForceGreet when already in dialogue
+                    */
+                    if (MWBase::Environment::get().getWindowManager()->containsMode(MWGui::GM_Dialogue))
+                        return;
+                    /*
+                        End of tes3mp addition
+                    */
 
                     MWBase::Environment::get().getDialogueManager()->startDialogue (ptr);
                 }
