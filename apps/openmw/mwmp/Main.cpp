@@ -273,7 +273,7 @@ void Main::pressedKey(int key)
 // should be ignored because of their potential for spam
 bool Main::isValidPacketScript(std::string script)
 {
-    static const int validPacketScriptsCount = 22;
+    static const int validPacketScriptsCount = 21;
     static const std::string validPacketScripts[validPacketScriptsCount] = {
         // Ghostgate buttons
         "GG_OpenGate1", // coc Ghostgate
@@ -298,12 +298,11 @@ bool Main::isValidPacketScript(std::string script)
         "SothaLever10",
         "SothaLever11",
         "SothaOilLever", // coc "Sotha Sil, Dome of Udok"
-        "hlormarScript",
         // Generic state script
         "LocalState"
     };
 
-    static const int invalidPacketScriptsCount = 16;
+    static const int invalidPacketScriptsCount = 17;
     static const std::string invalidPacketScripts[invalidPacketScriptsCount] = {
         // Spammy shorts
         "OutsideBanner",
@@ -311,6 +310,7 @@ bool Main::isValidPacketScript(std::string script)
         "dreamer_talkerEnable",
         "drenSlaveOwners",
         "ahnassiScript",
+        "hlormarScript",
         // Spammy floats
         "Float",
         "SignRotate",
