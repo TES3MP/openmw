@@ -95,17 +95,10 @@ void OMW::Engine::executeLocalScripts()
             is allowed to send packets about its value changes
 
             If it is, set a tes3mp-only boolean to true in its interpreterContext
-
-            hlormarScript relies on menu mode status to stop forcegreeting
         */
         if (mwmp::Main::isValidPacketScript(script.first))
         {
             interpreterContext.sendPackets = true;
-        }
-
-        if (script.first == "hlormarScript")
-        {
-            interpreterContext.menuModeStatus = true;
         }
         /*
             End of tes3mp addition

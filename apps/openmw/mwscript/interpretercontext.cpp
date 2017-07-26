@@ -167,9 +167,6 @@ namespace MWScript
             script being processed by the InterpreterContext
         */
         sendPackets = false;
-
-        /* Disabled by tes3mp, because being in a menu should not pause scripts in it */
-        menuModeStatus = false;
         /*
             End of tes3mp addition
         */
@@ -273,19 +270,12 @@ namespace MWScript
 
     bool InterpreterContext::menuMode()
     {
-        /*
-            Start of tes3mp addition
+        /* Disabled by tes3mp, because being in a menu should not pause scripts in it
 
-            Allow menu mode reporting for badly written scripts that depend on it
-            like hlormarScript
+        return MWBase::Environment::get().getWindowManager()->isGuiMode();
         */
-        if (menuModeStatus)
-            return MWBase::Environment::get().getWindowManager()->isGuiMode();
-        else
-            return false;
-        /*
-            End of tes3mp addition
-        */
+
+        return false;
     }
 
     int InterpreterContext::getGlobalShort (const std::string& name) const
