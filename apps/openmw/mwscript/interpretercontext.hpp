@@ -59,6 +59,8 @@ namespace MWScript
                 Useful boolean for setting whether scripts send packets
             */
             bool sendPackets;
+
+            bool menuModeStatus;
             /*
                 End of tes3mp addition
             */
