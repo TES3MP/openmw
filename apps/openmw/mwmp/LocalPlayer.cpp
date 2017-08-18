@@ -38,6 +38,7 @@
 #include "Networking.hpp"
 #include "CellController.hpp"
 #include "MechanicsHelper.hpp"
+#include "voip/MumbleLink.hpp"
 
 using namespace mwmp;
 using namespace std;
@@ -391,6 +392,8 @@ void LocalPlayer::updateCell(bool forceUpdate)
 
         // Also check if the inventory needs to be updated
         updateInventory();
+
+        MumbleLink::setContext(MWBase::Environment::get().getWorld()->getCellName());
     }
 }
 

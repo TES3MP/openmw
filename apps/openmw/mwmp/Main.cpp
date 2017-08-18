@@ -46,6 +46,7 @@
 #include "GUIController.hpp"
 #include "CellController.hpp"
 #include "MechanicsHelper.hpp"
+#include "voip/MumbleLink.hpp"
 
 using namespace mwmp;
 using namespace std;
@@ -174,6 +175,9 @@ bool Main::init(std::vector<std::string> &content, Files::Collections &collectio
 
     pMain->mNetworking->connect(pMain->server, pMain->port, content, collections);
     RestoreMgr(mgr);
+
+    MumbleLink::initMumble();
+
     return pMain->mNetworking->isConnected();
 }
 
@@ -228,6 +232,8 @@ void Main::updateWorld(float dt) const
         mNetworking->getPlayerPacket(ID_LOADED)->Send();
         mLocalPlayer->updateStatsDynamic(true);
         get().getGUIController()->setChatVisible(true);
+
+        MumbleLink::setIdentity(get().mLocalPlayer->guid.ToString());
     }
     else
     {
