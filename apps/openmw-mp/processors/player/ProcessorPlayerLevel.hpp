@@ -13,12 +13,10 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_LEVEL)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
-            if (!player.creatureStats.mDead)
-            {
-                Script::Call<Script::CallbackIdentity("OnPlayerLevel")>(player.getId());
-            }
+            if (!player->creatureStats.mDead)
+                Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_LEVEL>(player);
         }
     };
 }

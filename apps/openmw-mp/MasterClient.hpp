@@ -11,6 +11,7 @@
 #include <components/openmw-mp/Master/MasterData.hpp>
 #include <RakString.h>
 #include <components/openmw-mp/Master/PacketMasterAnnounce.hpp>
+#include <atomic>
 
 class MasterClient
 {
@@ -46,7 +47,7 @@ private:
     std::thread thrQuery;
     mwmp::PacketMasterAnnounce pma;
     RakNet::BitStream writeStream;
-    bool updated;
+    std::atomic<bool> updated;
 };
 
 

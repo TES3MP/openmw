@@ -17,12 +17,12 @@ namespace mwmp
             BPP_INIT(ID_GUI_MESSAGEBOX)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
-            Script::Call<Script::CallbackIdentity("OnGUIAction")>(player.getId(), (int)player.guiMessageBox.id,
-                                                                  player.guiMessageBox.data.c_str());
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_GUI_ACTION>(player, player->guiMessageBox.id,
+                                                                                       player->guiMessageBox.data);
         }
     };
 }

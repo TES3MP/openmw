@@ -17,19 +17,26 @@ namespace mwmp
             BPP_INIT(ID_CHAT_MESSAGE)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
-            Script::CallBackReturn<Script::CallbackIdentity("OnPlayerSendMessage")> result = true;
-            Script::Call<Script::CallbackIdentity("OnPlayerSendMessage")>(result, player.getId(), player.chatMessage.c_str());
+            auto &lua = Networking::get().getState();
 
-            if (result)
+            auto cmdExecResult = lua.getCmdCtrl().exec(player, player->chatMessage);
+            switch (cmdExecResult.first)
             {
-                player.chatMessage = player.npc.mName + " (" + std::to_string(player.getId()) + "): "
-                                      + player.chatMessage + "\n";
-                packet.Send(false);
-                packet.Send(true);
+                case CommandController::ExecResult::NOT_FOUND: // err cmd not found
+                    player->message("#FF0000Command not found.\n"); // inform player that command not found
+                    break;
+                case CommandController::ExecResult::NOT_CMD: // cmd length < 2 or message is not cmd
+                    lua.getEventCtrl().Call<CoreEvent::ON_PLAYER_SENDMESSAGE>(player, player->chatMessage);
+                    break;
+                case CommandController::ExecResult::SUCCESS: // returned true from function
+                    break;
+                case CommandController::ExecResult::FAIL: // returned false from function
+                    player->message("#B8860B"+cmdExecResult.second); // show "help msg" to player
+                    break;
             }
         }
     };

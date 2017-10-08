@@ -1,3 +1,6 @@
 [submodule "extern/breakpad"]
 	path = extern/breakpad
 	url = https://chromium.googlesource.com/breakpad/breakpad
+[submodule "extern/sol"]
+	path = extern/sol
+	url = https://github.com/ThePhD/sol2

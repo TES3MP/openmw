@@ -9,7 +9,7 @@
 #include <components/openmw-mp/Controllers/ActorPacketController.hpp>
 #include <components/openmw-mp/Controllers/WorldPacketController.hpp>
 #include <components/openmw-mp/Packets/PacketPreInit.hpp>
-#include "Player.hpp"
+#include <apps/openmw-mp/Script/LuaState.hpp>
 
 class MasterClient;
 namespace  mwmp
@@ -31,7 +31,7 @@ namespace  mwmp
         void processPlayerPacket(RakNet::Packet *packet);
         void processActorPacket(RakNet::Packet *packet);
         void processWorldPacket(RakNet::Packet *packet);
-        void update(RakNet::Packet *packet);
+        bool update(RakNet::Packet *packet);
 
         unsigned short numberOfConnections() const;
         unsigned int maxConnections() const;
@@ -45,6 +45,8 @@ namespace  mwmp
         ActorPacketController *getActorPacketController() const;
         WorldPacketController *getWorldPacketController() const;
 
+        LuaState &getState() {return luaState;}
+
         BaseActorList *getLastActorList();
         BaseEvent *getLastEvent();
 
@@ -57,18 +59,18 @@ namespace  mwmp
         void setServerPassword(std::string passw) noexcept;
         bool isPassworded() const;
 
-        static const Networking &get();
+        static Networking &get();
         static Networking *getPtr();
 
         void postInit();
     private:
+        LuaState luaState;
         PacketPreInit::PluginContainer getPluginListSample();
         std::string serverPassword;
         static Networking *sThis;
 
         RakNet::RakPeerInterface *peer;
         RakNet::BitStream bsOut;
-        TPlayers *players;
         MasterClient *mclient;
 
         BaseActorList baseActorList;

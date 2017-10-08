@@ -30,20 +30,22 @@ void ActorPacket::Packet(RakNet::BitStream *bs, bool send)
     if (!PacketHeader(bs, send))
         return;
 
-    BaseActor actor;
+    BaseActor *actor;
 
     for (unsigned int i = 0; i < actorList->count; i++)
     {
         if (send)
-            actor = actorList->baseActors.at(i);
+            actor = actorList->baseActors.at(i).get();
+        else
+            actor = new BaseActor();
 
-        RW(actor.refNumIndex, send);
-        RW(actor.mpNum, send);
+        RW(actor->refNumIndex, send);
+        RW(actor->mpNum, send);
 
-        Actor(actor, send);
+        Actor(*actor, send);
 
         if (!send)
-            actorList->baseActors.push_back(actor);
+            actorList->baseActors.push_back(std::shared_ptr<BaseActor>(actor));
     }
 }
 
@@ -68,10 +70,4 @@ bool ActorPacket::PacketHeader(RakNet::BitStream *bs, bool send)
     }
 
     return true;
-}
-
-
-void ActorPacket::Actor(BaseActor &actor, bool send)
-{
-
 }

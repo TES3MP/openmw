@@ -10,7 +10,7 @@ using namespace mwmp;
 template<class T>
 typename BasePacketProcessor<T>::processors_t BasePacketProcessor<T>::processors;
 
-void WorldProcessor::Do(WorldPacket &packet, Player &player, BaseEvent &event)
+void WorldProcessor::Do(WorldPacket &packet, std::shared_ptr<Player> player, BaseEvent &event)
 {
     packet.Send(true);
 }
@@ -26,7 +26,7 @@ bool WorldProcessor::Process(RakNet::Packet &packet, BaseEvent &event) noexcept
     {
         if (processor.first == packet.data[0])
         {
-            Player *player = Players::getPlayer(packet.guid);
+            auto player = Players::getPlayerByGUID(packet.guid);
             WorldPacket *myPacket = Networking::get().getWorldPacketController()->GetPacket(packet.data[0]);
 
             myPacket->setEvent(&event);
@@ -36,7 +36,7 @@ bool WorldProcessor::Process(RakNet::Packet &packet, BaseEvent &event) noexcept
                 myPacket->Read();
 
             if (event.isValid)
-                processor.second->Do(*myPacket, *player, event);
+                processor.second->Do(*myPacket, player, event);
             else
                 LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Received %s that failed integrity check and was ignored!", processor.second->strPacketID.c_str());
             

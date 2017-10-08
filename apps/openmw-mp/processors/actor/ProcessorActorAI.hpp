@@ -13,7 +13,7 @@ namespace mwmp
             BPP_INIT(ID_ACTOR_AI)
         }
 
-        void Do(ActorPacket &packet, Player &player, BaseActorList &actorList) override
+        void Do(ActorPacket &packet, std::shared_ptr<Player> player, BaseActorList &actorList) override
         {
             // Send only to players who have the cell loaded
             Cell *serverCell = CellController::get()->getCell(&actorList.cell);

@@ -13,7 +13,7 @@ namespace mwmp
             BPP_INIT(ID_GAME_WEATHER)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             // Placeholder to be filled in later
         }

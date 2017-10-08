@@ -3,12 +3,15 @@ project(masterserver)
 #set(CMAKE_CXX_STANDARD 14)
 add_definitions(-std=gnu++14)
 
-include_directories("./")
+find_package(LuaJit REQUIRED)
+find_package(OpenSSL REQUIRED)
 
-set(SOURCE_FILES main.cpp MasterServer.cpp MasterServer.hpp RestServer.cpp RestServer.hpp)
+include_directories("./" ${LUAJIT_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/extern/sol ${OPENSSL_INCLUDE_DIR})
+
+set(SOURCE_FILES main.cpp MasterServer.cpp MasterServer.hpp RestServer.cpp RestServer.hpp  AdminRest.cpp)
 
 add_executable(masterserver ${SOURCE_FILES})
-target_link_libraries(masterserver ${RakNet_LIBRARY} components)
+target_link_libraries(masterserver ${RakNet_LIBRARY} ${LUAJIT_LIBRARY} ${OPENSSL_LIBRARIES} components)
 
 option(BUILD_MASTER_TEST "build master server test program" OFF)
 

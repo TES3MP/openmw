@@ -272,9 +272,9 @@ std::string CellController::generateMapIndex(MWWorld::Ptr ptr)
     return generateMapIndex(ptr.getCellRef().getRefNum().mIndex, ptr.getCellRef().getMpNum());
 }
 
-std::string CellController::generateMapIndex(BaseActor baseActor)
+std::string CellController::generateMapIndex(std::shared_ptr<mwmp::BaseActor> baseActor)
 {
-    return generateMapIndex(baseActor.refNumIndex, baseActor.mpNum);
+    return generateMapIndex(baseActor->refNumIndex, baseActor->mpNum);
 }
 
 bool CellController::hasLocalAuthority(const ESM::Cell& cell)

@@ -13,9 +13,9 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_BOUNTY)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
-            Script::Call<Script::CallbackIdentity("OnPlayerBounty")>(player.getId());
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_BOUNTY>(player);
         }
     };
 }

@@ -7,7 +7,6 @@
 
 #include "../PlayerProcessor.hpp"
 #include "apps/openmw-mp/Networking.hpp"
-#include "apps/openmw-mp/Script/Script.hpp"
 #include <components/openmw-mp/Controllers/PlayerPacketController.hpp>
 
 namespace mwmp
@@ -22,15 +21,15 @@ namespace mwmp
             playerController = Networking::get().getPlayerPacketController();
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received %s from %s", strPacketID.c_str(), player.npc.mName.c_str());
+            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received %s from %s", strPacketID.c_str(), player->npc.mName.c_str());
 
-            if (!player.creatureStats.mDead)
+            if (!player->creatureStats.mDead)
             {
-                LOG_APPEND(Log::LOG_INFO, "- Moved to %s", player.cell.getDescription().c_str());
+                LOG_APPEND(Log::LOG_INFO, "- Moved to %s", player->cell.getDescription().c_str());
 
-                player.forEachLoaded([this](Player *pl, Player *other) {
+                player->forEachLoaded([this](Player *pl, Player *other) {
 
                     LOG_APPEND(Log::LOG_INFO, "- Started information exchange with %s", other->npc.mName.c_str());
 
@@ -67,17 +66,17 @@ namespace mwmp
                     LOG_APPEND(Log::LOG_INFO, "- Finished information exchange with %s", other->npc.mName.c_str());
                 });
 
-                playerController->GetPacket(ID_PLAYER_POSITION)->setPlayer(&player);
+                playerController->GetPacket(ID_PLAYER_POSITION)->setPlayer(player.get());
                 playerController->GetPacket(ID_PLAYER_POSITION)->Send();
-                packet.setPlayer(&player);
+                packet.setPlayer(player.get());
                 packet.Send(true); //send to other clients
 
-                Script::Call<Script::CallbackIdentity("OnPlayerCellChange")>(player.getId());
+                Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_CELLCHANGE>(player);
 
-                LOG_APPEND(Log::LOG_INFO, "- Finished processing ID_PLAYER_CELL_CHANGE", player.cell.getDescription().c_str());
+                LOG_APPEND(Log::LOG_INFO, "- Finished processing ID_PLAYER_CELL_CHANGE", player->cell.getDescription().c_str());
             }
             else
-                LOG_APPEND(Log::LOG_INFO, "- Ignored because %s is dead", player.npc.mName.c_str());
+                LOG_APPEND(Log::LOG_INFO, "- Ignored because %s is dead", player->npc.mName.c_str());
         }
     };
 }

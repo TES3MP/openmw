@@ -48,7 +48,7 @@ namespace mwmp
 
         std::string generateMapIndex(int refNumindex, int mpNum);
         std::string generateMapIndex(MWWorld::Ptr ptr);
-        std::string generateMapIndex(mwmp::BaseActor baseActor);
+        std::string generateMapIndex(std::shared_ptr<mwmp::BaseActor> baseActor);
 
         bool hasLocalAuthority(const ESM::Cell& cell);
         bool isInitializedCell(const ESM::Cell& cell);

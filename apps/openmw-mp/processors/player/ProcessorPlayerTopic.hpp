@@ -13,13 +13,14 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_TOPIC)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
             packet.Send(true);
 
-            Script::Call<Script::CallbackIdentity("OnPlayerTopic")>(player.getId());
+            //Todo: Script::Call<Script::CallbackIdentity("OnPlayerTopic")>(player.getId());
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_TOPIC>(player);
         }
     };
 }

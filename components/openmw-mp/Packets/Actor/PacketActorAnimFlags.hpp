@@ -10,7 +10,7 @@ namespace mwmp
     public:
         PacketActorAnimFlags(RakNet::RakPeerInterface *peer);
 
-        virtual void Actor(BaseActor &actor, bool send);
+        void Actor(BaseActor &actor, bool send) final;
     };
 }
 

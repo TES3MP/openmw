@@ -13,7 +13,7 @@ namespace mwmp
             BPP_INIT(ID_ACTOR_CELL_CHANGE)
         }
 
-        void Do(ActorPacket &packet, Player &player, BaseActorList &actorList) override
+        void Do(ActorPacket &packet, std::shared_ptr<Player> player, BaseActorList &actorList) override
         {
             Cell *serverCell = CellController::get()->getCell(&actorList.cell);
 
@@ -21,7 +21,18 @@ namespace mwmp
             {
                 serverCell->removeActors(&actorList);
 
-                Script::Call<Script::CallbackIdentity("OnActorCellChange")>(player.getId(), actorList.cell.getDescription().c_str());
+                std::vector<std::shared_ptr<Actor>> actors;
+
+                for (auto &baseActor : actorList.baseActors)
+                {
+                    Actor *actor = new Actor;
+                    actor->actor = baseActor;
+                    actors.emplace_back(actor);
+                }
+
+                Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_ACTOR_CELL_CHANGE>(player, actors);
+
+                Networking::get().getState().getActorCtrl().sendActors(player, actors, actorList.cell, true);
 
                 // Send this to everyone
                 packet.Send(true);

@@ -4,12 +4,14 @@
 #include <components/esm/loadcell.hpp>
 
 #include <components/openmw-mp/Base/BaseStructs.hpp>
+#include <components/openmw-mp/Base/BaseNetCreature.hpp>
 
 #include <RakNetTypes.h>
+#include <memory>
 
 namespace mwmp
 {
-    class BaseActor
+    class BaseActor : public BaseNetCreature
     {
     public:
 
@@ -17,33 +19,23 @@ namespace mwmp
         {
             hasPositionData = false;
             hasStatsDynamicData = false;
+            refNumIndex = 0;
+            mpNum = 0;
+            drawState = 0;
+            isFlying = false;
         }
 
         std::string refId;
         int refNumIndex;
         int mpNum;
 
-        ESM::Position position;
-        ESM::Position direction;
-
-        ESM::Cell cell;
-
-        unsigned int movementFlags;
-        char drawState;
-        bool isFlying;
-
         std::string response;
         std::string sound;
 
-        SimpleCreatureStats creatureStats;
-
         Animation animation;
-        Attack attack;
 
         bool hasPositionData;
         bool hasStatsDynamicData;
-
-        Item equipedItems[19];
     };
 
     class BaseActorList
@@ -52,7 +44,7 @@ namespace mwmp
 
         BaseActorList()
         {
-
+            cell.blank();
         }
 
         enum ACTOR_ACTION
@@ -65,7 +57,7 @@ namespace mwmp
 
         RakNet::RakNetGUID guid;
 
-        std::vector<BaseActor> baseActors;
+        std::vector<std::shared_ptr<BaseActor>> baseActors;
 
         unsigned int count;
 

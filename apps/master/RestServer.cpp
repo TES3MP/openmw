@@ -7,21 +7,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
+#include "RestUtils.hpp"
+
 using namespace std;
 using namespace chrono;
 using namespace boost::property_tree;
-
-static string response201 = "HTTP/1.1 201 Created\r\nContent-Length: 7\r\n\r\nCreated";
-static string response202 = "HTTP/1.1 202 Accepted\r\nContent-Length: 8\r\n\r\nAccepted";
-static string response400 = "HTTP/1.1 400 Bad Request\r\nContent-Length: 11\r\n\r\nbad request";
-
-inline void ResponseStr(HttpServer::Response &response, string content, string type = "", string code = "200 OK")
-{
-    response << "HTTP/1.1 " << code << "\r\n";
-    if (!type.empty())
-        response << "Content-Type: " << type <<"\r\n";
-    response << "Content-Length: " << content.length() << "\r\n\r\n" << content;
-}
 
 inline void ptreeToServer(boost::property_tree::ptree &pt, MasterServer::SServer &server)
 {
@@ -70,7 +60,7 @@ void RestServer::start()
                 auto port = (unsigned short)stoi(&(addr[addr.find(':')+1]));
                 queryToStringStream(ss, "server", serverMap->at(RakNet::SystemAddress(addr.c_str(), port)));
                 ss << "}";
-                ResponseStr(*response, ss.str(), "application/json");
+                ResponseStr<SimpleWeb::HTTP>(response, ss.str(), "application/json");
             }
             catch(out_of_range e)
             {
@@ -93,7 +83,7 @@ void RestServer::start()
                         ss << ", ";
                 }
                 ss << "}}";
-                ResponseStr(*response, ss.str(), "application/json");
+                ResponseStr<SimpleWeb::HTTP>(response, ss.str(), "application/json");
                 updatedCache = false;
             }
             *response << str;
@@ -110,7 +100,7 @@ void RestServer::start()
             MasterServer::SServer server;
             ptreeToServer(pt, server);
 
-            unsigned short port = pt.get<unsigned short>("port");
+            auto port = pt.get<unsigned short>("port");
             server.lastUpdate = steady_clock::now();
             serverMap->insert({RakNet::SystemAddress(request->remote_endpoint_address.c_str(), port), server});
             updatedCache = true;
@@ -137,7 +127,6 @@ void RestServer::start()
             *response << response400;
             return;
         }
-
         if (request->content.size() != 0)
         {
             try
@@ -171,14 +160,14 @@ void RestServer::start()
         ss << ", \"players\": " << players;
         ss << "}";
 
-        ResponseStr(*response, ss.str(), "application/json");
+        ResponseStr<SimpleWeb::HTTP>(response, ss.str(), "application/json");
     };
 
     httpServer.default_resource["GET"]=[](auto response, auto /*request*/) {
         *response << response400;
     };
 
-    httpServer.start();
+    thr = thread([this](){httpServer.start();});
 }
 
 void RestServer::cacheUpdated()
@@ -189,4 +178,6 @@ void RestServer::cacheUpdated()
 void RestServer::stop()
 {
     httpServer.stop();
+    if(thr.joinable())
+        thr.join();
 }

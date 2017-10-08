@@ -17,12 +17,12 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_POSITION)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             //DEBUG_PRINTF(strPacketID);
-            if (!player.creatureStats.mDead)
+            if (!player->creatureStats.mDead)
             {
-                player.sendToLoaded(&packet);
+                player->sendToLoaded(&packet);
             }
         }
     };

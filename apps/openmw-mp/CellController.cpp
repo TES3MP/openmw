@@ -1,9 +1,10 @@
 #include "CellController.hpp"
 
 #include <iostream>
+#include <apps/openmw-mp/Script/EventController.hpp>
 #include "Cell.hpp"
 #include "Player.hpp"
-#include "Script/Script.hpp"
+#include "Networking.hpp"
 
 using namespace std;
 
@@ -50,7 +51,7 @@ Cell *CellController::getCell(ESM::Cell *esmCell)
 
 Cell *CellController::getCellByXY(int x, int y)
 {
-    auto it = find_if(cells.begin(), cells.end(), [x, y](const Cell *c)
+    auto it = find_if (cells.begin(), cells.end(), [x, y](const Cell *c)
     {
         return c->cell.mData.mX == x && c->cell.mData.mY == y;
     });
@@ -66,7 +67,7 @@ Cell *CellController::getCellByXY(int x, int y)
 
 Cell *CellController::getCellByName(std::string cellName)
 {
-    auto it = find_if(cells.begin(), cells.end(), [cellName](const Cell *c)
+    auto it = find_if (cells.begin(), cells.end(), [cellName](const Cell *c)
     {
         return c->cell.mName == cellName;
     });
@@ -83,7 +84,7 @@ Cell *CellController::getCellByName(std::string cellName)
 Cell *CellController::addCell(ESM::Cell cellData)
 {
     LOG_APPEND(Log::LOG_INFO, "- Loaded cells: %d", cells.size());
-    auto it = find_if(cells.begin(), cells.end(), [cellData](const Cell *c) {
+    auto it = find_if (cells.begin(), cells.end(), [cellData](const Cell *c) {
         // Currently we cannot compare because plugin lists can be loaded in different order
         //return c->cell.sRecordId == cellData.sRecordId;
         if (c->cell.isExterior() && cellData.isExterior())
@@ -123,7 +124,8 @@ void CellController::removeCell(Cell *cell)
     {
         if (*it != nullptr && *it == cell)
         {
-            Script::Call<Script::CallbackIdentity("OnCellDeletion")>(cell->getDescription().c_str());
+            mwmp::Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_CELL_DELETION>(cell->getDescription());
+
             LOG_APPEND(Log::LOG_INFO, "- Removing %s from CellController", cell->getDescription().c_str());
 
             delete *it;

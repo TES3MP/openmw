@@ -6,6 +6,7 @@
 #  RakNet_INCLUDES - the RakNet include directory
 #  RakNet_LIBRARY - Link these to use RakNet
 
+
 FIND_LIBRARY (RakNet_LIBRARY_RELEASE NAMES RakNetLibStatic
     PATHS
     ENV LD_LIBRARY_PATH
@@ -15,7 +16,7 @@ FIND_LIBRARY (RakNet_LIBRARY_RELEASE NAMES RakNetLibStatic
     /usr/local/lib64
     /usr/local/lib
     /opt/local/lib
-    $ENV{RAKNET_ROOT}/lib/*
+    $ENV{RAKNET_ROOT}/lib
     )
 	
 FIND_LIBRARY (RakNet_LIBRARY_DEBUG NAMES RakNetLibStatic
@@ -27,10 +28,8 @@ FIND_LIBRARY (RakNet_LIBRARY_DEBUG NAMES RakNetLibStatic
     /usr/local/lib64
     /usr/local/lib
     /opt/local/lib
-    $ENV{RAKNET_ROOT}/lib/*
-    )	
-	
-	
+    $ENV{RAKNET_ROOT}/lib
+    )
 
 FIND_PATH (RakNet_INCLUDES raknet/RakPeer.h
     ENV CPATH
@@ -39,7 +38,7 @@ FIND_PATH (RakNet_INCLUDES raknet/RakPeer.h
     /opt/local/include
 	$ENV{RAKNET_ROOT}/include
     )
- 
+
 MESSAGE(STATUS ${RakNet_INCLUDES})
 MESSAGE(STATUS ${RakNet_LIBRARY_RELEASE})
  
@@ -74,4 +73,3 @@ ELSE(RakNet_FOUND)
     MESSAGE(FATAL_ERROR "Could not find RakNet")
   ENDIF(RakNet_FIND_REQUIRED)
 ENDIF(RakNet_FOUND)
-

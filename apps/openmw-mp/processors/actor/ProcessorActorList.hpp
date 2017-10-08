@@ -13,17 +13,22 @@ namespace mwmp
             BPP_INIT(ID_ACTOR_LIST)
         }
 
-        void Do(ActorPacket &packet, Player &player, BaseActorList &actorList) override
+        void Do(ActorPacket &packet, std::shared_ptr<Player> player, BaseActorList &actorList) override
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received %s from %s", strPacketID.c_str(), player.npc.mName.c_str());
-            
-            // Send only to players who have the cell loaded
-            Cell *serverCell = CellController::get()->getCell(&actorList.cell);
+            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received %s from %s", strPacketID.c_str(), player->npc.mName.c_str());
 
-            if (serverCell != nullptr)
-                serverCell->sendToLoaded(&packet, &actorList);
+            std::vector<std::shared_ptr<Actor>> actors;
 
-            Script::Call<Script::CallbackIdentity("OnActorList")>(player.getId(), actorList.cell.getDescription().c_str());
+            for (auto &baseActor : actorList.baseActors)
+            {
+                Actor *actor = new Actor;
+                actor->actor = baseActor;
+                actors.emplace_back(actor);
+            }
+
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_ACTOR_LIST>(player, actors);
+
+            Networking::get().getState().getActorCtrl().sendActors(player, actors, actorList.cell, true);
         }
     };
 }

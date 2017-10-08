@@ -13,11 +13,11 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_REST)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
-            Script::Call<Script::CallbackIdentity("OnPlayerRest")>(player.getId());
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_REST>(player);
         }
     };
 }

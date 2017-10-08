@@ -38,54 +38,54 @@ void ActorList::reset()
     guid = mwmp::Main::get().getNetworking()->getLocalPlayer()->guid;
 }
 
-void ActorList::addActor(BaseActor baseActor)
+void ActorList::addActor(BaseActor *baseActor)
 {
-    baseActors.push_back(baseActor);
+    baseActors.emplace_back(baseActor);
 }
 
-void ActorList::addActor(LocalActor localActor)
+void ActorList::addActor(LocalActor *localActor)
 {
-    baseActors.push_back(localActor);
+    baseActors.emplace_back(localActor);
 }
 
-void ActorList::addPositionActor(LocalActor localActor)
+void ActorList::addPositionActor(LocalActor *localActor)
 {
-    positionActors.push_back(localActor);
+    positionActors.emplace_back(localActor);
 }
 
-void ActorList::addAnimFlagsActor(LocalActor localActor)
+void ActorList::addAnimFlagsActor(LocalActor *localActor)
 {
-    animFlagsActors.push_back(localActor);
+    animFlagsActors.emplace_back(localActor);
 }
 
-void ActorList::addAnimPlayActor(LocalActor localActor)
+void ActorList::addAnimPlayActor(LocalActor *localActor)
 {
-    animPlayActors.push_back(localActor);
+    animPlayActors.emplace_back(localActor);
 }
 
-void ActorList::addSpeechActor(LocalActor localActor)
+void ActorList::addSpeechActor(LocalActor *localActor)
 {
-    speechActors.push_back(localActor);
+    speechActors.emplace_back(localActor);
 }
 
-void ActorList::addStatsDynamicActor(LocalActor localActor)
+void ActorList::addStatsDynamicActor(LocalActor *localActor)
 {
-    statsDynamicActors.push_back(localActor);
+    statsDynamicActors.emplace_back(localActor);
 }
 
-void ActorList::addEquipmentActor(LocalActor localActor)
+void ActorList::addEquipmentActor(LocalActor *localActor)
 {
-    equipmentActors.push_back(localActor);
+    equipmentActors.emplace_back(localActor);
 }
 
-void ActorList::addAttackActor(LocalActor localActor)
+void ActorList::addAttackActor(LocalActor *localActor)
 {
-    attackActors.push_back(localActor);
+    attackActors.emplace_back(localActor);
 }
 
-void ActorList::addCellChangeActor(LocalActor localActor)
+void ActorList::addCellChangeActor(LocalActor *localActor)
 {
-    cellChangeActors.push_back(localActor);
+    cellChangeActors.emplace_back(localActor);
 }
 
 void ActorList::sendPositionActors()
@@ -174,6 +174,15 @@ void ActorList::sendActorsInCell(MWWorld::CellStore* cellStore)
     cell = *cellStore->getCell();
     action = BaseActorList::SET;
 
+    auto createActor = [](const MWWorld::Ptr &ptr){
+        BaseActor *actor = new BaseActor;
+        actor->refId = ptr.getCellRef().getRefId();
+        actor->refNumIndex = ptr.getCellRef().getRefNum().mIndex;
+        actor->mpNum = ptr.getCellRef().getMpNum();
+
+        return actor;
+    };
+
     for (auto &ref : cellStore->getNpcs()->mList)
     {
         MWWorld::Ptr ptr(&ref, 0);
@@ -181,12 +190,7 @@ void ActorList::sendActorsInCell(MWWorld::CellStore* cellStore)
         // If this Ptr is lacking a unique index, ignore it
         if (ptr.getCellRef().getRefNum().mIndex == 0 && ptr.getCellRef().getMpNum() == 0) continue;
 
-        BaseActor actor;
-        actor.refId = ptr.getCellRef().getRefId();
-        actor.refNumIndex = ptr.getCellRef().getRefNum().mIndex;
-        actor.mpNum = ptr.getCellRef().getMpNum();
-
-        addActor(actor);
+        addActor(createActor(ptr));
     }
 
     for (auto &ref : cellStore->getCreatures()->mList)
@@ -196,12 +200,7 @@ void ActorList::sendActorsInCell(MWWorld::CellStore* cellStore)
         // If this Ptr is lacking a unique index, ignore it
         if (ptr.getCellRef().getRefNum().mIndex == 0 && ptr.getCellRef().getMpNum() == 0) continue;
 
-        BaseActor actor;
-        actor.refId = ptr.getCellRef().getRefId();
-        actor.refNumIndex = ptr.getCellRef().getRefNum().mIndex;
-        actor.mpNum = ptr.getCellRef().getMpNum();
-
-        addActor(actor);
+        addActor(createActor(ptr));
     }
 
     mwmp::Main::get().getNetworking()->getActorPacket(ID_ACTOR_LIST)->setActorList(this);

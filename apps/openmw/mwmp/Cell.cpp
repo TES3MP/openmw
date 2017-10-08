@@ -121,8 +121,8 @@ void Cell::readPositions(ActorList& actorList)
         if (dedicatedActors.count(mapIndex) > 0)
         {
             DedicatedActor *actor = dedicatedActors[mapIndex];
-            actor->position = baseActor.position;
-            actor->direction = baseActor.direction;
+            actor->position = baseActor->position;
+            actor->direction = baseActor->direction;
 
             if (!actor->hasPositionData)
             {
@@ -148,9 +148,9 @@ void Cell::readAnimFlags(ActorList& actorList)
         if (dedicatedActors.count(mapIndex) > 0)
         {
             DedicatedActor *actor = dedicatedActors[mapIndex];
-            actor->movementFlags = baseActor.movementFlags;
-            actor->drawState = baseActor.drawState;
-            actor->isFlying = baseActor.isFlying;
+            actor->movementFlags = baseActor->movementFlags;
+            actor->drawState = baseActor->drawState;
+            actor->isFlying = baseActor->isFlying;
         }
     }
 }
@@ -164,10 +164,10 @@ void Cell::readAnimPlay(ActorList& actorList)
         if (dedicatedActors.count(mapIndex) > 0)
         {
             DedicatedActor *actor = dedicatedActors[mapIndex];
-            actor->animation.groupname = baseActor.animation.groupname;
-            actor->animation.mode = baseActor.animation.mode;
-            actor->animation.count = baseActor.animation.count;
-            actor->animation.persist = baseActor.animation.persist;
+            actor->animation.groupname = baseActor->animation.groupname;
+            actor->animation.mode = baseActor->animation.mode;
+            actor->animation.count = baseActor->animation.count;
+            actor->animation.persist = baseActor->animation.persist;
         }
     }
 }
@@ -183,7 +183,7 @@ void Cell::readStatsDynamic(ActorList& actorList)
         if (dedicatedActors.count(mapIndex) > 0)
         {
             DedicatedActor *actor = dedicatedActors[mapIndex];
-            actor->creatureStats = baseActor.creatureStats;
+            actor->copyCreatureStats(baseActor->creatureStats);
 
             if (!actor->hasStatsDynamicData)
             {
@@ -221,7 +221,7 @@ void Cell::readEquipment(ActorList& actorList)
             DedicatedActor *actor = dedicatedActors[mapIndex];
 
             for (int slot = 0; slot < 19; ++slot)
-                actor->equipedItems[slot] = baseActor.equipedItems[slot];
+                actor->equipedItems[slot] = baseActor->equipedItems[slot];
 
             actor->setEquipment();
         }
@@ -237,8 +237,8 @@ void Cell::readSpeech(ActorList& actorList)
         if (dedicatedActors.count(mapIndex) > 0)
         {
             DedicatedActor *actor = dedicatedActors[mapIndex];
-            actor->response = baseActor.response;
-            actor->sound = baseActor.sound;
+            actor->response = baseActor->response;
+            actor->sound = baseActor->sound;
         }
     }
 }
@@ -252,7 +252,7 @@ void Cell::readAttack(ActorList& actorList)
         if (dedicatedActors.count(mapIndex) > 0)
         {
             DedicatedActor *actor = dedicatedActors[mapIndex];
-            actor->attack = baseActor.attack;
+            actor->attack = baseActor->attack;
 
             // Set the correct drawState here if we've somehow we've missed a previous
             // AnimFlags packet
@@ -285,9 +285,9 @@ void Cell::readCellChange(ActorList& actorList)
         if (dedicatedActors.count(mapIndex) > 0)
         {
             DedicatedActor *dedicatedActor = dedicatedActors[mapIndex];
-            dedicatedActor->cell = baseActor.cell;
-            dedicatedActor->position = baseActor.position;
-            dedicatedActor->direction = baseActor.direction;
+            dedicatedActor->cell = baseActor->cell;
+            dedicatedActor->position = baseActor->position;
+            dedicatedActor->direction = baseActor->direction;
 
             LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Server says DedicatedActor %s moved to %s", mapIndex.c_str(), dedicatedActor->cell.getDescription().c_str());
 
@@ -317,7 +317,7 @@ void Cell::readCellChange(ActorList& actorList)
                     localActor->movementFlags = dedicatedActor->movementFlags;
                     localActor->drawState = dedicatedActor->drawState;
                     localActor->isFlying = dedicatedActor->isFlying;
-                    localActor->creatureStats = dedicatedActor->creatureStats;
+                    localActor->copyCreatureStats(dedicatedActor->creatureStats);
 
                     newCell->localActors[mapIndex] = localActor;
                     cellController->setLocalActorRecord(mapIndex, newCell->getDescription());
@@ -390,7 +390,7 @@ void Cell::initializeDedicatedActors(ActorList& actorList)
         // If this key doesn't exist, create it
         if (dedicatedActors.count(mapIndex) == 0)
         {
-            MWWorld::Ptr ptrFound = store->searchExact(baseActor.refNumIndex, baseActor.mpNum);
+            MWWorld::Ptr ptrFound = store->searchExact(baseActor->refNumIndex, baseActor->mpNum);
 
             if (!ptrFound) return;
 

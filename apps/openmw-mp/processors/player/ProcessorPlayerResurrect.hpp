@@ -17,15 +17,15 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_RESURRECT)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Received %s from %s", strPacketID.c_str(), player.npc.mName.c_str());
+            LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Received %s from %s", strPacketID.c_str(), player->npc.mName.c_str());
 
-            player.creatureStats.mDead = false;
+            player->creatureStats.mDead = false;
 
             packet.Send(true);
 
-            Script::Call<Script::CallbackIdentity("OnPlayerResurrect")>(player.getId());
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_RESURRECT>(player);
         }
     };
 }

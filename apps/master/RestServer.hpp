@@ -24,6 +24,7 @@ private:
     HttpServer httpServer;
     MasterServer::ServerMap *serverMap;
     bool updatedCache = true;
+    std::thread thr;
 };
 
 

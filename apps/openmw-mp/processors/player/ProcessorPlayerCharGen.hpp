@@ -17,12 +17,12 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_CHARGEN)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
-            if (player.charGenStage.current == player.charGenStage.end && player.charGenStage.current != 0)
-                Script::Call<Script::CallbackIdentity("OnPlayerEndCharGen")>(player.getId());
+            if (player->charGenStage.current == player->charGenStage.end && player->charGenStage.current != 0)
+                Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_ENDCHARGEN>(player);
         }
     };
 }

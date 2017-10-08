@@ -13,7 +13,7 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_MAP)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 

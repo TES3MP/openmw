@@ -13,11 +13,11 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_FACTION)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
-            Script::Call<Script::CallbackIdentity("OnPlayerFaction")>(player.getId());
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_FACTION>(player);
         }
     };
 }

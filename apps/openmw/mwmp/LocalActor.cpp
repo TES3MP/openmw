@@ -68,7 +68,7 @@ void LocalActor::updateCell()
     cell = *ptr.getCell()->getCell();
     position = ptr.getRefData().getPosition();
 
-    mwmp::Main::get().getNetworking()->getActorList()->addCellChangeActor(*this);
+    mwmp::Main::get().getNetworking()->getActorList()->addCellChangeActor(this);
 }
 
 void LocalActor::updatePosition(bool forceUpdate)
@@ -80,7 +80,7 @@ void LocalActor::updatePosition(bool forceUpdate)
     {
         posWasChanged = posIsChanging;
         position = ptr.getRefData().getPosition();
-        mwmp::Main::get().getNetworking()->getActorList()->addPositionActor(*this);
+        mwmp::Main::get().getNetworking()->getActorList()->addPositionActor(this);
     }
 }
 
@@ -127,7 +127,7 @@ void LocalActor::updateAnimFlags(bool forceUpdate)
 
         drawState = currentDrawState;
 
-        mwmp::Main::get().getNetworking()->getActorList()->addAnimFlagsActor(*this);
+        mwmp::Main::get().getNetworking()->getActorList()->addAnimFlagsActor(this);
     }
 }
 
@@ -135,7 +135,7 @@ void LocalActor::updateAnimPlay()
 {
     if (!animation.groupname.empty())
     {
-        mwmp::Main::get().getNetworking()->getActorList()->addAnimPlayActor(*this);
+        mwmp::Main::get().getNetworking()->getActorList()->addAnimPlayActor(this);
         animation.groupname.clear();
     }
 }
@@ -144,7 +144,7 @@ void LocalActor::updateSpeech()
 {
     if (!sound.empty())
     {
-        mwmp::Main::get().getNetworking()->getActorList()->addSpeechActor(*this);
+        mwmp::Main::get().getNetworking()->getActorList()->addSpeechActor(this);
         sound.clear();
     }
 }
@@ -178,7 +178,7 @@ void LocalActor::updateStatsDynamic(bool forceUpdate)
 
         creatureStats.mDead = ptrCreatureStats->isDead();
 
-        mwmp::Main::get().getNetworking()->getActorList()->addStatsDynamicActor(*this);
+        mwmp::Main::get().getNetworking()->getActorList()->addStatsDynamicActor(this);
     }
 }
 
@@ -228,7 +228,7 @@ void LocalActor::updateEquipment(bool forceUpdate)
 
     if (equipmentChanged)
     {
-        mwmp::Main::get().getNetworking()->getActorList()->addEquipmentActor(*this);
+        mwmp::Main::get().getNetworking()->getActorList()->addEquipmentActor(this);
         equipmentChanged = false;
     }
 }
@@ -246,7 +246,7 @@ void LocalActor::updateAttack()
                 attack.success = MechanicsHelper::getSpellSuccess(attack.spellId, ptr);
         }
 
-        mwmp::Main::get().getNetworking()->getActorList()->addAttackActor(*this);
+        mwmp::Main::get().getNetworking()->getActorList()->addAttackActor(this);
         attack.shouldSend = false;
     }
 }

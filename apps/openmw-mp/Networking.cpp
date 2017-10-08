@@ -2,7 +2,8 @@
 // Created by koncord on 12.01.16.
 //
 
-#include "Player.hpp"
+#include "Players.hpp"
+#include <Script/EventController.hpp>
 #include "processors/ProcessorInitializer.hpp"
 #include <RakPeer.h>
 #include <Kbhit.h>
@@ -14,8 +15,7 @@
 #include <components/openmw-mp/Packets/PacketPreInit.hpp>
 
 #include <iostream>
-#include <Script/Script.hpp>
-#include <Script/API/TimerAPI.hpp>
+//#include <Script/API/TimerAPI.hpp>
 #include <chrono>
 #include <thread>
 
@@ -34,11 +34,12 @@ Networking *Networking::sThis = 0;
 
 static int currentMpNum = 0;
 
+
+
 Networking::Networking(RakNet::RakPeerInterface *peer) : mclient(nullptr)
 {
     sThis = this;
     this->peer = peer;
-    players = Players::getPlayers();
 
     CellController::create();
 
@@ -53,8 +54,7 @@ Networking::Networking(RakNet::RakPeerInterface *peer) : mclient(nullptr)
 
     running = true;
     exitCode = 0;
-
-    Script::Call<Script::CallbackIdentity("OnServerInit")>();
+    luaState.loadMods();
 
     serverPassword = TES3MP_DEFAULT_PASSW;
 
@@ -63,11 +63,11 @@ Networking::Networking(RakNet::RakPeerInterface *peer) : mclient(nullptr)
 
 Networking::~Networking()
 {
-    Script::Call<Script::CallbackIdentity("OnServerExit")>(false);
+    luaState.getEventCtrl().Call<CoreEvent::ON_EXIT>(false);
 
     CellController::destroy();
 
-    sThis = 0;
+    sThis = nullptr;
     delete playerPacketController;
     delete actorPacketController;
     delete worldPacketController;
@@ -85,13 +85,13 @@ bool Networking::isPassworded() const
 
 void Networking::processPlayerPacket(RakNet::Packet *packet)
 {
-    Player *player = Players::getPlayer(packet->guid);
+    auto player = Players::getPlayerByGUID(packet->guid);
 
     PlayerPacket *myPacket = playerPacketController->GetPacket(packet->data[0]);
 
     if (packet->data[0] == ID_HANDSHAKE)
     {
-        myPacket->setPlayer(player);
+        myPacket->setPlayer(player.get());
         myPacket->Read();
 
         if (player->isHandshaked())
@@ -124,15 +124,13 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
     {
         player->setLoadState(Player::LOADED);
 
-        static constexpr unsigned int ident = Script::CallbackIdentity("OnPlayerConnect");
-        Script::CallBackReturn<ident> result = true;
-        Script::Call<ident>(result, Players::getPlayer(packet->guid)->getId());
+        bool result = luaState.getEventCtrl().Call<CoreEvent::ON_PLAYER_CONNECT, bool>(player);
 
         if (!result)
         {
-            playerPacketController->GetPacket(ID_USER_DISCONNECTED)->setPlayer(Players::getPlayer(packet->guid));
+            playerPacketController->GetPacket(ID_USER_DISCONNECTED)->setPlayer(player.get());
             playerPacketController->GetPacket(ID_USER_DISCONNECTED)->Send(false);
-            Players::deletePlayer(packet->guid);
+            Players::deletePlayerByGUID(packet->guid);
             return;
         }
     }
@@ -140,7 +138,7 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
     {
         LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_BASEINFO about %s", player->npc.mName.c_str());
 
-        myPacket->setPlayer(player);
+        myPacket->setPlayer(player.get());
         myPacket->Read();
         myPacket->Send(true);
     }
@@ -162,7 +160,7 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
 
 void Networking::processActorPacket(RakNet::Packet *packet)
 {
-    Player *player = Players::getPlayer(packet->guid);
+    auto player = Players::getPlayerByGUID(packet->guid);
 
     if (!player->isHandshaked() || player->getLoadState() != Player::POSTLOADED)
         return;
@@ -174,7 +172,7 @@ void Networking::processActorPacket(RakNet::Packet *packet)
 
 void Networking::processWorldPacket(RakNet::Packet *packet)
 {
-    Player *player = Players::getPlayer(packet->guid);
+    auto player = Players::getPlayerByGUID(packet->guid);
 
     if (!player->isHandshaked() || player->getLoadState() != Player::POSTLOADED)
         return;
@@ -184,15 +182,15 @@ void Networking::processWorldPacket(RakNet::Packet *packet)
 
 }
 
-void Networking::update(RakNet::Packet *packet)
+bool Networking::update(RakNet::Packet *packet)
 {
-    Player *player = Players::getPlayer(packet->guid);
+    auto player = Players::getPlayerByGUID(packet->guid);
 
     RakNet::BitStream bsIn(&packet->data[1], packet->length, false);
 
     bsIn.IgnoreBytes((unsigned int) RakNet::RakNetGUID::size()); // Ignore GUID from received packet
 
-    if (player == 0)
+    if (player == nullptr)
     {
         if (packet->data[0] == ID_GAME_PREINIT)
         {
@@ -222,7 +220,6 @@ void Networking::update(RakNet::Packet *packet)
                         // the server
                         if (it == hashList.end())
                             break;
-
                     }
                     else // name is incorrect
                         break;
@@ -244,33 +241,39 @@ void Networking::update(RakNet::Packet *packet)
                 packetPreInit.setChecksums(&tmp);
                 packetPreInit.Send(packet->systemAddress);
             }
-            return;
+            return false;
         }
 
         playerPacketController->SetStream(&bsIn, 0);
 
         playerPacketController->GetPacket(ID_HANDSHAKE)->RequestData(packet->guid);
-        Players::newPlayer(packet->guid);
-        player = Players::getPlayer(packet->guid);
-        return;
+        player = Players::addPlayer(packet->guid);
+        return false;
     }
-    else if (playerPacketController->ContainsPacket(packet->data[0]))
+
+    if (playerPacketController->ContainsPacket(packet->data[0]))
     {
         playerPacketController->SetStream(&bsIn, 0);
         processPlayerPacket(packet);
+        return true;
     }
-    else if (actorPacketController->ContainsPacket(packet->data[0]))
+
+    if (actorPacketController->ContainsPacket(packet->data[0]))
     {
         actorPacketController->SetStream(&bsIn, 0);
         processActorPacket(packet);
+        return true;
     }
-    else if (worldPacketController->ContainsPacket(packet->data[0]))
+
+    if (worldPacketController->ContainsPacket(packet->data[0]))
     {
         worldPacketController->SetStream(&bsIn, 0);
         processWorldPacket(packet);
+        return true;
     }
-    else
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled RakNet packet with identifier %i has arrived", packet->data[0]);
+
+    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled RakNet packet with identifier %i has arrived", packet->data[0]);
+    return false;
 }
 
 void Networking::newPlayer(RakNet::RakNetGUID guid)
@@ -283,27 +286,24 @@ void Networking::newPlayer(RakNet::RakNetGUID guid)
 
     LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Sending info about other players to %lu", guid.g);
 
-    for (TPlayers::iterator pl = players->begin(); pl != players->end(); pl++) //sending other players to new player
+    Players::for_each([this, &guid](auto pl) //sending other players to new player
     {
         // If we are iterating over the new player, don't send the packets below
-        if (pl->first == guid) continue;
+        if (pl->guid == guid) return;
 
         // If an invalid key makes it into the Players map, ignore it
-        else if (pl->first == RakNet::UNASSIGNED_RAKNET_GUID) continue;
-
-        // if player not fully connected
-        else if (pl->second == nullptr) continue;
+        else if (pl->guid == RakNet::UNASSIGNED_RAKNET_GUID) return;
 
         // If we are iterating over a player who has inputted their name, proceed
-        else if (pl->second->getLoadState() == Player::POSTLOADED)
+        else if (pl->getLoadState() == Player::POSTLOADED)
         {
-            playerPacketController->GetPacket(ID_PLAYER_BASEINFO)->setPlayer(pl->second);
-            playerPacketController->GetPacket(ID_PLAYER_STATS_DYNAMIC)->setPlayer(pl->second);
-            playerPacketController->GetPacket(ID_PLAYER_ATTRIBUTE)->setPlayer(pl->second);
-            playerPacketController->GetPacket(ID_PLAYER_SKILL)->setPlayer(pl->second);
-            playerPacketController->GetPacket(ID_PLAYER_POSITION)->setPlayer(pl->second);
-            playerPacketController->GetPacket(ID_PLAYER_CELL_CHANGE)->setPlayer(pl->second);
-            playerPacketController->GetPacket(ID_PLAYER_EQUIPMENT)->setPlayer(pl->second);
+            playerPacketController->GetPacket(ID_PLAYER_BASEINFO)->setPlayer(pl.get());
+            playerPacketController->GetPacket(ID_PLAYER_STATS_DYNAMIC)->setPlayer(pl.get());
+            playerPacketController->GetPacket(ID_PLAYER_ATTRIBUTE)->setPlayer(pl.get());
+            playerPacketController->GetPacket(ID_PLAYER_SKILL)->setPlayer(pl.get());
+            playerPacketController->GetPacket(ID_PLAYER_POSITION)->setPlayer(pl.get());
+            playerPacketController->GetPacket(ID_PLAYER_CELL_CHANGE)->setPlayer(pl.get());
+            playerPacketController->GetPacket(ID_PLAYER_EQUIPMENT)->setPlayer(pl.get());
 
             playerPacketController->GetPacket(ID_PLAYER_BASEINFO)->Send(guid);
             playerPacketController->GetPacket(ID_PLAYER_STATS_DYNAMIC)->Send(guid);
@@ -313,7 +313,7 @@ void Networking::newPlayer(RakNet::RakNetGUID guid)
             playerPacketController->GetPacket(ID_PLAYER_CELL_CHANGE)->Send(guid);
             playerPacketController->GetPacket(ID_PLAYER_EQUIPMENT)->Send(guid);
         }
-    }
+    });
 
     LOG_APPEND(Log::LOG_WARN, "- Done");
 
@@ -321,14 +321,15 @@ void Networking::newPlayer(RakNet::RakNetGUID guid)
 
 void Networking::disconnectPlayer(RakNet::RakNetGUID guid)
 {
-    Player *player = Players::getPlayer(guid);
-    if (!player)
+    auto player = Players::getPlayerByGUID(guid);
+    if (player == nullptr)
         return;
-    Script::Call<Script::CallbackIdentity("OnPlayerDisconnect")>(player->getId());
 
-    playerPacketController->GetPacket(ID_USER_DISCONNECTED)->setPlayer(player);
+    luaState.getEventCtrl().Call<CoreEvent::ON_PLAYER_DISCONNECT>(player);
+
+    playerPacketController->GetPacket(ID_USER_DISCONNECTED)->setPlayer(player.get());
     playerPacketController->GetPacket(ID_USER_DISCONNECTED)->Send(true);
-    Players::deletePlayer(guid);
+    Players::deletePlayerByGUID(guid);
 }
 
 PlayerPacketController *Networking::getPlayerPacketController() const
@@ -369,11 +370,11 @@ void Networking::setCurrentMpNum(int value)
 int Networking::incrementMpNum()
 {
     currentMpNum++;
-    Script::Call<Script::CallbackIdentity("OnMpNumIncrement")>(currentMpNum);
+    luaState.getEventCtrl().Call<CoreEvent::ON_MP_REFNUM>(currentMpNum);
     return currentMpNum;
 }
 
-const Networking &Networking::get()
+Networking &Networking::get()
 {
     return *sThis;
 }
@@ -396,16 +397,14 @@ PacketPreInit::PluginContainer Networking::getPluginListSample()
     while (true)
     {
         unsigned field = 0;
-        auto name = "";
-        Script::Call<Script::CallbackIdentity("OnRequestPluginList")>(name, id, field++);
-        if (strlen(name) == 0)
+        auto name = luaState.getEventCtrl().Call<CoreEvent::ON_REQUEST_PLUGIN_LIST, string>(id, field++);
+        if (name.size() == 0)
             break;
         PacketPreInit::HashList hashList;
         while (true)
         {
-            auto hash = "";
-            Script::Call<Script::CallbackIdentity("OnRequestPluginList")>(hash, id, field++);
-            if (strlen(hash) == 0)
+            auto hash = luaState.getEventCtrl().Call<CoreEvent::ON_REQUEST_PLUGIN_LIST, string>(id, field++);
+            if (hash.size() == 0)
                 break;
             hashList.push_back((unsigned)stoul(hash));
         }
@@ -425,8 +424,11 @@ int Networking::mainLoop()
 {
     RakNet::Packet *packet;
 
+    auto &timerCtrl = luaState.getTimerCtrl();
+
     while (running)
     {
+        bool updated = false;
         if (kbhit() && getch() == '\n')
             break;
         for (packet=peer->Receive(); packet; peer->DeallocatePacket(packet), packet=peer->Receive())
@@ -469,15 +471,22 @@ int Networking::mainLoop()
                 case ID_UNCONNECTED_PING:
                     break;
                 default:
-                    update(packet);
+                    updated = update(packet);
                     break;
             }
         }
-        TimerAPI::Tick();
-        this_thread::sleep_for(chrono::milliseconds(1));
+        timerCtrl.tick();
+        if (updated)
+        {
+            // fixme: not good to call for_each every frame. Maybe for_each_Updated will be better
+            Players::for_each([](shared_ptr<Player> pl) {
+                pl->update();
+            });
+        }
+        this_thread::sleep_for (chrono::milliseconds(1));
     }
 
-    TimerAPI::Terminate();
+    timerCtrl.terminate();
     return exitCode;
 }
 
@@ -523,7 +532,7 @@ void Networking::InitQuery(std::string queryAddr, unsigned short queryPort)
 
 void Networking::postInit()
 {
-    Script::Call<Script::CallbackIdentity("OnServerPostInit")>();
+    luaState.getEventCtrl().Call<CoreEvent::ON_POST_INIT>();
     samples = getPluginListSample();
     if (mclient)
     {

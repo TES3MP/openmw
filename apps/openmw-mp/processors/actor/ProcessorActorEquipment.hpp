@@ -1,6 +1,7 @@
 #ifndef OPENMW_PROCESSORACTOREQUIPMENT_HPP
 #define OPENMW_PROCESSORACTOREQUIPMENT_HPP
 
+#include <apps/openmw-mp/Actors.hpp>
 #include "../ActorProcessor.hpp"
 
 namespace mwmp
@@ -13,17 +14,20 @@ namespace mwmp
             BPP_INIT(ID_ACTOR_EQUIPMENT)
         }
 
-        void Do(ActorPacket &packet, Player &player, BaseActorList &actorList) override
+        void Do(ActorPacket &packet, std::shared_ptr<Player> player, BaseActorList &actorList) override
         {
-            // Send only to players who have the cell loaded
-            Cell *serverCell = CellController::get()->getCell(&actorList.cell);
+            std::vector<std::shared_ptr<Actor>> actors;
 
-            if (serverCell != nullptr)
+            for (auto &baseActor : actorList.baseActors)
             {
-                Script::Call<Script::CallbackIdentity("OnActorEquipment")>(player.getId(), actorList.cell.getDescription().c_str());
-
-                serverCell->sendToLoaded(&packet, &actorList);
+                Actor *actor = new Actor;
+                actor->actor = baseActor;
+                actors.emplace_back(actor);
             }
+
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_ACTOR_EQUIPMENT>(player, actors);
+
+            Networking::get().getState().getActorCtrl().sendActors(player, actors, actorList.cell, true);
         }
     };
 }

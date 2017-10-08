@@ -13,6 +13,7 @@
 #include <components/openmw-mp/Version.hpp>
 #include <components/openmw-mp/Master/PacketMasterAnnounce.hpp>
 #include "Networking.hpp"
+#include "Players.hpp"
 
 using namespace std;
 using namespace mwmp;
@@ -32,7 +33,7 @@ MasterClient::MasterClient(RakNet::RakPeerInterface *peer, std::string queryAddr
 void MasterClient::SetPlayers(unsigned pl)
 {
     mutexData.lock();
-    if (queryData.GetPlayers() != pl)
+    if ((unsigned) queryData.GetPlayers() != pl)
     {
         queryData.SetPlayers(pl);
         updated = true;
@@ -43,7 +44,7 @@ void MasterClient::SetPlayers(unsigned pl)
 void MasterClient::SetMaxPlayers(unsigned pl)
 {
     mutexData.lock();
-    if (queryData.GetMaxPlayers() != pl)
+    if ((unsigned) queryData.GetMaxPlayers() != pl)
     {
         queryData.SetMaxPlayers(pl);
         updated = true;
@@ -128,6 +129,10 @@ bool MasterClient::Process(RakNet::Packet *packet)
         case ID_CONNECTION_REQUEST_ACCEPTED:
         case ID_DISCONNECTION_NOTIFICATION:
             break;
+        case ID_CONNECTION_BANNED:
+            Stop();
+            LOG_MESSAGE_SIMPLE(Log::LOG_FATAL, "Your server was banned on the master server. Contact the master server administrator for details.");
+            break;
         case ID_MASTER_QUERY:
             break;
         case ID_MASTER_ANNOUNCE:
@@ -195,22 +200,22 @@ void MasterClient::Thread()
     queryData.SetPassword((int) Networking::get().isPassworded());
     queryData.SetVersion(TES3MP_VERSION);
 
-    auto *players = Players::getPlayers();
+    //auto *players = Players::getPlayers();
     while (sRun)
     {
-        SetPlayers((int) players->size());
+        SetPlayers((unsigned) Players::size());
 
-        auto pIt = players->begin();
-        if (queryData.players.size() != players->size())
+        auto pIt = Players::begin();
+        if (queryData.players.size() != Players::size())
         {
             queryData.players.clear();
             updated = true;
         }
         else
         {
-            for (int i = 0; pIt != players->end(); i++, pIt++)
+            for (int i = 0; pIt != Players::end(); i++, pIt++)
             {
-                if (queryData.players[i] != pIt->second->npc.mName)
+                if (queryData.players[i] != (*pIt)->npc.mName)
                 {
                     queryData.players.clear();
                     updated = true;
@@ -222,13 +227,12 @@ void MasterClient::Thread()
         if (updated)
         {
             updated = false;
-            if (pIt != players->end())
+            if (pIt != Players::end())
             {
-                for (auto player : *players)
-                {
-                    if (!player.second->npc.mName.empty())
-                        queryData.players.push_back(player.second->npc.mName);
-                }
+                Players::for_each([this](auto player) {
+                    if (!player->npc.mName.empty())
+                        queryData.players.push_back(player->npc.mName);
+                });
             }
             Send(PacketMasterAnnounce::FUNCTION_ANNOUNCE);
         }

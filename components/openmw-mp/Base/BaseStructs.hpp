@@ -18,6 +18,19 @@ namespace mwmp
             return refId == rhs.refId && count == rhs.count && charge == rhs.charge;
         }
     };
+
+    struct InventoryChanges
+    {
+        std::vector<Item> items;
+        unsigned int count;
+        enum ACTION_TYPE
+        {
+            SET = 0,
+            ADD,
+            REMOVE
+        };
+        int action; // 0 - Clear and set in entirety, 1 - Add item, 2 - Remove item
+    };
     
     struct Target
     {
@@ -62,12 +75,6 @@ namespace mwmp
         int mode;
         int count;
         bool persist;
-    };
-
-    struct SimpleCreatureStats
-    {
-        ESM::StatState<float> mDynamic[3];
-        bool mDead;
     };
 }
 

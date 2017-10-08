@@ -19,13 +19,13 @@ namespace mwmp
             playerController = Networking::get().getPlayerPacketController();
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
-            if (!player.creatureStats.mDead)
+            if (!player->creatureStats.mDead)
             {
-                player.sendToLoaded(&packet);
+                player->sendToLoaded(&packet);
             }
         }
     };

@@ -14,6 +14,19 @@
 #include <components/openmw-mp/Utils.hpp>
 #include <components/openmw-mp/Log.hpp>
 
+#define Singleton(className)\
+public:\
+className(className const&) = delete;\
+className(className&&) = delete;\
+className& operator=(className const&) = delete;\
+className& operator=(className &&) = delete;\
+protected:\
+className();\
+~className();\
+public:\
+static className &Get() {static className instance; return instance;}\
+private:
+
 #if (!defined(DEBUG_PRINTF) && defined(DEBUG))
 #define DEBUG_PRINTF(...) LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, __VA_ARGS__)
 #else

@@ -17,14 +17,14 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_SKILL)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
-            if (!player.creatureStats.mDead)
+            if (!player->creatureStats.mDead)
             {
                 //myPacket->Send(player, true);
-                player.sendToLoaded(&packet);
+                player->sendToLoaded(&packet);
 
-                Script::Call<Script::CallbackIdentity("OnPlayerSkill")>(player.getId());
+                Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_PLAYER_SKILL>(player);
             }
         }
     };

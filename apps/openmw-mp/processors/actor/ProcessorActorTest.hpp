@@ -13,15 +13,20 @@ namespace mwmp
             BPP_INIT(ID_ACTOR_TEST)
         }
 
-        void Do(ActorPacket &packet, Player &player, BaseActorList &actorList) override
+        void Do(ActorPacket &packet, std::shared_ptr<Player> player, BaseActorList &actorList) override
         {
-            // Send only to players who have the cell loaded
-            Cell *serverCell = CellController::get()->getCell(&actorList.cell);
+            std::vector<std::shared_ptr<Actor>> actors;
 
-            if (serverCell != nullptr)
-                serverCell->sendToLoaded(&packet, &actorList);
+            for (auto &baseActor : actorList.baseActors)
+            {
+                Actor *actor = new Actor;
+                actor->actor = baseActor;
+                actors.emplace_back(actor);
+            }
 
-            Script::Call<Script::CallbackIdentity("OnActorTest")>(player.getId(), actorList.cell.getDescription().c_str());
+            Networking::get().getState().getEventCtrl().Call<CoreEvent::ON_ACTOR_TEST>(player, actors);
+
+            Networking::get().getState().getActorCtrl().sendActors(player, actors, actorList.cell, true);
         }
     };
 }

@@ -8,11 +8,12 @@
 #include <components/esm/loadcell.hpp>
 #include <components/esm/loadnpc.hpp>
 #include <components/esm/npcstats.hpp>
-#include <components/esm/creaturestats.hpp>
 #include <components/esm/loadclas.hpp>
 #include <components/esm/loadspel.hpp>
+#include <components/esm/activespells.hpp>
 
 #include <components/openmw-mp/Base/BaseStructs.hpp>
+#include <components/openmw-mp/Base/BaseNetCreature.hpp>
 
 #include <RakNetTypes.h>
 
@@ -123,19 +124,6 @@ namespace mwmp
         unsigned int count;
     };
 
-    struct InventoryChanges
-    {
-        std::vector<Item> items;
-        unsigned int count;
-        enum ACTION_TYPE
-        {
-            SET = 0,
-            ADD,
-            REMOVE
-        };
-        int action; // 0 - Clear and set in entirety, 1 - Add item, 2 - Remove item
-    };
-
     struct SpellbookChanges
     {
         std::vector<ESM::Spell> spells;
@@ -162,7 +150,7 @@ namespace mwmp
         TRIBUNAL_TEMPLE
     };
 
-    class BasePlayer
+    class BasePlayer : public mwmp::BaseNetCreature
     {
     public:
 
@@ -197,9 +185,15 @@ namespace mwmp
             spellbookChanges.action = 0;
             spellbookChanges.count = 0;
             useCreatureName = false;
+            isWerewolf = false;
         }
 
         BasePlayer()
+        {
+
+        }
+
+        ~BasePlayer()
         {
 
         }
@@ -210,7 +204,6 @@ namespace mwmp
         int day;
         double hour;
 
-        InventoryChanges inventoryChanges;
         SpellbookChanges spellbookChanges;
         JournalChanges journalChanges;
         FactionChanges factionChanges;
@@ -228,21 +221,10 @@ namespace mwmp
 
         bool ignorePosPacket;
 
-        unsigned int movementFlags;
-        char movementAnim;
-        char drawState;
-        bool isFlying;
-
-        ESM::Position position;
-        ESM::Position direction;
         ESM::Position previousCellPosition;
-        ESM::Cell cell;
         ESM::NPC npc;
         ESM::NpcStats npcStats;
-        ESM::CreatureStats creatureStats;
         ESM::Class charClass;
-        Item equipedItems[19];
-        Attack attack;
         std::string birthsign;
         std::string chatMessage;
         CGStage charGenStage;
@@ -251,8 +233,6 @@ namespace mwmp
         bool isWerewolf;
         std::string creatureModel;
         bool useCreatureName;
-
-        bool isChangingRegion;
 
         std::string deathReason;
 

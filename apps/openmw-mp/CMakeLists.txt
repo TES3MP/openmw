@@ -1,12 +1,5 @@
 project(tes3mp-server)
 
-if(UNIX) #temporarily disabled for non-unix
-    if(NOT (${CMAKE_CXX_COMPILER} MATCHES "aarch64" OR ${CMAKE_CXX_COMPILER} MATCHES "arm"))  #temporarily disabled for arm
-    find_package(CallFF REQUIRED)
-    include_directories(${CallFF_INCLUDES})
-    endif(NOT (${CMAKE_CXX_COMPILER} MATCHES "aarch64" OR ${CMAKE_CXX_COMPILER} MATCHES "arm"))
-endif(UNIX)
-
 option(BUILD_WITH_PAWN "Enable Pawn language" OFF)
 option(ENABLE_BREAKPAD "Enable Google Breakpad for Crash reporting" OFF)
 
@@ -22,89 +15,52 @@ if(ENABLE_BREAKPAD)
     include_directories(${CMAKE_SOURCE_DIR}/extern/breakpad/src ${Breakpad_Headers})
 endif(ENABLE_BREAKPAD)
 
-if(BUILD_WITH_PAWN)
-
-    add_subdirectory(amx)
-
-    #set(Pawn_ROOT ${CMAKE_SOURCE_DIR}/external/pawn/)
-    set(Pawn_INCLUDES ${Pawn_ROOT}/include)
-    set(Pawn_LIBRARY ${Pawn_ROOT}/lib/libamx.a)
-    set(PawnScript_Sources
-            Script/LangPawn/LangPAWN.cpp
-            Script/LangPawn/PawnFunc.cpp)
-    set(PawnScript_Headers ${Pawn_INCLUDES}
-            Script/LangPawn/LangPAWN.hpp
-            )
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_PAWN -DPAWN_CELL_SIZE=64")
-    #include_directories(${Pawn_INCLUDES})
-    include_directories("./amx/linux")
-endif(BUILD_WITH_PAWN)
-
 option(BUILD_WITH_LUA "Enable Terra/Lua language" ON)
 option(FORCE_LUA "Use Lua instead Terra" OFF)
-if(BUILD_WITH_LUA)
-    #set(Terra_ROOT ${CMAKE_SOURCE_DIR}/external/terra/)
-    if(WIN32 OR FORCE_LUA)
-        find_package(Lua51 REQUIRED)
-        MESSAGE(STATUS "Found LUA_LIBRARY: ${LUA_LIBRARY}")
-        MESSAGE(STATUS "Found LUA_INCLUDE_DIR: ${LUA_INCLUDE_DIR}")
-    else()
-        find_package(Terra REQUIRED)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_TERRA")
-    endif()
-    set(LuaScript_Sources
-            Script/LangLua/LangLua.cpp
-            Script/LangLua/LuaFunc.cpp)
-    set(LuaScript_Headers ${Terra_INCLUDES} ${LUA_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/extern/LuaBridge ${CMAKE_SOURCE_DIR}/extern/LuaBridge/detail
-            Script/LangLua/LangLua.hpp)
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_LUA")
-    include_directories(${Terra_INCLUDES} ${LUA_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/extern/LuaBridge)
-endif(BUILD_WITH_LUA)
 
-set(NativeScript_Sources
-        Script/LangNative/LangNative.cpp
-        )
-set(NativeScript_Headers
-        Script/LangNative/LangNative.hpp
-        )
+#set(Terra_ROOT ${CMAKE_SOURCE_DIR}/external/terra/)
+#if(WIN32 OR FORCE_LUA)
+    find_package(LuaJit REQUIRED)
+#[[else()
+    find_package(Terra REQUIRED)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_TERRA")]]
+#endif()
+set(LuaScript_Headers ${Terra_INCLUDES} ${LUA_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/extern/sol/sol.hpp)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DENABLE_LUA")
+include_directories(${Terra_INCLUDES} ${LUA_INCLUDE_DIR} ${LUAJIT_INCLUDE_DIR} ${CMAKE_SOURCE_DIR}/extern/sol)
+
 
 # local files
 set(SERVER
     main.cpp
-    Player.cpp
+    Player.cpp Players.cpp
     Networking.cpp
     MasterClient.cpp
     Cell.cpp
     CellController.cpp
     Utils.cpp
-    Script/Script.cpp Script/ScriptFunction.cpp
-    Script/ScriptFunctions.cpp
-
-    Script/Functions/Actors.cpp Script/Functions/World.cpp Script/Functions/Miscellaneous.cpp
-
-    Script/Functions/Books.cpp Script/Functions/Cells.cpp Script/Functions/CharClass.cpp
-    Script/Functions/Chat.cpp Script/Functions/Dialogue.cpp Script/Functions/Factions.cpp
-    Script/Functions/GUI.cpp Script/Functions/Items.cpp Script/Functions/Mechanics.cpp
-    Script/Functions/Positions.cpp Script/Functions/Quests.cpp Script/Functions/Settings.cpp
-    Script/Functions/Spells.cpp Script/Functions/Stats.cpp Script/Functions/Timer.cpp
-
-    Script/API/TimerAPI.cpp Script/API/PublicFnAPI.cpp
-        ${PawnScript_Sources}
-        ${LuaScript_Sources}
-        ${NativeScript_Sources}
-
+    CharClass.cpp
+    Inventory.cpp
+    Settings.cpp
+    Timer.cpp
+    Books.cpp
+    GUI.cpp
+    Dialogue.cpp
+    Factions.cpp
+    Cells.cpp
+    Quests.cpp
+    Spells.cpp
+    Actors.cpp
+    NetActor.cpp
+    CellState.cpp
+    Object.cpp
+    Script/CommandController.cpp Script/EventController.cpp Script/LuaState.cpp Script/luaUtils.cpp
 )
 
 set(SERVER_HEADER
-        Script/Types.hpp Script/Script.hpp Script/SystemInterface.hpp
-        Script/ScriptFunction.hpp Script/Platform.hpp Script/Language.hpp
-        Script/ScriptFunctions.hpp Script/API/TimerAPI.hpp Script/API/PublicFnAPI.hpp
-        ${PawnScript_Headers}
-        ${LuaScript_Headers}
-        ${NativeScript_Headers}
-        ${CallFF_INCLUDES}
+
 )
 source_group(tes3mp-server FILES ${SERVER} ${SERVER_HEADER})
 
@@ -171,7 +127,14 @@ add_executable(tes3mp-server
         ${PROCESSORS_ACTOR} ${PROCESSORS_PLAYER} ${PROCESSORS_WORLD} ${PROCESSORS}
         ${APPLE_BUNDLE_RESOURCES}
         )
-add_definitions(-std=gnu++14 -Wno-ignored-qualifiers)
+
+# For Lua debugging
+target_compile_definitions(tes3mp-server PRIVATE $<$<CONFIG:Debug>:SOL_SAFE_FUNCTIONS> $<$<CONFIG:RelWithDebInfo>:SOL_SAFE_FUNCTIONS>)
+target_compile_definitions(tes3mp-server PRIVATE $<$<CONFIG:Debug>:SERVER_DEBUG> $<$<CONFIG:RelWithDebInfo>:SERVER_DEBUG>)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(tes3mp-server PRIVATE -std=gnu++14 -Wno-ignored-qualifiers -ftemplate-depth=2048)
+endif()
 
 target_link_libraries(tes3mp-server
     #${Boost_SYSTEM_LIBRARY}
@@ -182,9 +145,8 @@ target_link_libraries(tes3mp-server
     components
     ${Terra_LIBRARY}
     ${LUA_LIBRARIES}
-    ${Pawn_LIBRARY}
+    ${LUAJIT_LIBRARY}
     ${Breakpad_Library}
-    ${CallFF_LIBRARY}
 )
 
 if (UNIX)

@@ -17,11 +17,11 @@ namespace mwmp
             BPP_INIT(ID_PLAYER_STATS_DYNAMIC)
         }
 
-        void Do(PlayerPacket &packet, Player &player) override
+        void Do(PlayerPacket &packet, std::shared_ptr<Player> player) override
         {
             DEBUG_PRINTF(strPacketID.c_str());
 
-            player.sendToLoaded(&packet);
+            player->sendToLoaded(&packet);
         }
     };
 }

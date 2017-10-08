@@ -18,17 +18,17 @@ namespace mwmp
         virtual ~ActorList();
 
         void reset();
-        void addActor(BaseActor baseActor);
-        void addActor(LocalActor localActor);
+        void addActor(BaseActor *baseActor);
+        void addActor(LocalActor *localActor);
 
-        void addPositionActor(LocalActor localActor);
-        void addAnimFlagsActor(LocalActor localActor);
-        void addAnimPlayActor(LocalActor localActor);
-        void addSpeechActor(LocalActor localActor);
-        void addStatsDynamicActor(LocalActor localActor);
-        void addEquipmentActor(LocalActor localActor);
-        void addAttackActor(LocalActor localActor);
-        void addCellChangeActor(LocalActor localActor);
+        void addPositionActor(LocalActor *localActor);
+        void addAnimFlagsActor(LocalActor *localActor);
+        void addAnimPlayActor(LocalActor *localActor);
+        void addSpeechActor(LocalActor *localActor);
+        void addStatsDynamicActor(LocalActor *localActor);
+        void addEquipmentActor(LocalActor *localActor);
+        void addAttackActor(LocalActor *localActor);
+        void addCellChangeActor(LocalActor *localActor);
 
         void sendPositionActors();
         void sendAnimFlagsActors();
@@ -44,14 +44,14 @@ namespace mwmp
     private:
         Networking *getNetworking();
 
-        std::vector<BaseActor> positionActors;
-        std::vector<BaseActor> animFlagsActors;
-        std::vector<BaseActor> animPlayActors;
-        std::vector<BaseActor> speechActors;
-        std::vector<BaseActor> statsDynamicActors;
-        std::vector<BaseActor> equipmentActors;
-        std::vector<BaseActor> attackActors;
-        std::vector<BaseActor> cellChangeActors;
+        std::vector<std::shared_ptr<BaseActor>> positionActors;
+        std::vector<std::shared_ptr<BaseActor>> animFlagsActors;
+        std::vector<std::shared_ptr<BaseActor>> animPlayActors;
+        std::vector<std::shared_ptr<BaseActor>> speechActors;
+        std::vector<std::shared_ptr<BaseActor>> statsDynamicActors;
+        std::vector<std::shared_ptr<BaseActor>> equipmentActors;
+        std::vector<std::shared_ptr<BaseActor>> attackActors;
+        std::vector<std::shared_ptr<BaseActor>> cellChangeActors;
     };
 }
 

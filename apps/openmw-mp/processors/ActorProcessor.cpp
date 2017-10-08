@@ -6,7 +6,7 @@ using namespace mwmp;
 template<class T>
 typename BasePacketProcessor<T>::processors_t BasePacketProcessor<T>::processors;
 
-void ActorProcessor::Do(ActorPacket &packet, Player &player, BaseActorList &actorList)
+void ActorProcessor::Do(ActorPacket &packet, std::shared_ptr<Player> player, BaseActorList &actorList)
 {
     packet.Send(true);
 }
@@ -22,7 +22,7 @@ bool ActorProcessor::Process(RakNet::Packet &packet, BaseActorList &actorList) n
     {
         if (processor.first == packet.data[0])
         {
-            Player *player = Players::getPlayer(packet.guid);
+            auto player = Players::getPlayerByGUID(packet.guid);
             ActorPacket *myPacket = Networking::get().getActorPacketController()->GetPacket(packet.data[0]);
 
             myPacket->setActorList(&actorList);
@@ -32,7 +32,7 @@ bool ActorProcessor::Process(RakNet::Packet &packet, BaseActorList &actorList) n
                 myPacket->Read();
 
             if (actorList.isValid)
-                processor.second->Do(*myPacket, *player, actorList);
+                processor.second->Do(*myPacket, player, actorList);
             else
                 LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Received %s that failed integrity check and was ignored!", processor.second->strPacketID.c_str());
 

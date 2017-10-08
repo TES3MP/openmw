@@ -23,8 +23,6 @@
 #include "MasterClient.hpp"
 #include "Utils.hpp"
 
-#include <apps/openmw-mp/Script/Script.hpp>
-
 #ifdef ENABLE_BREAKPAD
 #include <handler/exception_handler.h>
 #endif
@@ -200,19 +198,6 @@ int main(int argc, char *argv[])
 
     Utils::printVersion("TES3MP dedicated server", TES3MP_VERSION, version.mCommitHash, TES3MP_PROTO_VERSION);
 
-    setenv("AMXFILE", moddir.c_str(), 1);
-    setenv("MOD_DIR", moddir.c_str(), 1); // hack for lua
-
-    setenv("LUA_PATH", Utils::convertPath(plugin_home + "/scripts/?.lua" + ";"
-                                          + plugin_home + "/scripts/?.t" + ";"
-                                          + plugin_home + "/lib/lua/?.lua" + ";"
-                                          + plugin_home + "/lib/lua/?.t").c_str(), 1);
-#ifdef _WIN32
-    setenv("LUA_CPATH", Utils::convertPath(plugin_home + "/lib/?.dll").c_str(), 1);
-#else
-    setenv("LUA_CPATH", Utils::convertPath(plugin_home + "/lib/?.so").c_str(), 1);
-#endif
-
     int code;
 
     RakNet::RakPeerInterface *peer = RakNet::RakPeerInterface::GetInstance();
@@ -232,10 +217,8 @@ int main(int argc, char *argv[])
 
     RakNet::SocketDescriptor sd((unsigned short) port, addr.c_str());
 
-    try
+    //try
     {
-        for (auto plugin : plugins)
-            Script::LoadScript(plugin.c_str(), plugin_home.c_str());
 
         switch (peer->Startup((unsigned) players, &sd, 1))
         {
@@ -287,16 +270,18 @@ int main(int argc, char *argv[])
 
         networking.getMasterClient()->Stop();
     }
-    catch (std::exception &e)
+    /*catch (std::exception &e)
     {
         LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, e.what());
         throw; //fall through
-    }
+    }*/
 
     RakNet::RakPeerInterface::DestroyInstance(peer);
 
     if (code == 0)
         LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Quitting peacefully.");
+    else if (code == 1)
+        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Forcibly shutting down because of error.");
 
     LOG_QUIT();
 

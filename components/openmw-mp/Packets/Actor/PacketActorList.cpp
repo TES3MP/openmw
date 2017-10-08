@@ -15,24 +15,26 @@ void PacketActorList::Packet(RakNet::BitStream *bs, bool send)
 
     RW(actorList->action, send);
 
-    BaseActor actor;
+    BaseActor *actor;
 
     for (unsigned int i = 0; i < actorList->count; i++)
     {
         if (send)
-            actor = actorList->baseActors.at(i);
+            actor = actorList->baseActors.at(i).get();
+        else
+            actor = new BaseActor();
 
-        RW(actor.refId, send);
-        RW(actor.refNumIndex, send);
-        RW(actor.mpNum, send);
+        RW(actor->refId, send);
+        RW(actor->refNumIndex, send);
+        RW(actor->mpNum, send);
 
-        if (actor.refId.empty() || (actor.refNumIndex != 0 && actor.mpNum != 0))
+        if (actor->refId.empty() || (actor->refNumIndex != 0 && actor->mpNum != 0))
         {
             actorList->isValid = false;
             return;
         }
 
         if (!send)
-            actorList->baseActors.push_back(actor);
+            actorList->baseActors.push_back(std::shared_ptr<BaseActor>(actor));
     }
 }
