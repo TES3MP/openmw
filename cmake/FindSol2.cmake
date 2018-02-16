@@ -5,7 +5,7 @@
 include(LibFindMacros)
 
 libfind_pkg_detect(Sol2 sol2
-    FIND_PATH sol.hpp
+    FIND_PATH sol.hpp PATHS ${CMAKE_SOURCE_DIR}/extern/sol
 )
 libfind_process(Sol2)
 
