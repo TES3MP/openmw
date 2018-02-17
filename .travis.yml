@@ -2,14 +2,13 @@ os:
  - linux
 # - osx
 osx_image: xcode8.3
-language: cpp
+language: generic
 sudo: required
 dist: trusty
 branches:
   only:
     - master
     - coverity_scan
-    - /openmw-.*$/
 env:
   global:
    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
@@ -36,6 +35,8 @@ addons:
       libsdl2-dev, qtbase5-dev, libopenal-dev,
       # The other ones from OpenMW ppa
       libbullet-dev, libswresample-dev, libopenscenegraph-3.4-dev, libmygui-dev
+      # LuaJit
+      libluajit-5.1-dev
     ]
 
   coverity_scan:
