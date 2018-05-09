@@ -1,7 +1,5 @@
 #!/bin/sh
 echo -n | openssl s_client -connect scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
-sudo ln -s /usr/bin/clang-3.6 /usr/local/bin/clang
-sudo ln -s /usr/bin/clang++-3.6 /usr/local/bin/clang++
 
 # build libgtest & libgtest_main
 sudo mkdir /usr/src/gtest/build
