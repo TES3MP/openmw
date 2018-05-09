@@ -1,10 +1,5 @@
-os:
- - linux
-# - osx
-osx_image: xcode8.3
 language: cpp
 sudo: required
-dist: trusty
 branches:
   only:
     - master
@@ -52,14 +47,21 @@ matrix:
       env:
         ANALYZE="scan-build-3.6 --use-cc clang-3.6 --use-c++ clang++-3.6 "
       compiler: clang
+    - os: linux
+      env:
+        MATRIX_CC="CC=gcc-6 && CXX=g++-6"
+    - os: linux
+      env:
+        MATRIX_CC="CC=clang-3.6 && CXX=clang++-3.6"
   allow_failures:
     - env: ANALYZE="scan-build-3.6 --use-cc clang-3.6 --use-c++ clang++-3.6 "
 
-before_install: 
+before_install:
       - ./CI/before_install.${TRAVIS_OS_NAME}.sh
 before_script: ./CI/before_script.${TRAVIS_OS_NAME}.sh
 script:
  - cd ./build
+ - if [ ! -z "${MATRIX_CC}" ]; then eval "${MATRIX_CC}"; fi
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then ${ANALYZE}make -j3; fi
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "${TRAVIS_OS_NAME}" = "osx" ]; then make package; fi
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "${TRAVIS_OS_NAME}" = "linux" ]; then ./openmw_test_suite; fi
