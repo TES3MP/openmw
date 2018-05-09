@@ -30,7 +30,9 @@ addons:
       # Audio & Video
       libsdl2-dev, qtbase5-dev, libopenal-dev,
       # The other ones from OpenMW ppa
-      libbullet-dev, libswresample-dev, libopenscenegraph-3.4-dev, libmygui-dev
+      libbullet-dev, libswresample-dev, libopenscenegraph-3.4-dev, libmygui-dev,
+      # tes3mp stuff
+      libluajit-5.1-dev
     ]
 
   coverity_scan:
@@ -61,7 +63,6 @@ before_install:
 before_script: ./CI/before_script.${TRAVIS_OS_NAME}.sh
 script:
  - cd ./build
- - if [ ! -z "${MATRIX_CC}" ]; then eval "${MATRIX_CC}"; fi
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ]; then ${ANALYZE}make -j3; fi
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "${TRAVIS_OS_NAME}" = "osx" ]; then make package; fi
  - if [ "$COVERITY_SCAN_BRANCH" != 1 ] && [ "${TRAVIS_OS_NAME}" = "linux" ]; then ./openmw_test_suite; fi
