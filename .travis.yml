@@ -16,10 +16,10 @@ addons:
     sources:
       - sourceline: 'ppa:openmw/openmw'
       - ubuntu-toolchain-r-test
-      - llvm-toolchain-precise-3.6
+      - llvm-toolchain-precise-3.8
     packages: [
       # Dev
-      cmake, clang-3.6, libunshield-dev, libtinyxml-dev,
+      cmake, clang-3.8, libunshield-dev, libtinyxml-dev,
       g++-6,
       # Tests
       libgtest-dev, google-mock,
@@ -47,16 +47,18 @@ matrix:
   include:
     - os: linux
       env:
-        ANALYZE="scan-build-3.6 --use-cc clang-3.6 --use-c++ clang++-3.6 "
+        - MATRIX_CC="CC=clang-3.8 && CXX=clang++-3.8"
+        - ANALYZE="scan-build-3.8 --use-cc clang-3.8 --use-c++ clang++-3.8 "
       compiler: clang
     - os: linux
       env:
-        MATRIX_CC="CC=gcc-6 && CXX=g++-6"
+        - MATRIX_CC="CC=gcc-6 && CXX=g++-6"
     - os: linux
       env:
-        MATRIX_CC="CC=clang-3.6 && CXX=clang++-3.6"
+        - MATRIX_CC="CC=clang-3.8 && CXX=clang++-3.8"
   allow_failures:
-    - env: ANALYZE="scan-build-3.6 --use-cc clang-3.6 --use-c++ clang++-3.6 "
+    - env:
+        - ANALYZE="scan-build-3.8 --use-cc clang-3.8 --use-c++ clang++-3.8 "
 
 before_install:
       - ./CI/before_install.${TRAVIS_OS_NAME}.sh
