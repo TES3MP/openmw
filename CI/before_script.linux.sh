@@ -4,6 +4,12 @@ free -m
 mkdir build
 cd build
 
+# Set up compilers
+if [ ! -z "${MATRIX_CC}" ]; then
+    eval "${MATRIX_CC}"
+fi
+
+
 export CODE_COVERAGE=0
 export RAKNET_ROOT=~/RakNet
 if [ ! -z "${ANALYZE}" ]; then
