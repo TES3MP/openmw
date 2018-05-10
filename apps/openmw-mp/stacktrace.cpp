@@ -7,6 +7,7 @@
 
 #ifndef _WIN32
 
+#include <cxxabi.h>
 #include <execinfo.h>
 
 void stacktrace()
