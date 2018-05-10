@@ -253,7 +253,7 @@ namespace MWBase
                 Start of tes3mp addition
 
                 This has been declared here so it can be accessed from places
-                other than MWWorld::World 
+                other than MWWorld::World
             */
             virtual void PCDropped(const MWWorld::Ptr& item) = 0;
             /*
@@ -323,7 +323,7 @@ namespace MWBase
 
                 Make it possible to set the physics framerate from elsewhere
             */
-            virtual void World::setPhysicsFramerate(float physFramerate) = 0;
+            virtual void setPhysicsFramerate(float physFramerate) = 0;
             /*
                 End of tes3mp addition
             */
