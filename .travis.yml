@@ -24,7 +24,7 @@ addons:
       # Tests
       libgtest-dev, google-mock,
       # Boost
-      libboost-filesystem-dev, libboost-program-options-dev, libboost-system-dev,
+      #libboost-filesystem-dev, libboost-program-options-dev, libboost-system-dev,
       # FFmpeg
       libavcodec-dev, libavformat-dev, libavutil-dev, libswscale-dev,
       # Audio & Video
@@ -32,7 +32,7 @@ addons:
       # The other ones from OpenMW ppa
       libbullet-dev, libswresample-dev, libopenscenegraph-3.4-dev, libmygui-dev,
       # tes3mp stuff
-      libluajit-5.1-dev, libboost-dev, libqt5opengl5-dev
+      libluajit-5.1-dev, libboost1.58-all-dev, libqt5opengl5-dev
     ]
 
   coverity_scan:
