@@ -58,7 +58,7 @@ LocalPlayer::LocalPlayer()
     ignorePosPacket = false;
     ignoreJailTeleportation = false;
     ignoreJailSkillIncreases = false;
-    
+
     attack.shouldSend = false;
 
     deathReason = "suicide";
@@ -220,7 +220,7 @@ void LocalPlayer::updateStatsDynamic(bool forceUpdate)
 
     if (needUpdate(oldMagicka, magicka, 4))
         statsDynamicIndexChanges.push_back(1);
-    
+
     if (needUpdate(oldFatigue, fatigue, 4))
         statsDynamicIndexChanges.push_back(2);
 
@@ -614,7 +614,7 @@ void LocalPlayer::updateAnimFlags(bool forceUpdate)
     bool isSneaking = ptrNpcStats.getMovementFlag(CreatureStats::Flag_Sneak);
     bool isForceJumping = ptrNpcStats.getMovementFlag(CreatureStats::Flag_ForceJump);
     bool isForceMoveJumping = ptrNpcStats.getMovementFlag(CreatureStats::Flag_ForceMoveJump);
-    
+
     isFlying = world->isFlying(ptrPlayer);
     bool isJumping = !world->isOnGround(ptrPlayer) && !isFlying;
 
@@ -637,7 +637,7 @@ void LocalPlayer::updateAnimFlags(bool forceUpdate)
         wasForceJumping = isForceJumping;
         wasForceMoveJumping = isForceMoveJumping;
         lastDrawState = currentDrawState;
-        
+
         wasFlying = isFlying;
         wasJumping = isJumping;
 
@@ -1338,7 +1338,7 @@ void LocalPlayer::setSelectedSpell()
 
     if (!spells.hasSpell(selectedSpellId))
         return;
- 
+
     MWBase::Environment::get().getWindowManager()->setSelectedSpell(selectedSpellId,
         int(MWMechanics::getSpellSuccessChance(selectedSpellId, ptrPlayer)));
 }
