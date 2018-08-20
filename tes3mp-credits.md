@@ -19,7 +19,6 @@ Community administrators
 ------------------------
 
     Volk Milit (Ja'Virr-Dar)
-    Texafornian
     Testman
 
 
