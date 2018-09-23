@@ -149,7 +149,17 @@ namespace MWScript
                 MWBase::Environment::get().getWindowManager ()->wakeUpPlayer();
             }
         };
+        
+        class OpGetMultiplayer : public Interpreter::Opcode0
+        {
+            public:
 
+                virtual void execute (Interpreter::Runtime& runtime)
+                {
+                    runtime.push (1);
+                }
+        };
+        
         class OpXBox : public Interpreter::Opcode0
         {
             public:
