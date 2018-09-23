@@ -239,7 +239,7 @@ namespace Compiler
     {
         void registerExtensions (Extensions& extensions)
         {
-            extensions.registerFunction ("getmultiplayer", '1', "", opcodeGetMultiplayer);
+            extensions.registerFunction ("getmultiplayer", 'l', "", opcodeGetMultiplayer);
             extensions.registerFunction ("xbox", 'l', "", opcodeXBox);
             extensions.registerFunction ("onactivate", 'l', "", opcodeOnActivate, opcodeOnActivateExplicit);
             extensions.registerInstruction ("activate", "x", opcodeActivate, opcodeActivateExplicit);
