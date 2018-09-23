@@ -198,6 +198,7 @@ namespace Compiler
 
     namespace Misc
     {
+        const int opcodeGetMultiplayer = 0x2000308;
         const int opcodeXBox = 0x200000c;
         const int opcodeOnActivate = 0x200000d;
         const int opcodeOnActivateExplicit = 0x2000306;
