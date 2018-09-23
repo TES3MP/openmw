@@ -1426,7 +1426,7 @@ namespace MWScript
 
         void installOpcodes (Interpreter::Interpreter& interpreter)
         {
-            interpreter.InstallSegment5 (Compiler::Misc::opcodeGetMultiplayer, new OpGetMultiplayer);
+            interpreter.installSegment5 (Compiler::Misc::opcodeGetMultiplayer, new OpGetMultiplayer);
             interpreter.installSegment5 (Compiler::Misc::opcodeXBox, new OpXBox);
             interpreter.installSegment5 (Compiler::Misc::opcodeOnActivate, new OpOnActivate<ImplicitRef>);
             interpreter.installSegment5 (Compiler::Misc::opcodeOnActivateExplicit, new OpOnActivate<ExplicitRef>);
