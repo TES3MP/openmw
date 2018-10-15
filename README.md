@@ -38,7 +38,7 @@ Getting Started
 
 * [Quickstart guide](https://github.com/TES3MP/openmw-tes3mp/wiki/Quickstart-guide)
 * [Steam group](https://steamcommunity.com/groups/mwmulti) and its [detailed FAQ](https://steamcommunity.com/groups/mwmulti/discussions/1/353916184342480541/)
-* [TES3MP section on OpenMW forums](https://forum.openmw.org/viewforum.php?f=44)
+* [TES3MP section on OpenMW forums](https://forum.openmw.org/viewforum.php?f=45)
 * [Subreddit](https://www.reddit.com/r/tes3mp)
 * [Known issues and bug reports](https://github.com/TES3MP/openmw-tes3mp/issues)
 
