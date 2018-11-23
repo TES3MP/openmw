@@ -175,8 +175,15 @@ int main(int argc, char *argv[])
 
     if (!variables["no-logs"].as<bool>())
     {
+        // check if Logs directory exists, create if it doesn't
+        if(!boost::filesystem::exists( cfgMgr.getLogPath() / "Logs" ))
+        {
+                boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs" );
+                boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs/Client");
+                boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs/Server");
+        }
+        
         // Redirect cout and cerr to tes3mp server log
-
         logfile.open(boost::filesystem::path(
                 cfgMgr.getLogPath() / "/Logs/Server/tes3mp-server-" += Log::getFilenameTimestamp() += ".log"));
 
