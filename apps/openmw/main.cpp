@@ -361,6 +361,14 @@ int main(int argc, char**argv)
         Instead of logging information in openmw.log, use a more descriptive filename
         that includes a timestamp
     */
+    // Check if directory exists, create if it does
+    Files::ConfigurationManager cfgMgr;
+    if(!boost::filesystem::exists( cfgMgr.getLogPath() / "Logs" ))
+    {
+            boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs" );
+            boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs/Client");
+            boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs/Server");
+    }
     return wrapApplication(&runApplication, argc, argv, "/Logs/Client/tes3mp-client-" + Log::getFilenameTimestamp() + ".log");
     /*
         End of tes3mp change (major)
