@@ -361,7 +361,7 @@ int main(int argc, char**argv)
         Instead of logging information in openmw.log, use a more descriptive filename
         that includes a timestamp
     */
-    return wrapApplication(&runApplication, argc, argv, "/tes3mp-client-" + Log::getFilenameTimestamp() + ".log");
+    return wrapApplication(&runApplication, argc, argv, "/Logs/Client/tes3mp-client-" + Log::getFilenameTimestamp() + ".log");
     /*
         End of tes3mp change (major)
     */
