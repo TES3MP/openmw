@@ -1365,7 +1365,7 @@ void LocalPlayer::sendClass()
 
 void LocalPlayer::sendInventory()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Sending entire inventory to server");
+    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending entire inventory to server");
 
     MWWorld::Ptr ptrPlayer = getPlayerPtr();
     MWWorld::InventoryStore &ptrInventory = ptrPlayer.getClass().getInventoryStore(ptrPlayer);
@@ -1401,7 +1401,7 @@ void LocalPlayer::sendInventory()
 
 void LocalPlayer::sendItemChange(const MWWorld::Ptr& itemPtr, int count, unsigned int action)
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Sending item change for %s with action %i, count %i",
+    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending item change for %s with action %i, count %i",
         itemPtr.getCellRef().getRefId().c_str(), action, count);
 
     inventoryChanges.items.clear();
@@ -1427,7 +1427,7 @@ void LocalPlayer::sendItemChange(const MWWorld::Ptr& itemPtr, int count, unsigne
 
 void LocalPlayer::sendItemChange(const std::string& refId, int count, unsigned int action)
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Sending item change for %s with action %i, count %i",
+    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending item change for %s with action %i, count %i",
         refId.c_str(), action, count);
 
     inventoryChanges.items.clear();
