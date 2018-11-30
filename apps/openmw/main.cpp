@@ -363,13 +363,13 @@ int main(int argc, char**argv)
     */
     // Check if directory exists, create if it does
     Files::ConfigurationManager cfgMgr;
-    if(!boost::filesystem::exists( cfgMgr.getLogPath() / "Logs" ))
+    if(!boost::filesystem::exists( cfgMgr.getLogPath() / "logs" ))
     {
-            boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs" );
-            boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs/Client");
-            boost::filesystem::create_directory( cfgMgr.getLogPath() / "Logs/Server");
+            boost::filesystem::create_directory( cfgMgr.getLogPath() / "logs" );
+            boost::filesystem::create_directory( cfgMgr.getLogPath() / "logs/client");
+            boost::filesystem::create_directory( cfgMgr.getLogPath() / "logs/server");
     }
-    return wrapApplication(&runApplication, argc, argv, "/Logs/Client/tes3mp-client-" + Log::getFilenameTimestamp() + ".log");
+    return wrapApplication(&runApplication, argc, argv, "/logs/client/tes3mp-client-" + Log::getFilenameTimestamp() + ".log");
     /*
         End of tes3mp change (major)
     */
