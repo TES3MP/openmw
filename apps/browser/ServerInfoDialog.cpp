@@ -70,7 +70,11 @@ void ServerInfoDialog::refresh()
         leAddr->setText(sd.first.ToString(true, ':'));
         lblName->setText(sd.second.GetName());
         int ping = PingRakNetServer(sd.first.ToString(false), sd.first.GetPort());
-        lblPing->setNum(ping);
+        if (ping == PING_UNREACHABLE) {
+            lblPing->setText("Unreachable");
+        } else {
+            lblPing->setNum(ping);
+        }
         btnConnect->setDisabled(ping == PING_UNREACHABLE);
 
         listPlayers->clear();
