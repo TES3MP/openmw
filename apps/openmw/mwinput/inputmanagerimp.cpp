@@ -1260,6 +1260,16 @@ namespace MWInput
 
     void InputManager::toggleWalking()
     {
+        /*
+            Start of tes3mp addition
+            
+            Don't switch between walking states while text input is active
+        */
+        if (SDL_IsTextInputActive()) return;
+        /*
+            End of tes3mp addition
+        */
+
         if (MWBase::Environment::get().getWindowManager()->isGuiMode()) return;
         mAlwaysRunActive = !mAlwaysRunActive;
 
