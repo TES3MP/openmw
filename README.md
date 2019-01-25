@@ -18,7 +18,7 @@ Font Licenses:
 Project Status
 --------------
 
-[Version changelog](https://github.com/TES3MP/openmw-tes3mp/blob/master/tes3mp-changelog.md)
+[Version changelog](https://github.com/TES3MP/openmw-tes3mp/blob/0.7.0/tes3mp-changelog.md)
 
 As of version 0.7.0, TES3MP is fully playable, providing very extensive player, NPC, world and quest synchronization, as well as state saving and loading, all of which are highly customizable via [serverside Lua scripts](https://github.com/TES3MP/CoreScripts).
 
