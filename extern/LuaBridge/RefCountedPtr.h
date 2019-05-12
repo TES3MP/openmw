@@ -2,6 +2,7 @@
 /*
   https://github.com/vinniefalco/LuaBridge
   
+  Copyright 2019, Dmitry Tarakanov
   Copyright 2012, Vinnie Falco <vinnie.falco@gmail.com>
   Copyright 2007, Nathan Reed
 
@@ -27,15 +28,12 @@
 */
 //==============================================================================
 
-#ifndef LUABRIDGE_REFCOUNTEDPTR_HEADER
-#define LUABRIDGE_REFCOUNTEDPTR_HEADER
+#pragma once
 
-#ifdef _MSC_VER
-# include <hash_map>
-#else
-# include <stdint.h>
-# include <ext/hash_map>
-#endif
+#include <unordered_map>
+#include "RefCountedObject.h"
+
+namespace luabridge {
 
 //==============================================================================
 /**
@@ -44,22 +42,10 @@
 struct RefCountedPtrBase
 {
   // Declaration of container for the refcounts
-#ifdef _MSC_VER
-  typedef stdext::hash_map <const void *, int> RefCountsType;
-#else
-  struct ptr_hash
-  {
-    size_t operator () (const void * const v) const
-    {
-      static __gnu_cxx::hash<unsigned int> H;
-      return H(uintptr_t(v));
-    }
-  };
-  typedef __gnu_cxx::hash_map<const void *, int, ptr_hash> RefCountsType;
-#endif
+  typedef std::unordered_map <const void *, int> RefCountsType;
 
 protected:
-  inline RefCountsType& getRefCounts ()
+  RefCountsType& getRefCounts () const
   {
     static RefCountsType refcounts;
     return refcounts ;
@@ -226,10 +212,19 @@ private:
   T* m_p;
 };
 
-//==============================================================================
-
-namespace luabridge
+template <class T>
+bool operator== (const RefCountedPtr <T>& lhs, const RefCountedPtr <T>& rhs)
 {
+  return lhs.get () == rhs.get ();
+}
+
+template <class T>
+bool operator!= (const RefCountedPtr <T>& lhs, const RefCountedPtr <T>& rhs)
+{
+  return lhs.get() != rhs.get();
+}
+
+//==============================================================================
 
 // forward declaration
 template <class T>
@@ -246,6 +241,4 @@ struct ContainerTraits <RefCountedPtr <T> >
   }
 };
 
-}
-
-#endif
+} // namespace luabridge

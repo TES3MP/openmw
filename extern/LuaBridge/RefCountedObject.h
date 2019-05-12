@@ -36,12 +36,15 @@
 */
 //==============================================================================
 
-#ifndef LUABRIDGE_REFCOUNTEDOBJECT_HEADER
-#define LUABRIDGE_REFCOUNTEDOBJECT_HEADER
+#pragma once
 
 //#define LUABRIDGE_COMPILER_SUPPORTS_MOVE_SEMANTICS 1
 
+#include <LuaBridge/detail/TypeTraits.h>
+
 #include <cassert>
+
+namespace luabridge {
 
 //==============================================================================
 /**
@@ -337,13 +340,6 @@ bool operator!= (ReferenceCountedObjectClass* object1, RefCountedObjectPtr<Refer
 
 //==============================================================================
 
-namespace luabridge
-{
-
-// forward declaration
-template <class T>
-struct ContainerTraits;
-
 template <class T>
 struct ContainerTraits <RefCountedObjectPtr <T> >
 {
@@ -355,9 +351,6 @@ struct ContainerTraits <RefCountedObjectPtr <T> >
   }
 };
 
-}
-
 //==============================================================================
 
-#endif
-
+} // namespace luabridge

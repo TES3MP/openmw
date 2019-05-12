@@ -2,6 +2,7 @@
 /*
   https://github.com/vinniefalco/LuaBridge
   
+  Copyright 2019, Dmitry Tarakanov
   Copyright 2012, Vinnie Falco <vinnie.falco@gmail.com>
 
   License: The MIT License (http://www.opensource.org/licenses/mit-license.php)
@@ -26,8 +27,12 @@
 */
 //==============================================================================
 
-#ifndef LUABRIDGE_TYPEINFO_HEADER
-#define LUABRIDGE_TYPEINFO_HEADER
+#pragma once
+
+#include <string>
+
+
+namespace luabridge {
 
 //------------------------------------------------------------------------------
 /**
@@ -57,6 +62,7 @@ template <class T>
 struct ContainerTraits
 {
   typedef bool isNotContainer;
+  typedef T Type;
 };
 
 //------------------------------------------------------------------------------
@@ -122,4 +128,8 @@ struct TypeTraits
   /**@}*/
 };
 
-#endif
+
+template <class T>
+struct Stack;
+
+} // namespace luabridge

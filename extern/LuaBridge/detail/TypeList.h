@@ -43,6 +43,16 @@
 */
 //==============================================================================
 
+#pragma once
+
+#include <LuaBridge/detail/Config.h>
+#include <LuaBridge/detail/Stack.h>
+
+#include <string>
+#include <typeinfo>
+
+namespace luabridge {
+
 /**
   None type means void parameters or return value.
 */
@@ -51,7 +61,39 @@ typedef void None;
 template <typename Head, typename Tail = None>
 struct TypeList
 {
+  typedef Tail TailType;
 };
+
+template <class List>
+struct TypeListSize
+{
+  static const size_t value = TypeListSize <typename List::TailType>::value + 1;
+};
+
+template <>
+struct TypeListSize <None>
+{
+  static const size_t value = 0;
+};
+
+#ifdef LUABRIDGE_CXX11
+
+template <class... Params>
+struct MakeTypeList;
+
+template <class Param, class... Params>
+struct MakeTypeList <Param, Params...>
+{
+  using Result = TypeList <Param, typename MakeTypeList <Params...>::Result>;
+};
+
+template <>
+struct MakeTypeList <>
+{
+  using Result = None;
+};
+
+#endif
 
 /**
   A TypeList with actual values.
@@ -79,7 +121,7 @@ struct TypeListValues <TypeList <Head, Tail> >
   {
   }
 
-  static std::string const tostring (bool comma = false)
+  static std::string tostring (bool comma = false)
   {
     std::string s;
 
@@ -172,3 +214,5 @@ struct ArgList <TypeList <Head, Tail>, Start>
   {
   }
 };
+
+} // namespace luabridge
