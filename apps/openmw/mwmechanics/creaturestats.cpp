@@ -468,6 +468,24 @@ namespace MWMechanics
         return mBlock;
     }
 
+    /* nox7 modification */
+    /*
+        Add manually blocking set
+    */
+    void CreatureStats::setManualBlock(bool value)
+    {
+        mManualBlock = value;
+    }
+
+    /* nox7 modification */
+    /*
+        Add manually blocking get
+    */
+    bool CreatureStats::getManualBlock() const
+    {
+        return mManualBlock;
+    }
+
     bool CreatureStats::getMovementFlag (Flag flag) const
     {
         return (mMovementFlags & flag) != 0;
