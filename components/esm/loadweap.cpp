@@ -19,35 +19,35 @@ namespace ESM
             esm.getSubName();
             switch (esm.retSubName().intval)
             {
-                case ESM::SREC_NAME:
-                    mId = esm.getHString();
-                    hasName = true;
-                    break;
-                case ESM::FourCC<'M','O','D','L'>::value:
-                    mModel = esm.getHString();
-                    break;
-                case ESM::FourCC<'F','N','A','M'>::value:
-                    mName = esm.getHString();
-                    break;
-                case ESM::FourCC<'W','P','D','T'>::value:
-                    esm.getHT(mData, 32);
-                    hasData = true;
-                    break;
-                case ESM::FourCC<'S','C','R','I'>::value:
-                    mScript = esm.getHString();
-                    break;
-                case ESM::FourCC<'I','T','E','X'>::value:
-                    mIcon = esm.getHString();
-                    break;
-                case ESM::FourCC<'E','N','A','M'>::value:
-                    mEnchant = esm.getHString();
-                    break;
-                case ESM::SREC_DELE:
-                    esm.skipHSub();
-                    isDeleted = true;
-                    break;
-                default:
-                    esm.fail("Unknown subrecord");
+            case ESM::SREC_NAME:
+                mId = esm.getHString();
+                hasName = true;
+                break;
+            case ESM::FourCC<'M', 'O', 'D', 'L'>::value:
+                mModel = esm.getHString();
+                break;
+            case ESM::FourCC<'F', 'N', 'A', 'M'>::value:
+                mName = esm.getHString();
+                break;
+            case ESM::FourCC<'W', 'P', 'D', 'T'>::value:
+                esm.getHT(mData, 32);
+                hasData = true;
+                break;
+            case ESM::FourCC<'S', 'C', 'R', 'I'>::value:
+                mScript = esm.getHString();
+                break;
+            case ESM::FourCC<'I', 'T', 'E', 'X'>::value:
+                mIcon = esm.getHString();
+                break;
+            case ESM::FourCC<'E', 'N', 'A', 'M'>::value:
+                mEnchant = esm.getHString();
+                break;
+            case ESM::SREC_DELE:
+                esm.skipHSub();
+                isDeleted = true;
+                break;
+            default:
+                esm.fail("Unknown subrecord");
             }
         }
 
