@@ -615,6 +615,30 @@ void CharacterController::refreshCurrentAnims(CharacterState idle, CharacterStat
         idle = CharState_None;
 
     refreshIdleAnims(weap, idle, force);
+
+    /* nox7 modification */
+    /*
+        Add state for blocking animation
+    */
+    if (mPtr.getClass().getCreatureStats(mPtr).getManualBlock() == true) {
+        if (!mAnimation->isPlaying("shield")) {
+            // Player is manually blocking, play the end of the block animation
+            MWRender::Animation::AnimPriority priorityBlock(Priority_Torch);
+            priorityBlock[MWRender::Animation::BoneGroup_LeftArm] = Priority_Block;
+            mAnimation->play("shield", priorityBlock, MWRender::Animation::BlendMask_All, false, 1, "block hit", "block hit", 0.0f, 0);
+        }
+    }
+    else {
+        // std::cout << "Not blocking, is anim playing?\n";
+        // if (mAnimation->isPlaying("shield")) {
+            // std::cout << "Anim was playing, stopping?\n";
+            // Disable the shield animation if the player stopped blocking
+        mAnimation->disable("shield");
+        //MWRender::Animation::AnimPriority priorityBlock(Priority_Hit);
+        //priorityBlock[MWRender::Animation::BoneGroup_LeftArm] = Priority_Block;
+        //mAnimation->play("shield", priorityBlock, MWRender::Animation::BlendMask_All, true, 1, "block stop", "block start", 0.0f, 0);
+    // }
+    }
 }
 
 
