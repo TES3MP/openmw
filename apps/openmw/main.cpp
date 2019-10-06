@@ -218,35 +218,6 @@ bool parseOptions (int argc, char** argv, OMW::Engine& engine, Files::Configurat
         End of tes3mp change (minor)
     */
 
-    /*
-        Start of tes3mp addition
-
-        Check for unmodified tes3mp-credits file on Windows; this makes it so people can't repackage official
-        releases with their own made-up credits, though it obviously has no bearing on unofficial releases that
-        change the checksum below
-    */
-#ifdef _WIN32
-
-    std::string creditsPath = (cfgMgr.getLocalPath() / "tes3mp-credits").string();
-
-    unsigned int expectedChecksumInt = Utils::hexStrToInt(TES3MP_CREDITS_CHECKSUM);
-    bool hasValidCredits = Utils::doesFileHaveChecksum(creditsPath + ".md", expectedChecksumInt);
-
-    if (!hasValidCredits)
-        hasValidCredits = Utils::doesFileHaveChecksum(creditsPath + ".txt", expectedChecksumInt);
-
-    if (!hasValidCredits)
-    {
-        LOG_MESSAGE_SIMPLE(Log::LOG_FATAL, "The client is shutting down");
-        LOG_APPEND(Log::LOG_FATAL, "- %s", TES3MP_CREDITS_ERROR);
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "tes3mp", TES3MP_CREDITS_ERROR, 0);
-        return false;
-    }
-#endif
-    /*
-        End of tes3mp addition
-    */
-
     engine.setGrabMouse(!variables["no-grab"].as<bool>());
 
     // Font encoding settings
