@@ -38,6 +38,8 @@ FIND_PATH (RakNet_INCLUDES raknet/RakPeer.h
     /usr/local/include
     /opt/local/include
 	$ENV{RAKNET_ROOT}/include
+	PATHS
+	${CMAKE_SOURCE_DIR}/MSVC2017_64/deps/Crabnet
     )
  
 MESSAGE(STATUS ${RakNet_INCLUDES})
