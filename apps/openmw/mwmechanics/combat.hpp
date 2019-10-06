@@ -12,6 +12,9 @@ bool applyOnStrikeEnchantment(const MWWorld::Ptr& attacker, const MWWorld::Ptr& 
 /// @return can we block the attack?
 bool blockMeleeAttack (const MWWorld::Ptr& attacker, const MWWorld::Ptr& blocker, const MWWorld::Ptr& weapon, float damage, float attackStrength);
 
+/// @return Is the attack being manually blocked? If so, reduce the damage
+void attemptToManuallyBlockMeleeAttack(const MWWorld::Ptr& attacker, const MWWorld::Ptr& blocker, const MWWorld::Ptr& weapon, float &damage, float attackStrength);
+
 void resistNormalWeapon (const MWWorld::Ptr& actor, const MWWorld::Ptr& attacker, const MWWorld::Ptr& weapon, float& damage);
 
 /// @note for a thrown weapon, \a weapon == \a projectile, for bows/crossbows, \a projectile is the arrow/bolt

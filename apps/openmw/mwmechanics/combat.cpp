@@ -187,6 +187,86 @@ namespace MWMechanics
         return false;
     }
 
+    /* nox7 addition */
+    /*
+        Add method to manually block attack if player is manually blocking, this will affect damage
+    */
+    void attemptToManuallyBlockMeleeAttack(const MWWorld::Ptr &attacker, const MWWorld::Ptr &blocker, const MWWorld::Ptr &weapon, float &damage, float attackStrength)
+    {
+        if (!blocker.getClass().hasInventoryStore(blocker))
+            return;
+
+        MWMechanics::CreatureStats& blockerStats = blocker.getClass().getCreatureStats(blocker);
+
+        if (blockerStats.getKnockedDown() // Used for both knockout or knockdown
+            || blockerStats.getHitRecovery()
+            || blockerStats.isParalyzed())
+            return;
+
+        if (!MWBase::Environment::get().getMechanicsManager()->isReadyToBlock(blocker))
+            return;
+
+        if (blocker == MWMechanics::getPlayer() && blockerStats.getManualBlock()) {
+            // Victim is manually blocking
+
+            // Reduce shield durability by incoming damage, before modification
+            // Get the shield
+            MWWorld::InventoryStore& inv = blocker.getClass().getInventoryStore(blocker);
+            MWWorld::ContainerStoreIterator shield = inv.getSlot(MWWorld::InventoryStore::Slot_CarriedLeft);
+            if (shield == inv.end() || shield->getTypeName() != typeid(ESM::Armor).name()) {
+                // Shouldn't happen, can't block without a shield
+            }
+            else {
+                int shieldhealth = shield->getClass().getItemHealth(*shield);
+
+                shieldhealth -= std::min(shieldhealth, int(damage));
+                shield->getCellRef().setCharge(shieldhealth);
+
+                // If the shield broke, then unequip it and stop blocking animation pose
+                if (shieldhealth == 0) {
+                    blockerStats.setManualBlock(false);
+                    inv.unequipItem(*shield, blocker);
+                }
+
+                // Fetch victim's block skill and apply it to reduce incoming damage
+                float blockSkill = static_cast<float>(blocker.getClass().getSkill(blocker, ESM::Skill::Block));
+                float blockedDamage = damage * (blockSkill / 100.0f);
+                damage -= blockedDamage;
+                damage = ceil(damage);
+                if (damage < 0.01f) {
+                    damage = 0;
+                }
+
+                // Plays the block sound for the armor piece
+                blocker.getClass().block(blocker);
+
+                // Drain the victim's fatigue from blocking
+                const MWWorld::Store<ESM::GameSetting>& gmst = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+                const float fFatigueBlockBase = gmst.find("fFatigueBlockBase")->mValue.getFloat();
+                const float fFatigueBlockMult = gmst.find("fFatigueBlockMult")->mValue.getFloat();
+                const float fWeaponFatigueBlockMult = gmst.find("fWeaponFatigueBlockMult")->mValue.getFloat();
+                MWMechanics::DynamicStat<float> fatigue = blockerStats.getFatigue();
+                float normalizedEncumbrance = blocker.getClass().getNormalizedEncumbrance(blocker);
+                normalizedEncumbrance = std::min(1.f, normalizedEncumbrance);
+                float fatigueLoss = fFatigueBlockBase + normalizedEncumbrance * fFatigueBlockMult;
+                if (!weapon.isEmpty())
+                    fatigueLoss += weapon.getClass().getWeight(weapon) * attackStrength * fWeaponFatigueBlockMult;
+
+                float newFatigue = fatigue.getCurrent() - fatigueLoss;
+                fatigue.setCurrent(newFatigue);
+                blockerStats.setFatigue(fatigue);
+
+                // If the fatigue is too low, then they cannot block
+                if (newFatigue <= 0)
+                    blockerStats.setManualBlock(false);
+
+                // Give the blocker's Block skill some experience
+                if (blocker == MWMechanics::getPlayer())
+                    blocker.getClass().skillUsageSucceeded(blocker, ESM::Skill::Block, 0);
+            }
+        }
+    }
+
     void resistNormalWeapon(const MWWorld::Ptr &actor, const MWWorld::Ptr& attacker, const MWWorld::Ptr &weapon, float &damage)
     {
         const MWMechanics::MagicEffects& effects = actor.getClass().getCreatureStats(actor).getMagicEffects();
@@ -482,23 +562,27 @@ namespace MWMechanics
 
     void adjustWeaponDamage(float &damage, const MWWorld::Ptr &weapon, const MWWorld::Ptr& attacker)
     {
+        /* nox7 modification */
+        /*
+            The weapon damage is now only adjusted by the weapon's condition
+            TODO A little bit of strength too later (10%?)
+        */
+
         if (weapon.isEmpty())
             return;
 
         const bool weaphashealth = weapon.getClass().hasItemHealth(weapon);
-        if(weaphashealth)
+        if (weaphashealth)
         {
-            int weaphealth = weapon.getClass().getItemHealth(weapon);
-            int weapmaxhealth = weapon.getClass().getItemMaxHealth(weapon);
-            damage *= (float(weaphealth) / weapmaxhealth);
+            damage *= weapon.getClass().getItemNormalizedHealth(weapon);
         }
 
-        static const float fDamageStrengthBase = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>()
-                .find("fDamageStrengthBase")->getFloat();
-        static const float fDamageStrengthMult = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>()
-                .find("fDamageStrengthMult")->getFloat();
-        damage *= fDamageStrengthBase +
-                (attacker.getClass().getCreatureStats(attacker).getAttribute(ESM::Attribute::Strength).getModified() * fDamageStrengthMult * 0.1f);
+        // static const float fDamageStrengthBase = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>()
+        //        .find("fDamageStrengthBase")->mValue.getFloat();
+        // static const float fDamageStrengthMult = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>()
+        //        .find("fDamageStrengthMult")->mValue.getFloat();
+        // damage *= fDamageStrengthBase +
+        //        (attacker.getClass().getCreatureStats(attacker).getAttribute(ESM::Attribute::Strength).getModified() * fDamageStrengthMult * 0.1f);
     }
 
     void getHandToHandDamage(const MWWorld::Ptr &attacker, const MWWorld::Ptr &victim, float &damage, bool &healthdmg, float attackStrength)
