@@ -180,7 +180,7 @@ namespace MWInput
                                 A_ToggleSpell, A_Rest, A_QuickKey1, A_QuickKey2,
                                 A_QuickKey3, A_QuickKey4, A_QuickKey5, A_QuickKey6,
                                 A_QuickKey7, A_QuickKey8, A_QuickKey9, A_QuickKey10,
-                                A_Use, A_Journal};
+                                A_Use, A_Journal, A_ManualBlock};
 
         for(size_t i = 0; i < sizeof(playerChannels)/sizeof(playerChannels[0]); i++) {
             int pc = playerChannels[i];
@@ -265,8 +265,42 @@ namespace MWInput
                 MWMechanics::DrawState_ state = MWBase::Environment::get().getWorld()->getPlayer().getDrawState();
                 mPlayer->setAttackingOrSpell(currentValue != 0 && state != MWMechanics::DrawState_Nothing);
             }
-            else if (action == A_Jump)
+            else if (action == A_Jump) {
                 mAttemptJump = (currentValue == 1.0 && previousValue == 0.0);
+            }
+            else if (action == A_ManualBlock) {
+                if (currentValue == 1.0) {
+                    // Do they meet the requirements to block?
+                    // Have a shield equipped, fatigue is greater than 0
+                    MWWorld::InventoryStore& inv = mPlayer->getPlayer().getClass().getInventoryStore(mPlayer->getPlayer());
+                    MWWorld::ContainerStoreIterator shield = inv.getSlot(MWWorld::InventoryStore::Slot_CarriedLeft);
+                    if (shield == inv.end() || shield->getTypeName() != typeid(ESM::Armor).name()) {
+                        // No shield
+                    }
+                    else {
+                        // Has a shield, but is there a two-handed weapon or hand-to-hand equipped? If so, only allow blocking when draw state is none
+                        int weaponType = ESM::Weapon::None;
+                        MWMechanics::getActiveWeapon(mPlayer->getPlayer(), &weaponType);
+                        if (weaponType == ESM::Weapon::LongBladeTwoHand || weaponType == ESM::Weapon::BluntTwoClose ||
+                            weaponType == ESM::Weapon::BluntTwoWide || weaponType == ESM::Weapon::HandToHand ||
+                            weaponType == ESM::Weapon::AxeTwoHand || weaponType == ESM::Weapon::SpearTwoWide ||
+                            weaponType == ESM::Weapon::MarksmanBow || weaponType == ESM::Weapon::MarksmanCrossbow ||
+                            weaponType == ESM::Weapon::Spell || weaponType == ESM::Weapon::MarksmanThrown ||
+                            weaponType == ESM::Weapon::PickProbe
+                            ) {
+                            MWBase::Environment::get().getWindowManager()->messageBox("No shield available to block!");
+                        }
+                        else {
+                            MWMechanics::DynamicStat<float> fatigue = mPlayer->getPlayer().getClass().getCreatureStats(mPlayer->getPlayer()).getFatigue();
+                            if (floor(fatigue.getCurrent()) > 0.0f)
+                                mPlayer->getPlayer().getClass().getCreatureStats(mPlayer->getPlayer()).setManualBlock(true);
+                        }
+                    }
+                }
+                else {
+                    mPlayer->getPlayer().getClass().getCreatureStats(mPlayer->getPlayer()).setManualBlock(false);
+                }
+            }
         }
 
         if (currentValue == 1)
