@@ -15,6 +15,12 @@ TES3MP is a project adding multiplayer functionality to [OpenMW](https://github.
 Font Licenses:
 * DejaVuLGCSansMono.ttf: custom (see [files/mygui/DejaVu Font License.txt](https://github.com/TES3MP/openmw-tes3mp/blob/master/files/mygui/DejaVu%20Font%20License.txt) for more information)
 
+Building from Source (Windows w/ VS 2017)
+--------------
+Begin by cloning this repository into `C:\OpenMW-Tes3MP-Dev` then building the VS project as described in [this guide from the OpenMW team](https://wiki.openmw.org/index.php?title=Development_Environment_Setup#Visual_Studio_2013.2F2015.2F2017_scripted_way)
+
+TODO: Write about CrabNet and using the working commit (latets master is broken) and installing Lua.
+
 Project status
 --------------
 
