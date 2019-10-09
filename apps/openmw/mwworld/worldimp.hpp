@@ -237,8 +237,6 @@ namespace MWWorld
 
             void adjustSky() override;
 
-            const Fallback::Map *getFallback() const override;
-
             Player& getPlayer() override;
             MWWorld::Ptr getPlayerPtr() override;
 

@@ -134,19 +134,19 @@ namespace MWGui
         MWMechanics::NpcStats& pcStats = player.getClass().getNpcStats(player);
 
         setClassImage(mClassImage, getLevelupClassImage(pcStats.getSkillIncreasesForSpecialization(0),
-                                                        pcStats.getSkillIncreasesForSpecialization(1),
-                                                        pcStats.getSkillIncreasesForSpecialization(2)));
+            pcStats.getSkillIncreasesForSpecialization(1),
+            pcStats.getSkillIncreasesForSpecialization(2)));
 
-        int level = creatureStats.getLevel ()+1;
+        int level = creatureStats.getLevel() + 1;
         mLevelText->setCaptionWithReplacing("#{sLevelUpMenu1} " + MyGUI::utility::toString(level));
 
         std::string levelupdescription;
-        levelupdescription=world->getFallback()->getString("Level_Up_Level"+MyGUI::utility::toString(level));
+        levelupdescription = Fallback::Map::getString("Level_Up_Level" + MyGUI::utility::toString(level));
 
         if (levelupdescription == "")
-            levelupdescription=world->getFallback()->getString("Level_Up_Default");
+            levelupdescription = Fallback::Map::getString("Level_Up_Default");
 
-        mLevelDescription->setCaption (levelupdescription);
+        mLevelDescription->setCaption(levelupdescription);
 
         unsigned int availableAttributes = 0;
         for (int i = 0; i < 8; ++i)
@@ -158,8 +158,8 @@ namespace MWGui
                 mAttributeValues[i]->setEnabled(true);
                 availableAttributes++;
 
-                int mult = pcStats.getLevelupAttributeMultiplier (i);
-                mult = std::min(mult, 100-pcStats.getAttribute(i).getBase());
+                int mult = pcStats.getLevelupAttributeMultiplier(i);
+                mult = std::min(mult, 100 - pcStats.getAttribute(i).getBase());
                 text->setCaption(mult <= 1 ? "" : "x" + MyGUI::utility::toString(mult));
             }
             else
