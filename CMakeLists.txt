@@ -255,9 +255,9 @@ ELSE()
 ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
 
 
-set(BOOST_COMPONENTS system filesystem program_options)
+set(BOOST_COMPONENTS system filesystem program_options iostreams)
 if(WIN32)
-    set(BOOST_COMPONENTS ${BOOST_COMPONENTS} locale)
+    set(BOOST_COMPONENTS ${BOOST_COMPONENTS} locale zlib)
 endif(WIN32)
 
 IF(BOOST_STATIC)
