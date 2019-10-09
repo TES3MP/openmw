@@ -208,7 +208,7 @@ endif()
 
 IF(BUILD_OPENMW OR BUILD_OPENCS)
 
-    find_package(OpenSceneGraph 3.3.4 REQUIRED osgDB osgViewer osgText osgGA osgParticle osgUtil osgFX)
+    find_package(OpenSceneGraph 3.3.4 REQUIRED osgDB osgViewer osgText osgGA osgParticle osgUtil osgFX osgShadow)
     include_directories(${OPENSCENEGRAPH_INCLUDE_DIRS})
 
     set(USED_OSG_PLUGINS
