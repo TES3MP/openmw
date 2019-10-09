@@ -17,7 +17,7 @@ namespace mwmp
 
         virtual void Do(ActorPacket &packet, ActorList &actorList)
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received %s about %s", strPacketID.c_str(), actorList.cell.getDescription().c_str());
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received %s about %s", strPacketID.c_str(), actorList.cell.getDescription().c_str());
 
             Main::get().getCellController()->readAi(actorList);
         }

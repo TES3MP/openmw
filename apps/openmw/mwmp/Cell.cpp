@@ -1,5 +1,5 @@
 #include <components/esm/cellid.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include "../mwbase/environment.hpp"
 
@@ -64,7 +64,7 @@ void Cell::updateLocal(bool forceUpdate)
             // If the cell this actor has moved to is under our authority, move them to it
             if (cellController->hasLocalAuthority(actor->cell))
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "- Moving LocalActor %s to our authority in %s",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Moving LocalActor %s to our authority in %s",
                     mapIndex.c_str(), actor->cell.getDescription().c_str());
                 Cell *newCell = cellController->getCell(actor->cell);
                 newCell->localActors[mapIndex] = actor;
@@ -72,7 +72,7 @@ void Cell::updateLocal(bool forceUpdate)
             }
             else
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "- Deleting LocalActor %s which is no longer under our authority",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Deleting LocalActor %s which is no longer under our authority",
                     mapIndex.c_str(), getDescription().c_str());
                 cellController->removeLocalActorRecord(mapIndex);
                 delete actor;
@@ -337,7 +337,7 @@ void Cell::readCellChange(ActorList& actorList)
         // Is a packet mistakenly moving the actor to the cell it's already in? If so, ignore it
         if (Misc::StringUtils::ciEqual(getDescription(), baseActor.cell.getDescription()))
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Server says DedicatedActor %s moved to %s, but it was already there",
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Server says DedicatedActor %s moved to %s, but it was already there",
                 mapIndex.c_str(), getDescription().c_str());
             continue;
         }
@@ -349,7 +349,7 @@ void Cell::readCellChange(ActorList& actorList)
             dedicatedActor->position = baseActor.position;
             dedicatedActor->direction = baseActor.direction;
 
-            LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Server says DedicatedActor %s moved to %s",
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Server says DedicatedActor %s moved to %s",
                 mapIndex.c_str(), dedicatedActor->cell.getDescription().c_str());
 
             MWWorld::CellStore *newStore = cellController->getCellStore(dedicatedActor->cell);
@@ -358,7 +358,7 @@ void Cell::readCellChange(ActorList& actorList)
             // If the cell this actor has moved to is active and not under our authority, move them to it
             if (cellController->isActiveWorldCell(dedicatedActor->cell) && !cellController->hasLocalAuthority(dedicatedActor->cell))
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "- Moving DedicatedActor %s to our active cell %s",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Moving DedicatedActor %s to our active cell %s",
                     mapIndex.c_str(), dedicatedActor->cell.getDescription().c_str());
                 cellController->initializeCell(dedicatedActor->cell);
                 Cell *newCell = cellController->getCell(dedicatedActor->cell);
@@ -369,7 +369,7 @@ void Cell::readCellChange(ActorList& actorList)
             {
                 if (cellController->hasLocalAuthority(dedicatedActor->cell))
                 {
-                    LOG_APPEND(Log::LOG_VERBOSE, "- Creating new LocalActor based on %s in %s",
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Creating new LocalActor based on %s in %s",
                         mapIndex.c_str(), dedicatedActor->cell.getDescription().c_str());
                     Cell *newCell = cellController->getCell(dedicatedActor->cell);
                     LocalActor *localActor = new LocalActor();
@@ -386,7 +386,7 @@ void Cell::readCellChange(ActorList& actorList)
                     cellController->setLocalActorRecord(mapIndex, newCell->getDescription());
                 }
 
-                LOG_APPEND(Log::LOG_VERBOSE, "- Deleting DedicatedActor %s which is no longer needed",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Deleting DedicatedActor %s which is no longer needed",
                     mapIndex.c_str(), getDescription().c_str());
                 cellController->removeDedicatedActorRecord(mapIndex);
                 delete dedicatedActor;
@@ -400,7 +400,7 @@ void Cell::readCellChange(ActorList& actorList)
 void Cell::initializeLocalActor(const MWWorld::Ptr& ptr)
 {
     std::string mapIndex = Main::get().getCellController()->generateMapIndex(ptr);
-    LOG_APPEND(Log::LOG_VERBOSE, "- Initializing LocalActor %s in %s", mapIndex.c_str(), getDescription().c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Initializing LocalActor %s in %s", mapIndex.c_str(), getDescription().c_str());
 
     LocalActor *actor = new LocalActor();
     actor->cell = *store->getCell();
@@ -415,12 +415,12 @@ void Cell::initializeLocalActor(const MWWorld::Ptr& ptr)
 
     Main::get().getCellController()->setLocalActorRecord(mapIndex, getDescription());
 
-    LOG_APPEND(Log::LOG_VERBOSE, "- Successfully initialized LocalActor %s in %s", mapIndex.c_str(), getDescription().c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Successfully initialized LocalActor %s in %s", mapIndex.c_str(), getDescription().c_str());
 }
 
 void Cell::initializeLocalActors()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Initializing LocalActors in %s", getDescription().c_str());
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Initializing LocalActors in %s", getDescription().c_str());
 
     for (const auto &mergedRef : store->getMergedRefs())
     {
@@ -439,13 +439,13 @@ void Cell::initializeLocalActors()
         }
     }
 
-    LOG_APPEND(Log::LOG_VERBOSE, "- Successfully initialized LocalActors in %s", getDescription().c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Successfully initialized LocalActors in %s", getDescription().c_str());
 }
 
 void Cell::initializeDedicatedActor(const MWWorld::Ptr& ptr)
 {
     std::string mapIndex = Main::get().getCellController()->generateMapIndex(ptr);
-    LOG_APPEND(Log::LOG_VERBOSE, "- Initializing DedicatedActor %s in %s", mapIndex.c_str(), getDescription().c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Initializing DedicatedActor %s in %s", mapIndex.c_str(), getDescription().c_str());
 
     DedicatedActor *actor = new DedicatedActor();
     actor->cell = *store->getCell();
@@ -455,7 +455,7 @@ void Cell::initializeDedicatedActor(const MWWorld::Ptr& ptr)
 
     Main::get().getCellController()->setDedicatedActorRecord(mapIndex, getDescription());
 
-    LOG_APPEND(Log::LOG_VERBOSE, "- Successfully initialized DedicatedActor %s in %s", mapIndex.c_str(), getDescription().c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Successfully initialized DedicatedActor %s in %s", mapIndex.c_str(), getDescription().c_str());
 }
 
 void Cell::initializeDedicatedActors(ActorList& actorList)

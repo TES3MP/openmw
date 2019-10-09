@@ -24,11 +24,11 @@ namespace mwmp
         {
             if (!isLocal()) return;
 
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_ITEM_USE about LocalPlayer from server");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_ITEM_USE about LocalPlayer from server");
 
             if (!isRequest())
             {
-                LOG_APPEND(Log::LOG_INFO, "- refId: %s, count: %i, charge: %i, enchantmentCharge: %f, soul: %s",
+                LOG_APPEND(MWMPLog::LOG_INFO, "- refId: %s, count: %i, charge: %i, enchantmentCharge: %f, soul: %s",
                     player->usedItem.refId.c_str(), player->usedItem.count, player->usedItem.charge,
                     player->usedItem.enchantmentCharge, player->usedItem.soul.c_str());
 
@@ -40,7 +40,7 @@ namespace mwmp
                 if (itemPtr)
                     MWBase::Environment::get().getWindowManager()->getInventoryWindow()->useItem(itemPtr);
                 else
-                    LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Cannot use non-existent item %s", player->usedItem.refId.c_str());
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Cannot use non-existent item %s", player->usedItem.refId.c_str());
             }
         }
     };

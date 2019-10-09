@@ -4,7 +4,7 @@
 
 #include <cstdlib>
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Version.hpp>
 
 #include <components/esm/esmwriter.hpp>
@@ -85,7 +85,7 @@ std::string loadSettings(Settings::Manager& settings)
 
 Main::Main()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "tes3mp started");
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "tes3mp started");
     mNetworking = new Networking();
     mLocalPlayer = new LocalPlayer();
     mGUIController = new GUIController();
@@ -97,7 +97,7 @@ Main::Main()
 
 Main::~Main()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "tes3mp stopped");
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "tes3mp stopped");
     delete mNetworking;
     delete mLocalPlayer;
     delete mCellController;
@@ -153,7 +153,7 @@ bool Main::init(std::vector<std::string> &content, Files::Collections &collectio
     initializeManager(manager);
 
     int logLevel = manager.getInt("logLevel", "General");
-    Log::SetLevel(logLevel);
+    MWMPLog::SetLevel(logLevel);
     if (address.empty())
     {
         pMain->server = manager.getString("destinationAddress", "General");
@@ -219,7 +219,7 @@ void Main::updateWorld(float dt) const
     if (init)
     {
         init = false;
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending ID_PLAYER_BASEINFO to server");
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Sending ID_PLAYER_BASEINFO to server");
 
         mNetworking->getPlayerPacket(ID_PLAYER_BASEINFO)->setPlayer(getLocalPlayer());
         mNetworking->getPlayerPacket(ID_LOADED)->setPlayer(getLocalPlayer());

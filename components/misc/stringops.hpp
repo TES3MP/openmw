@@ -1,8 +1,6 @@
 #ifndef MISC_STRINGOPS_H
 #define MISC_STRINGOPS_H
 
-#include <cctype>
-#include <cstring>
 #include <string>
 #include <algorithm>
 
@@ -19,6 +17,19 @@ class StringUtils
         }
     };
 
+    // Allow to convert complex arguments to C-style strings for format() function
+    template <typename T>
+    static T argument(T value) noexcept
+    {
+        return value;
+    }
+
+    template <typename T>
+    static T const * argument(std::basic_string<T> const & value) noexcept
+    {
+        return value.c_str();
+    }
+
 public:
 
     /// Plain and simple locale-unaware toLower. Anything from A to Z is lower-cased, multibyte characters are unchanged.
@@ -26,36 +37,7 @@ public:
     /// Don't use tolower(int) because that depends on global locale.
     static char toLower(char c)
     {
-        switch(c)
-        {
-        case 'A':return 'a';
-        case 'B':return 'b';
-        case 'C':return 'c';
-        case 'D':return 'd';
-        case 'E':return 'e';
-        case 'F':return 'f';
-        case 'G':return 'g';
-        case 'H':return 'h';
-        case 'I':return 'i';
-        case 'J':return 'j';
-        case 'K':return 'k';
-        case 'L':return 'l';
-        case 'M':return 'm';
-        case 'N':return 'n';
-        case 'O':return 'o';
-        case 'P':return 'p';
-        case 'Q':return 'q';
-        case 'R':return 'r';
-        case 'S':return 's';
-        case 'T':return 't';
-        case 'U':return 'u';
-        case 'V':return 'v';
-        case 'W':return 'w';
-        case 'X':return 'x';
-        case 'Y':return 'y';
-        case 'Z':return 'z';
-        default:return c;
-        };
+        return (c >= 'A' && c <= 'Z') ? c + 'a' - 'A' : c;
     }
 
     static Utf8Stream::UnicodeChar toLowerUtf8(Utf8Stream::UnicodeChar ch)
@@ -240,6 +222,28 @@ public:
               offset = found + withLen;
         }
         return str;
+    }
+
+    // Requires some C++11 features:
+    // 1. std::string needs to be contiguous
+    // 2. std::snprintf with zero size (second argument) returns an output string size
+    // 3. variadic templates support
+    template <typename ... Args>
+    static std::string format(const char* fmt, Args const & ... args)
+    {
+        auto size = std::snprintf(nullptr, 0, fmt, argument(args) ...);
+        // Note: sprintf also writes a trailing null character. We should remove it.
+        std::string ret(size+1, '\0');
+        std::sprintf(&ret[0], fmt, argument(args) ...);
+        ret.erase(size);
+
+        return ret;
+    }
+
+    template <typename ... Args>
+    static std::string format(const std::string& fmt, Args const & ... args)
+    {
+        return format(fmt.c_str(), args ...);
     }
 };
 

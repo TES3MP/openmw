@@ -9,7 +9,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 /*
     End of tes3mp addition
 */
@@ -99,7 +99,7 @@ int wrapApplication(int (*innerApplication)(int argc, char *argv[]), int argc, c
 
             Initialize the logger added for multiplayer
         */
-        LOG_INIT(Log::LOG_INFO);
+        LOG_INIT(MWMPLog::LOG_INFO);
         /*
             End of tes3mp addition
         */

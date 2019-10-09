@@ -18,7 +18,7 @@ namespace mwmp
         {
             if (!isLocal()) return;
 
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_MISCELLANEOUS about LocalPlayer from server");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_MISCELLANEOUS about LocalPlayer from server");
 
             if (!isRequest())
             {

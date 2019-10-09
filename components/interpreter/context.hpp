@@ -12,7 +12,6 @@ namespace Interpreter
 
             /*
                 Start of tes3mp addition
-
                 Keep an enumeration of the possible context types
             */
             enum CONTEXT_TYPE
@@ -71,7 +70,7 @@ namespace Interpreter
 
             virtual std::string getActionBinding(const std::string& action) const = 0;
 
-            virtual std::string getNPCName() const = 0;
+            virtual std::string getActorName() const = 0;
 
             virtual std::string getNPCRace() const = 0;
 
@@ -129,7 +128,6 @@ namespace Interpreter
 
             /*
                 Start of tes3mp addition
-
                 Used for setting and checking the type of this Context
             */
             virtual unsigned short getContextType() const = 0;

@@ -15,7 +15,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
 #include "../mwmp/LocalPlayer.hpp"
@@ -396,10 +396,17 @@ namespace MWScript
         return "None";
     }
 
-    std::string InterpreterContext::getNPCName() const
+    std::string InterpreterContext::getActorName() const
     {
-        ESM::NPC npc = *getReferenceImp().get<ESM::NPC>()->mBase;
-        return npc.mName;
+        const MWWorld::Ptr& ptr = getReferenceImp();
+        if (ptr.getClass().isNpc())
+        {
+            const ESM::NPC* npc = ptr.get<ESM::NPC>()->mBase;
+            return npc->mName;
+        }
+
+        const ESM::Creature* creature = ptr.get<ESM::Creature>()->mBase;
+        return creature->mName;
     }
 
     std::string InterpreterContext::getNPCRace() const

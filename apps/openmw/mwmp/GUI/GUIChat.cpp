@@ -9,7 +9,7 @@
 #include "apps/openmw/mwgui/windowmanagerimp.hpp"
 #include "apps/openmw/mwinput/inputmanagerimp.hpp"
 #include <MyGUI_InputManager.h>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include "../Networking.hpp"
 #include "../Main.hpp"
@@ -83,7 +83,7 @@ namespace mwmp
             return;
         }
 
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Player: %s", cm.c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Player: %s", cm.c_str());
 
         // Add the command to the history, and set the current pointer to
         // the end of the list
@@ -121,12 +121,12 @@ namespace mwmp
         if(msg.size() == 0)
         {
             clean();
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Chat cleaned");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Chat cleaned");
         }
         else
         {
             mHistory->addText(color + msg);
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "%s", msg.c_str());
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "%s", msg.c_str());
         }
     }
 
@@ -166,7 +166,7 @@ namespace mwmp
                                windowState == CHAT_ENABLED ? "Chat visible" :
                                "Chat appearing when needed";
 
-        LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Switch chat mode to %s", chatMode.c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Switch chat mode to %s", chatMode.c_str());
         MWBase::Environment::get().getWindowManager()->messageBox(chatMode);
 
         switch (windowState)
@@ -197,7 +197,7 @@ namespace mwmp
             return;
 
         if (!mCommandLine->getVisible())
-            LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Opening chat.");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Opening chat.");
 
         if (windowState == CHAT_HIDDENMODE)
         {

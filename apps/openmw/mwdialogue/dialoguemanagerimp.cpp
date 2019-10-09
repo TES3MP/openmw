@@ -65,7 +65,7 @@ namespace MWDialogue
       mTranslationDataStorage(translationDataStorage)
       , mCompilerContext (MWScript::CompilerContext::Type_Dialogue)
       , mErrorStream(std::cout.rdbuf())
-      , mErrorHandler(mErrorStream)
+      , mErrorHandler()
       , mTalkedTo(false)
       , mTemporaryDispositionChange(0.f)
       , mPermanentDispositionChange(0.f)

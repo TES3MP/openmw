@@ -229,12 +229,12 @@ namespace MWWorld
     {
         if (!mWorkQueue)
         {
-            std::cerr << "Error: can't preload, no work queue set " << std::endl;
+            Log(Debug::Error) << "Error: can't preload, no work queue set";
             return;
         }
         if (cell->getState() == CellStore::State_Unloaded)
         {
-            std::cerr << "Error: can't preload objects for unloaded cell" << std::endl;
+            Log(Debug::Error) << "Error: can't preload objects for unloaded cell";
             return;
         }
 
@@ -250,7 +250,7 @@ namespace MWWorld
         {
             // throw out oldest cell to make room
             PreloadMap::iterator oldestCell = mPreloadCells.begin();
-            double oldestTimestamp = DBL_MAX;
+            double oldestTimestamp = std::numeric_limits<double>::max();
             double threshold = 1.0; // seconds
             for (PreloadMap::iterator it = mPreloadCells.begin(); it != mPreloadCells.end(); ++it)
             {
@@ -270,7 +270,7 @@ namespace MWWorld
                 return;
         }
 
-        osg::ref_ptr<PreloadItem> item (new PreloadItem(cell, mResourceSystem->getSceneManager(), mBulletShapeManager, mResourceSystem->getKeyframeManager(), mTerrain, mLandManager, mPreloadInstances));
+        osg::ref_ptr<PreloadItem> item(new PreloadItem(cell, mResourceSystem->getSceneManager(), mBulletShapeManager, mResourceSystem->getKeyframeManager(), mTerrain, mLandManager, mPreloadInstances));
         mWorkQueue->addWorkItem(item);
 
         mPreloadCells[cell] = PreloadEntry(timestamp, item);
@@ -378,12 +378,18 @@ namespace MWWorld
         {
         }
 
+        void storeViews(double referenceTime)
+        {
+            for (unsigned int i = 0; i < mTerrainViews.size() && i < mPreloadPositions.size(); ++i)
+                mWorld->storeView(mTerrainViews[i], referenceTime);
+        }
+
         virtual void doWork()
         {
             for (unsigned int i=0; i<mTerrainViews.size() && i<mPreloadPositions.size() && !mAbort; ++i)
             {
-                mWorld->preload(mTerrainViews[i], mPreloadPositions[i]);
-                mTerrainViews[i]->reset(0);
+                mTerrainViews[i]->reset();
+                mWorld->preload(mTerrainViews[i], mPreloadPositions[i], mAbort);
             }
         }
 
@@ -393,7 +399,7 @@ namespace MWWorld
         }
 
     private:
-        volatile bool mAbort;
+        std::atomic<bool> mAbort;
         std::vector<osg::ref_ptr<Terrain::View> > mTerrainViews;
         Terrain::World* mWorld;
         std::vector<osg::Vec3f> mPreloadPositions;

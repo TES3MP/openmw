@@ -578,6 +578,10 @@ if(WIN32)
 endif(WIN32)
 
 # Extern
+set(RECASTNAVIGATION_STATIC ON CACHE BOOL "Build recastnavigation static libraries")
+
+add_subdirectory (extern/recastnavigation EXCLUDE_FROM_ALL)
+
 IF(BUILD_OPENMW OR BUILD_OPENCS)
 add_subdirectory (extern/osg-ffmpeg-videoplayer)
 add_subdirectory (extern/oics)

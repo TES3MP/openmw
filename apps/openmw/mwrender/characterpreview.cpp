@@ -1,7 +1,6 @@
 #include "characterpreview.hpp"
 
 #include <cmath>
-#include <iostream>
 
 #include <osg/Material>
 #include <osg/Fog>
@@ -14,8 +13,10 @@
 #include <osgUtil/IntersectionVisitor>
 #include <osgUtil/LineSegmentIntersector>
 
+#include <components/debug/debuglog.hpp>
 #include <components/fallback/fallback.hpp>
 #include <components/sceneutil/lightmanager.hpp>
+#include <components/sceneutil/shadow.hpp>
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
@@ -23,6 +24,7 @@
 #include "../mwworld/inventorystore.hpp"
 
 #include "../mwmechanics/actorutil.hpp"
+#include "../mwmechanics/weapontype.hpp"
 
 #include "npcanimation.hpp"
 #include "vismask.hpp"
@@ -33,7 +35,7 @@ namespace MWRender
     class DrawOnceCallback : public osg::NodeCallback
     {
     public:
-        DrawOnceCallback ()
+        DrawOnceCallback()
             : mRendered(false)
             , mLastRenderedFrame(0)
         {
@@ -83,7 +85,7 @@ namespace MWRender
     class SetUpBlendVisitor : public osg::NodeVisitor
     {
     public:
-        SetUpBlendVisitor(): osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
+        SetUpBlendVisitor() : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
         {
         }
 
@@ -107,7 +109,7 @@ namespace MWRender
     };
 
     CharacterPreview::CharacterPreview(osg::Group* parent, Resource::ResourceSystem* resourceSystem,
-                                       const MWWorld::Ptr& character, int sizeX, int sizeY, const osg::Vec3f& position, const osg::Vec3f& lookAt)
+        const MWWorld::Ptr& character, int sizeX, int sizeY, const osg::Vec3f& position, const osg::Vec3f& lookAt)
         : mParent(parent)
         , mResourceSystem(resourceSystem)
         , mPosition(position)
@@ -130,12 +132,13 @@ namespace MWRender
         mCamera->setClearColor(osg::Vec4(0.f, 0.f, 0.f, 0.f));
         mCamera->setClearMask(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         const float fovYDegrees = 12.3f;
-        mCamera->setProjectionMatrixAsPerspective(fovYDegrees, sizeX/static_cast<float>(sizeY), 0.1f, 10000.f); // zNear and zFar are autocomputed
+        mCamera->setProjectionMatrixAsPerspective(fovYDegrees, sizeX / static_cast<float>(sizeY), 0.1f, 10000.f); // zNear and zFar are autocomputed
         mCamera->setViewport(0, 0, sizeX, sizeY);
         mCamera->setRenderOrder(osg::Camera::PRE_RENDER);
         mCamera->attach(osg::Camera::COLOR_BUFFER, mTexture);
         mCamera->setName("CharacterPreview");
         mCamera->setComputeNearFarMode(osg::Camera::COMPUTE_NEAR_FAR_USING_BOUNDING_VOLUMES);
+        mCamera->setCullMask(~(Mask_UpdateVisitor));
 
         mCamera->setNodeMask(Mask_RenderToTexture);
 
@@ -145,41 +148,42 @@ namespace MWRender
         stateset->setMode(GL_LIGHTING, osg::StateAttribute::ON);
         stateset->setMode(GL_NORMALIZE, osg::StateAttribute::ON);
         stateset->setMode(GL_CULL_FACE, osg::StateAttribute::ON);
-        osg::ref_ptr<osg::Material> defaultMat (new osg::Material);
+        osg::ref_ptr<osg::Material> defaultMat(new osg::Material);
         defaultMat->setColorMode(osg::Material::OFF);
-        defaultMat->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4f(1,1,1,1));
-        defaultMat->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4f(1,1,1,1));
+        defaultMat->setAmbient(osg::Material::FRONT_AND_BACK, osg::Vec4f(1, 1, 1, 1));
+        defaultMat->setDiffuse(osg::Material::FRONT_AND_BACK, osg::Vec4f(1, 1, 1, 1));
         defaultMat->setSpecular(osg::Material::FRONT_AND_BACK, osg::Vec4f(0.f, 0.f, 0.f, 0.f));
         stateset->setAttribute(defaultMat);
 
+        SceneUtil::ShadowManager::disableShadowsForStateSet(stateset);
+
         // assign large value to effectively turn off fog
         // shaders don't respect glDisable(GL_FOG)
-        osg::ref_ptr<osg::Fog> fog (new osg::Fog);
+        osg::ref_ptr<osg::Fog> fog(new osg::Fog);
         fog->setStart(10000000);
         fog->setEnd(10000000);
-        stateset->setAttributeAndModes(fog, osg::StateAttribute::OFF|osg::StateAttribute::OVERRIDE);
+        stateset->setAttributeAndModes(fog, osg::StateAttribute::OFF | osg::StateAttribute::OVERRIDE);
 
         osg::ref_ptr<osg::LightModel> lightmodel = new osg::LightModel;
         lightmodel->setAmbientIntensity(osg::Vec4(0.0, 0.0, 0.0, 1.0));
         stateset->setAttributeAndModes(lightmodel, osg::StateAttribute::ON);
 
         osg::ref_ptr<osg::Light> light = new osg::Light;
-        const Fallback::Map* fallback = MWBase::Environment::get().getWorld()->getFallback();
-        float diffuseR = fallback->getFallbackFloat("Inventory_DirectionalDiffuseR");
-        float diffuseG = fallback->getFallbackFloat("Inventory_DirectionalDiffuseG");
-        float diffuseB = fallback->getFallbackFloat("Inventory_DirectionalDiffuseB");
-        float ambientR = fallback->getFallbackFloat("Inventory_DirectionalAmbientR");
-        float ambientG = fallback->getFallbackFloat("Inventory_DirectionalAmbientG");
-        float ambientB = fallback->getFallbackFloat("Inventory_DirectionalAmbientB");
-        float azimuth = osg::DegreesToRadians(180.f - fallback->getFallbackFloat("Inventory_DirectionalRotationX"));
-        float altitude = osg::DegreesToRadians(fallback->getFallbackFloat("Inventory_DirectionalRotationY"));
-        float positionX = std::cos(azimuth) * std::sin(altitude);
+        float diffuseR = Fallback::Map::getFloat("Inventory_DirectionalDiffuseR");
+        float diffuseG = Fallback::Map::getFloat("Inventory_DirectionalDiffuseG");
+        float diffuseB = Fallback::Map::getFloat("Inventory_DirectionalDiffuseB");
+        float ambientR = Fallback::Map::getFloat("Inventory_DirectionalAmbientR");
+        float ambientG = Fallback::Map::getFloat("Inventory_DirectionalAmbientG");
+        float ambientB = Fallback::Map::getFloat("Inventory_DirectionalAmbientB");
+        float azimuth = osg::DegreesToRadians(Fallback::Map::getFloat("Inventory_DirectionalRotationX"));
+        float altitude = osg::DegreesToRadians(Fallback::Map::getFloat("Inventory_DirectionalRotationY"));
+        float positionX = -std::cos(azimuth) * std::sin(altitude);
         float positionY = std::sin(azimuth) * std::sin(altitude);
         float positionZ = std::cos(altitude);
-        light->setPosition(osg::Vec4(positionX,positionY,positionZ, 0.0));
-        light->setDiffuse(osg::Vec4(diffuseR,diffuseG,diffuseB,1));
-        light->setAmbient(osg::Vec4(ambientR,ambientG,ambientB,1));
-        light->setSpecular(osg::Vec4(0,0,0,0));
+        light->setPosition(osg::Vec4(positionX, positionY, positionZ, 0.0));
+        light->setDiffuse(osg::Vec4(diffuseR, diffuseG, diffuseB, 1));
+        light->setAmbient(osg::Vec4(ambientR, ambientG, ambientB, 1));
+        light->setSpecular(osg::Vec4(0, 0, 0, 0));
         light->setLightNum(0);
         light->setConstantAttenuation(1.f);
         light->setLinearAttenuation(0.f);
@@ -205,7 +209,7 @@ namespace MWRender
         mCharacter.mCell = nullptr;
     }
 
-    CharacterPreview::~CharacterPreview ()
+    CharacterPreview::~CharacterPreview()
     {
         mCamera->removeChildren(0, mCamera->getNumChildren());
         mParent->removeChild(mCamera);
@@ -239,10 +243,10 @@ namespace MWRender
 
     void CharacterPreview::rebuild()
     {
-        mAnimation = NULL;
+        mAnimation = nullptr;
 
         mAnimation = new NpcAnimation(mCharacter, mNode, mResourceSystem, true,
-                                      (renderHeadOnly() ? NpcAnimation::VM_HeadOnly : NpcAnimation::VM_Normal));
+            (renderHeadOnly() ? NpcAnimation::VM_HeadOnly : NpcAnimation::VM_Normal));
 
         onSetup();
 
@@ -259,7 +263,7 @@ namespace MWRender
 
 
     InventoryPreview::InventoryPreview(osg::Group* parent, Resource::ResourceSystem* resourceSystem, const MWWorld::Ptr& character)
-        : CharacterPreview(parent, resourceSystem, character, 512, 1024, osg::Vec3f(0, 700, 71), osg::Vec3f(0,0,71))
+        : CharacterPreview(parent, resourceSystem, character, 512, 1024, osg::Vec3f(0, 700, 71), osg::Vec3f(0, 0, 71))
     {
     }
 
@@ -270,7 +274,7 @@ namespace MWRender
 
         // NB Camera::setViewport has threading issues
         osg::ref_ptr<osg::StateSet> stateset = new osg::StateSet;
-        mViewport = new osg::Viewport(0, mSizeY-sizeY, std::min(mSizeX, sizeX), std::min(mSizeY, sizeY));
+        mViewport = new osg::Viewport(0, mSizeY - sizeY, std::min(mSizeX, sizeX), std::min(mSizeY, sizeY));
         stateset->setAttributeAndModes(mViewport);
         mCamera->setStateSet(stateset);
 
@@ -287,42 +291,36 @@ namespace MWRender
 
         MWWorld::InventoryStore &inv = mCharacter.getClass().getInventoryStore(mCharacter);
         MWWorld::ContainerStoreIterator iter = inv.getSlot(MWWorld::InventoryStore::Slot_CarriedRight);
-        std::string groupname;
+        std::string groupname = "inventoryhandtohand";
         bool showCarriedLeft = true;
-        if(iter == inv.end())
-            groupname = "inventoryhandtohand";
-        else
+        if (iter != inv.end())
         {
-            const std::string &typeName = iter->getTypeName();
-            if(typeName == typeid(ESM::Lockpick).name() || typeName == typeid(ESM::Probe).name())
-                groupname = "inventoryweapononehand";
-            else if(typeName == typeid(ESM::Weapon).name())
+            groupname = "inventoryweapononehand";
+            if (iter->getTypeName() == typeid(ESM::Weapon).name())
             {
                 MWWorld::LiveCellRef<ESM::Weapon> *ref = iter->get<ESM::Weapon>();
-
                 int type = ref->mBase->mData.mType;
-                if(type == ESM::Weapon::ShortBladeOneHand ||
-                   type == ESM::Weapon::LongBladeOneHand ||
-                   type == ESM::Weapon::BluntOneHand ||
-                   type == ESM::Weapon::AxeOneHand ||
-                   type == ESM::Weapon::MarksmanThrown ||
-                   type == ESM::Weapon::MarksmanCrossbow ||
-                   type == ESM::Weapon::MarksmanBow)
-                    groupname = "inventoryweapononehand";
-                else if(type == ESM::Weapon::LongBladeTwoHand ||
-                        type == ESM::Weapon::BluntTwoClose ||
-                        type == ESM::Weapon::AxeTwoHand)
-                    groupname = "inventoryweapontwohand";
-                else if(type == ESM::Weapon::BluntTwoWide ||
-                        type == ESM::Weapon::SpearTwoWide)
-                    groupname = "inventoryweapontwowide";
-                else
-                    groupname = "inventoryhandtohand";
+                const ESM::WeaponType* weaponInfo = MWMechanics::getWeaponType(type);
+                showCarriedLeft = !(weaponInfo->mFlags & ESM::WeaponType::TwoHanded);
 
-                showCarriedLeft = (iter->getClass().canBeEquipped(*iter, mCharacter).first != 2);
-           }
-            else
-                groupname = "inventoryhandtohand";
+                std::string inventoryGroup = weaponInfo->mLongGroup;
+                inventoryGroup = "inventory" + inventoryGroup;
+
+                // We still should use one-handed animation as fallback
+                if (mAnimation->hasAnimation(inventoryGroup))
+                    groupname = inventoryGroup;
+                else
+                {
+                    static const std::string oneHandFallback = "inventory" + MWMechanics::getWeaponType(ESM::Weapon::LongBladeOneHand)->mLongGroup;
+                    static const std::string twoHandFallback = "inventory" + MWMechanics::getWeaponType(ESM::Weapon::LongBladeTwoHand)->mLongGroup;
+
+                    // For real two-handed melee weapons use 2h swords animations as fallback, otherwise use the 1h ones
+                    if (weaponInfo->mFlags & ESM::WeaponType::TwoHanded && weaponInfo->mWeaponClass == ESM::WeaponType::Melee)
+                        groupname = twoHandFallback;
+                    else
+                        groupname = oneHandFallback;
+                }
+            }
         }
 
         mAnimation->showCarriedLeft(showCarriedLeft);
@@ -331,13 +329,13 @@ namespace MWRender
         mAnimation->play(mCurrentAnimGroup, 1, Animation::BlendMask_All, false, 1.0f, "start", "stop", 0.0f, 0);
 
         MWWorld::ConstContainerStoreIterator torch = inv.getSlot(MWWorld::InventoryStore::Slot_CarriedLeft);
-        if(torch != inv.end() && torch->getTypeName() == typeid(ESM::Light).name() && showCarriedLeft)
+        if (torch != inv.end() && torch->getTypeName() == typeid(ESM::Light).name() && showCarriedLeft)
         {
-            if(!mAnimation->getInfo("torch"))
+            if (!mAnimation->getInfo("torch"))
                 mAnimation->play("torch", 2, Animation::BlendMask_LeftArm, false,
-                                 1.0f, "start", "stop", 0.0f, ~0ul, true);
+                    1.0f, "start", "stop", 0.0f, ~0ul, true);
         }
-        else if(mAnimation->getInfo("torch"))
+        else if (mAnimation->getInfo("torch"))
             mAnimation->disable("torch");
 
         mAnimation->runAnimation(0.0f);
@@ -347,7 +345,7 @@ namespace MWRender
         redraw();
     }
 
-    int InventoryPreview::getSlotSelected (int posX, int posY)
+    int InventoryPreview::getSlotSelected(int posX, int posY)
     {
         if (!mViewport)
             return -1;
@@ -357,7 +355,7 @@ namespace MWRender
         // precision issue - compiling with OSG_USE_FLOAT_MATRIX=0, Intersector::WINDOW works ok.
         // Using Intersector::PROJECTION results in better precision because the start/end points and the model matrices
         // don't go through as many transformations.
-        osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector (new osgUtil::LineSegmentIntersector(osgUtil::Intersector::PROJECTION, projX, projY));
+        osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector(new osgUtil::LineSegmentIntersector(osgUtil::Intersector::PROJECTION, projX, projY));
 
         intersector->setIntersectionLimit(osgUtil::LineSegmentIntersector::LIMIT_NEAREST);
         osgUtil::IntersectionVisitor visitor(intersector);
@@ -380,30 +378,30 @@ namespace MWRender
 
     void InventoryPreview::updatePtr(const MWWorld::Ptr &ptr)
     {
-        mCharacter = MWWorld::Ptr(ptr.getBase(), NULL);
+        mCharacter = MWWorld::Ptr(ptr.getBase(), nullptr);
     }
 
     void InventoryPreview::onSetup()
     {
         CharacterPreview::onSetup();
-        osg::Vec3f scale (1.f, 1.f, 1.f);
+        osg::Vec3f scale(1.f, 1.f, 1.f);
         mCharacter.getClass().adjustScale(mCharacter, scale, true);
 
         mNode->setScale(scale);
 
-        mCamera->setViewMatrixAsLookAt(mPosition * scale.z(), mLookAt * scale.z(), osg::Vec3f(0,0,1));
+        mCamera->setViewMatrixAsLookAt(mPosition * scale.z(), mLookAt * scale.z(), osg::Vec3f(0, 0, 1));
     }
 
     // --------------------------------------------------------------------------------------------------
 
     RaceSelectionPreview::RaceSelectionPreview(osg::Group* parent, Resource::ResourceSystem* resourceSystem)
         : CharacterPreview(parent, resourceSystem, MWMechanics::getPlayer(),
-            512, 512, osg::Vec3f(0, 125, 8), osg::Vec3f(0,0,8))
-        , mBase (*mCharacter.get<ESM::NPC>()->mBase)
+            512, 512, osg::Vec3f(0, 125, 8), osg::Vec3f(0, 0, 8))
+        , mBase(*mCharacter.get<ESM::NPC>()->mBase)
         , mRef(&mBase)
         , mPitchRadians(osg::DegreesToRadians(6.f))
     {
-        mCharacter = MWWorld::Ptr(&mRef, NULL);
+        mCharacter = MWWorld::Ptr(&mRef, nullptr);
     }
 
     RaceSelectionPreview::~RaceSelectionPreview()
@@ -412,8 +410,8 @@ namespace MWRender
 
     void RaceSelectionPreview::setAngle(float angleRadians)
     {
-        mNode->setAttitude(osg::Quat(mPitchRadians, osg::Vec3(1,0,0))
-                * osg::Quat(angleRadians, osg::Vec3(0,0,1)));
+        mNode->setAttitude(osg::Quat(mPitchRadians, osg::Vec3(1, 0, 0))
+            * osg::Quat(angleRadians, osg::Vec3(0, 0, 1)));
         redraw();
     }
 
@@ -448,7 +446,7 @@ namespace MWRender
             osg::Matrix worldMat = osg::computeLocalToWorld(nodepaths[0]);
             osg::Vec3 headOffset = worldMat.getTrans();
 
-            cam->setViewMatrixAsLookAt(headOffset + mPosOffset, headOffset + mLookAtOffset, osg::Vec3(0,0,1));
+            cam->setViewMatrixAsLookAt(headOffset + mPosOffset, headOffset + mLookAtOffset, osg::Vec3(0, 0, 1));
         }
 
     private:
@@ -457,7 +455,7 @@ namespace MWRender
         osg::Vec3 mLookAtOffset;
     };
 
-    void RaceSelectionPreview::onSetup ()
+    void RaceSelectionPreview::onSetup()
     {
         CharacterPreview::onSetup();
         mAnimation->play("idle", 1, Animation::BlendMask_All, false, 1.0f, "start", "stop", 0.0f, 0);
@@ -474,7 +472,7 @@ namespace MWRender
             mCamera->addUpdateCallback(mUpdateCameraCallback);
         }
         else
-            std::cerr << "Error: Bip01 Head node not found" << std::endl;
+            Log(Debug::Error) << "Error: Bip01 Head node not found";
     }
 
 }

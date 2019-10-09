@@ -1,7 +1,6 @@
 #include "weaponpriority.hpp"
 
 #include <components/esm/loadench.hpp>
-#include <components/esm/loadmgef.hpp>
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
@@ -15,13 +14,17 @@
 #include "aicombataction.hpp"
 #include "spellpriority.hpp"
 #include "spellcasting.hpp"
+#include "weapontype.hpp"
 
 namespace MWMechanics
 {
-    float rateWeapon (const MWWorld::Ptr &item, const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy, int type,
-                      float arrowRating, float boltRating)
+    float rateWeapon(const MWWorld::Ptr &item, const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy, int type,
+        float arrowRating, float boltRating)
     {
-        if (item.getTypeName() != typeid(ESM::Weapon).name())
+        if (enemy.isEmpty() || item.getTypeName() != typeid(ESM::Weapon).name())
+            return 0.f;
+
+        if (item.getClass().hasItemHealth(item) && item.getClass().getItemHealth(item) == 0)
             return 0.f;
 
         const ESM::Weapon* weapon = item.get<ESM::Weapon>()->mBase;
@@ -29,96 +32,113 @@ namespace MWMechanics
         if (type != -1 && weapon->mData.mType != type)
             return 0.f;
 
-        float rating=0.f;
-        float rangedMult=1.f;
+        const MWBase::World* world = MWBase::Environment::get().getWorld();
+        const MWWorld::Store<ESM::GameSetting>& gmst = world->getStore().get<ESM::GameSetting>();
 
-        if (weapon->mData.mType >= ESM::Weapon::MarksmanBow && weapon->mData.mType <= ESM::Weapon::MarksmanThrown)
+        ESM::WeaponType::Class weapclass = MWMechanics::getWeaponType(weapon->mData.mType)->mWeaponClass;
+        if (type == -1 && weapclass == ESM::WeaponType::Ammo)
+            return 0.f;
+
+        float rating = 0.f;
+        static const float fAIMeleeWeaponMult = gmst.find("fAIMeleeWeaponMult")->mValue.getFloat();
+        float ratingMult = fAIMeleeWeaponMult;
+
+        if (weapclass != ESM::WeaponType::Melee)
         {
-            // Range weapon is useless under water
-            if (MWBase::Environment::get().getWorld()->isUnderwater(MWWorld::ConstPtr(actor), 0.75f))
+            // Underwater ranged combat is impossible
+            if (world->isUnderwater(MWWorld::ConstPtr(actor), 0.75f)
+                || world->isUnderwater(MWWorld::ConstPtr(enemy), 0.75f))
                 return 0.f;
 
-            if (enemy.isEmpty())
-                return 0.f;
-
-            if (MWBase::Environment::get().getWorld()->isUnderwater(MWWorld::ConstPtr(enemy), 0.75f))
-                return 0.f;
-
+            // Use a higher rating multiplier if the actor is out of enemy's reach, use the normal mult otherwise
             if (getDistanceMinusHalfExtents(actor, enemy) >= getMaxAttackDistance(enemy))
-                rangedMult = 1.5f;
+            {
+                static const float fAIRangeMeleeWeaponMult = gmst.find("fAIRangeMeleeWeaponMult")->mValue.getFloat();
+                ratingMult = fAIRangeMeleeWeaponMult;
+            }
         }
 
-        if (weapon->mData.mType >= ESM::Weapon::MarksmanBow)
+        const float chop = (weapon->mData.mChop[0] + weapon->mData.mChop[1]) / 2.f;
+        // We need to account for the fact that thrown weapons have 2x real damage applied to the target
+        // as they're both the weapon and the ammo of the hit
+        if (weapclass == ESM::WeaponType::Thrown)
         {
-            float rangedDamage = weapon->mData.mChop[0] + weapon->mData.mChop[1];
-            MWMechanics::adjustWeaponDamage(rangedDamage, item, actor);
-
-            rating = rangedDamage / 2.f;
-
-            if (weapon->mData.mType >= ESM::Weapon::MarksmanThrown)
-                MWMechanics::resistNormalWeapon(enemy, actor, item, rating);
+            rating = chop * 2;
+        }
+        else if (weapclass != ESM::WeaponType::Melee)
+        {
+            rating = chop;
         }
         else
         {
-            float meleeDamage = 0.f;
+            const float slash = (weapon->mData.mSlash[0] + weapon->mData.mSlash[1]) / 2.f;
+            const float thrust = (weapon->mData.mThrust[0] + weapon->mData.mThrust[1]) / 2.f;
+            rating = (slash * slash + thrust * thrust + chop * chop) / (slash + thrust + chop);
+        }
 
-            for (int i=0; i<2; ++i)
+        adjustWeaponDamage(rating, item, actor);
+
+        if (weapclass != ESM::WeaponType::Ranged)
+        {
+            resistNormalWeapon(enemy, actor, item, rating);
+            // applyWerewolfDamageMult(enemy, item, rating);
+        }
+        else
+        {
+            int ammotype = MWMechanics::getWeaponType(weapon->mData.mType)->mAmmoType;
+            if (ammotype == ESM::Weapon::Arrow)
             {
-                meleeDamage += weapon->mData.mSlash[i];
-                meleeDamage += weapon->mData.mThrust[i];
-                meleeDamage += weapon->mData.mChop[i];
+                if (arrowRating <= 0.f)
+                    rating = 0.f;
+                else
+                    rating += arrowRating;
             }
-
-            MWMechanics::adjustWeaponDamage(meleeDamage, item, actor);
-            rating = meleeDamage / 6.f;
-
-            MWMechanics::resistNormalWeapon(enemy, actor, item, rating);
-        }
-
-        if (item.getClass().hasItemHealth(item))
-        {
-            if (item.getClass().getItemHealth(item) == 0)
-                return 0.f;
-        }
-
-        if (weapon->mData.mType == ESM::Weapon::MarksmanBow)
-        {
-            if (arrowRating <= 0.f)
-                rating = 0.f;
-            else
-                rating += arrowRating;
-        }
-        else if (weapon->mData.mType == ESM::Weapon::MarksmanCrossbow)
-        {
-            if (boltRating <= 0.f)
-                rating = 0.f;
-            else
-                rating += boltRating;
+            else if (ammotype == ESM::Weapon::Bolt)
+            {
+                if (boltRating <= 0.f)
+                    rating = 0.f;
+                else
+                    rating += boltRating;
+            }
         }
 
         if (!weapon->mEnchant.empty())
         {
-            const ESM::Enchantment* enchantment = MWBase::Environment::get().getWorld()->getStore().get<ESM::Enchantment>().find(weapon->mEnchant);
+            const ESM::Enchantment* enchantment = world->getStore().get<ESM::Enchantment>().find(weapon->mEnchant);
             if (enchantment->mData.mType == ESM::Enchantment::WhenStrikes)
             {
                 int castCost = getEffectiveEnchantmentCastCost(static_cast<float>(enchantment->mData.mCost), actor);
+                float charge = item.getCellRef().getEnchantmentCharge();
 
-                if (item.getCellRef().getEnchantmentCharge() == -1 || item.getCellRef().getEnchantmentCharge() >= castCost)
+                if (charge == -1 || charge >= castCost || weapclass == ESM::WeaponType::Thrown || weapclass == ESM::WeaponType::Ammo)
                     rating += rateEffects(enchantment->mEffects, actor, enemy);
             }
         }
 
-        int skill = item.getClass().getEquipmentSkill(item);
-        if (skill != -1)
+        int value = 50.f;
+        if (actor.getClass().isNpc())
         {
-            int value = actor.getClass().getSkill(actor, skill);
-            rating *= MWMechanics::getHitChance(actor, enemy, value) / 100.f;
+            int skill = item.getClass().getEquipmentSkill(item);
+            if (skill != -1)
+                value = actor.getClass().getSkill(actor, skill);
+        }
+        else
+        {
+            MWWorld::LiveCellRef<ESM::Creature> *ref = actor.get<ESM::Creature>();
+            value = ref->mBase->mData.mCombat;
         }
 
-        return rating * rangedMult;
+        // Take hit chance in account, but do not allow rating become negative.
+        float chance = getHitChance(actor, enemy, value) / 100.f;
+        rating *= std::min(1.f, std::max(0.01f, chance));
+
+        if (weapclass != ESM::WeaponType::Ammo)
+            rating *= weapon->mData.mSpeed;
+
+        return rating * ratingMult;
     }
 
-    float rateAmmo(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy, MWWorld::Ptr &bestAmmo, ESM::Weapon::Type ammoType)
+    float rateAmmo(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy, MWWorld::Ptr &bestAmmo, int ammoType)
     {
         float bestAmmoRating = 0.f;
         if (!actor.getClass().hasInventoryStore(actor))
@@ -139,7 +159,7 @@ namespace MWMechanics
         return bestAmmoRating;
     }
 
-    float rateAmmo(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy, ESM::Weapon::Type ammoType)
+    float rateAmmo(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy, int ammoType)
     {
         MWWorld::Ptr emptyPtr;
         return rateAmmo(actor, enemy, emptyPtr, ammoType);
@@ -149,9 +169,9 @@ namespace MWMechanics
     {
         const MWWorld::Store<ESM::GameSetting>& gmst = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
 
-        static const float fAIMeleeWeaponMult = gmst.find("fAIMeleeWeaponMult")->getFloat();
-        static const float fAIMeleeArmorMult = gmst.find("fAIMeleeArmorMult")->getFloat();
-        static const float fAIRangeMeleeWeaponMult = gmst.find("fAIRangeMeleeWeaponMult")->getFloat();
+        static const float fAIMeleeWeaponMult = gmst.find("fAIMeleeWeaponMult")->mValue.getFloat();
+        static const float fAIMeleeArmorMult = gmst.find("fAIMeleeArmorMult")->mValue.getFloat();
+        static const float fAIRangeMeleeWeaponMult = gmst.find("fAIRangeMeleeWeaponMult")->mValue.getFloat();
 
         if (weapon.isEmpty())
             return 0.f;
@@ -161,8 +181,8 @@ namespace MWMechanics
         float bonusDamage = 0.f;
 
         const ESM::Weapon* esmWeap = weapon.get<ESM::Weapon>()->mBase;
-
-        if (esmWeap->mData.mType >= ESM::Weapon::MarksmanBow)
+        int type = esmWeap->mData.mType;
+        if (getWeaponType(type)->mWeaponClass != ESM::WeaponType::Melee)
         {
             if (!ammo.isEmpty() && !MWBase::Environment::get().getWorld()->isSwimming(enemy))
             {
@@ -178,7 +198,7 @@ namespace MWMechanics
         float thrustRating = esmWeap->mData.mThrust[1] * skillMult * fAIMeleeWeaponMult;
 
         return actor.getClass().getArmorRating(actor) * fAIMeleeArmorMult
-                    + std::max(std::max(chopRating, slashRating), thrustRating);
+            + std::max(std::max(chopRating, slashRating), thrustRating);
     }
 
 }

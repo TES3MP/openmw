@@ -10,7 +10,7 @@
 #include <components/version/version.hpp>
 
 #include <components/openmw-mp/ErrorMessages.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
 #include <components/openmw-mp/Utils.hpp>
 #include <components/openmw-mp/Version.hpp>
@@ -157,8 +157,8 @@ int main(int argc, char *argv[])
     auto version = Version::getOpenmwVersion(variables["resources"].as<Files::EscapeHashString>().toStdString());
 
     int logLevel = mgr.getInt("logLevel", "General");
-    if (logLevel < Log::LOG_VERBOSE || logLevel > Log::LOG_FATAL)
-        logLevel = Log::LOG_VERBOSE;
+    if (logLevel < MWMPLog::LOG_VERBOSE || logLevel > MWMPLog::LOG_FATAL)
+        logLevel = MWMPLog::LOG_VERBOSE;
 
     // Some objects used to redirect cout and cerr
     // Scope must be here, so this still works inside the catch block for logging exceptions
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
         // Redirect cout and cerr to tes3mp server log
 
         logfile.open(boost::filesystem::path(
-                cfgMgr.getLogPath() / "/tes3mp-server-" += Log::getFilenameTimestamp() += ".log"));
+                cfgMgr.getLogPath() / "/tes3mp-server-" += MWMPLog::getFilenameTimestamp() += ".log"));
 
         coutsb.open(Tee(logfile, oldcout));
         cerrsb.open(Tee(logfile, oldcerr));
@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
     vector<string> plugins(Utils::split(mgr.getString("plugins", "Plugins"), ','));
 
     Utils::printVersion("TES3MP dedicated server", TES3MP_VERSION, version.mCommitHash, TES3MP_PROTO_VERSION);
-    
+
     Script::SetModDir(dataDirectory);
 
 #ifdef ENABLE_LUA
@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
 
     if (RakNet::NonNumericHostString(address.c_str()))
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "You cannot use non-numeric addresses for the server.");
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "You cannot use non-numeric addresses for the server.");
         return 1;
     }
 
@@ -268,7 +268,7 @@ int main(int argc, char *argv[])
 
         if (mgr.getBool("enabled", "MasterServer"))
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sharing server query info to master enabled.");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Sharing server query info to master enabled.");
             string masterAddr = mgr.getString("address", "MasterServer");
             int masterPort = mgr.getInt("port", "MasterServer");
             int updateRate = mgr.getInt("rate", "MasterServer");
@@ -278,14 +278,14 @@ int main(int argc, char *argv[])
             if (Misc::StringUtils::ciEqual(masterAddr, "master.tes3mp.com") && masterPort == 25560)
             {
                 masterPort = 25561;
-                LOG_APPEND(Log::LOG_INFO, "- switching to port %i because the correct official master server for this version is on that port",
+                LOG_APPEND(MWMPLog::LOG_INFO, "- switching to port %i because the correct official master server for this version is on that port",
                     masterPort);
             }
 
             if (updateRate < 8000)
             {
                 updateRate = 8000;
-                LOG_APPEND(Log::LOG_INFO, "- switching to updateRate %i because the one in the server config was too low", updateRate);
+                LOG_APPEND(MWMPLog::LOG_INFO, "- switching to updateRate %i because the one in the server config was too low", updateRate);
             }
 
             networking.InitQuery(masterAddr, (unsigned short) masterPort);
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
     }
     catch (std::exception &e)
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, e.what());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, e.what());
         Script::Call<Script::CallbackIdentity("OnServerScriptCrash")>(e.what());
         throw; //fall through
     }
@@ -314,7 +314,7 @@ int main(int argc, char *argv[])
     RakNet::RakPeerInterface::DestroyInstance(peer);
 
     if (code == 0)
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Quitting peacefully.");
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Quitting peacefully.");
 
     LOG_QUIT();
 

@@ -11,7 +11,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwmp/Main.hpp"
 #include "../mwmp/LocalPlayer.hpp"
 #include "../mwmp/PlayerList.hpp"
@@ -181,7 +181,7 @@ namespace MWClass
             getContainerStore(ptr).fill(ref->mBase->mInventory, ptr.getCellRef().getRefId());
 
             if (hasInventory)
-                getInventoryStore(ptr).autoEquipShield(ptr);
+                getInventoryStore(ptr).autoEquip(ptr);
         }
     }
 

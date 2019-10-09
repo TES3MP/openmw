@@ -5,7 +5,7 @@
 #include <components/esm/attr.hpp>
 #include <components/esm/loadskil.hpp>
 #include <components/misc/stringops.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
 
 #include <apps/openmw-mp/Networking.hpp>
@@ -294,7 +294,7 @@ void StatsFunctions::SetRace(unsigned short pid, const char *race) noexcept
     if (player->npc.mRace == race)
         return;
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Setting race for %s: %s -> %s", player->npc.mName.c_str(),
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Setting race for %s: %s -> %s", player->npc.mName.c_str(),
                        player->npc.mRace.c_str(), race);
 
     player->npc.mRace = race;
@@ -562,7 +562,7 @@ void StatsFunctions::SetCharGenStage(unsigned short pid, int currentStage, int e
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_CHARGEN);
     packet->setPlayer(player);
-    
+
     packet->Send(false);
 }
 
@@ -573,7 +573,7 @@ void StatsFunctions::SendBaseInfo(unsigned short pid) noexcept
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_BASEINFO);
     packet->setPlayer(player);
-    
+
     packet->Send(false);
     packet->Send(true);
 }
@@ -585,7 +585,7 @@ void StatsFunctions::SendStatsDynamic(unsigned short pid) noexcept
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_STATS_DYNAMIC);
     packet->setPlayer(player);
-    
+
     packet->Send(false);
     packet->Send(true);
 
@@ -599,7 +599,7 @@ void StatsFunctions::SendAttributes(unsigned short pid) noexcept
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_ATTRIBUTE);
     packet->setPlayer(player);
-    
+
     packet->Send(false);
     packet->Send(true);
 
@@ -613,7 +613,7 @@ void StatsFunctions::SendSkills(unsigned short pid) noexcept
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_SKILL);
     packet->setPlayer(player);
-    
+
     packet->Send(false);
     packet->Send(true);
 
@@ -627,7 +627,7 @@ void StatsFunctions::SendLevel(unsigned short pid) noexcept
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_LEVEL);
     packet->setPlayer(player);
-    
+
     packet->Send(false);
     packet->Send(true);
 }
@@ -639,7 +639,7 @@ void StatsFunctions::SendBounty(unsigned short pid) noexcept
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_PLAYER_BOUNTY);
     packet->setPlayer(player);
-    
+
     packet->Send(false);
     packet->Send(true);
 }

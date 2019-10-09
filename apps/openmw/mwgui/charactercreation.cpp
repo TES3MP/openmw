@@ -35,10 +35,10 @@ namespace
     Step sGenerateClassSteps(int number) {
         number++;
         const Fallback::Map* fallback=MWBase::Environment::get().getWorld()->getFallback();
-        Step step = {fallback->getFallbackString("Question_"+MyGUI::utility::toString(number)+"_Question"),
-        {fallback->getFallbackString("Question_"+MyGUI::utility::toString(number)+"_AnswerOne"),
-        fallback->getFallbackString("Question_"+MyGUI::utility::toString(number)+"_AnswerTwo"),
-        fallback->getFallbackString("Question_"+MyGUI::utility::toString(number)+"_AnswerThree")},
+        Step step = {fallback->getString("Question_"+MyGUI::utility::toString(number)+"_Question"),
+        {fallback->getString("Question_"+MyGUI::utility::toString(number)+"_AnswerOne"),
+        fallback->getString("Question_"+MyGUI::utility::toString(number)+"_AnswerTwo"),
+        fallback->getString("Question_"+MyGUI::utility::toString(number)+"_AnswerThree")},
         "vo\\misc\\chargen qa"+MyGUI::utility::toString(number)+".wav"
         };
         return step;

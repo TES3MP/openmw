@@ -1,4 +1,4 @@
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/soundmanager.hpp"
@@ -214,18 +214,18 @@ void DedicatedActor::setAi()
     MWMechanics::CreatureStats *ptrCreatureStats = &ptr.getClass().getCreatureStats(ptr);
     ptrCreatureStats->setAiSetting(MWMechanics::CreatureStats::AI_Fight, 0);
 
-    LOG_APPEND(Log::LOG_VERBOSE, "- actor cellRef: %s %i-%i",
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- actor cellRef: %s %i-%i",
         ptr.getCellRef().getRefId().c_str(), ptr.getCellRef().getRefNum().mIndex, ptr.getCellRef().getMpNum());
 
     if (aiAction == mwmp::BaseActorList::CANCEL)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "-- Cancelling AI sequence");
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Cancelling AI sequence");
 
         ptrCreatureStats->getAiSequence().clear();
     }
     else if (aiAction == mwmp::BaseActorList::TRAVEL)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "-- Travelling to %f, %f, %f",
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Travelling to %f, %f, %f",
             aiCoordinates.pos[0], aiCoordinates.pos[1], aiCoordinates.pos[2]);
 
         MWMechanics::AiTravel package(aiCoordinates.pos[0], aiCoordinates.pos[1], aiCoordinates.pos[2]);
@@ -233,7 +233,7 @@ void DedicatedActor::setAi()
     }
     else if (aiAction == mwmp::BaseActorList::WANDER)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "-- Wandering for distance %i and duration %i, repetition is %s",
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Wandering for distance %i and duration %i, repetition is %s",
             aiDistance, aiDuration, aiShouldRepeat ? "true" : "false");
 
         std::vector<unsigned char> idleList;
@@ -249,7 +249,7 @@ void DedicatedActor::setAi()
         {
             targetPtr = MechanicsHelper::getPlayerPtr(aiTarget);
 
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Has player target %s",
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Has player target %s",
                 targetPtr.getClass().getName(targetPtr).c_str());
         }
         else
@@ -263,12 +263,12 @@ void DedicatedActor::setAi()
 
             if (targetPtr)
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Has actor target %s %i-%i",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Has actor target %s %i-%i",
                     targetPtr.getCellRef().getRefId().c_str(), aiTarget.refNum, aiTarget.mpNum);
             }
             else
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Has invalid actor target %i-%i",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Has invalid actor target %i-%i",
                     aiTarget.refNum, aiTarget.mpNum);
             }
 
@@ -278,7 +278,7 @@ void DedicatedActor::setAi()
         {
             if (aiAction == mwmp::BaseActorList::ACTIVATE)
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Activating target");
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Activating target");
 
                 MWMechanics::AiActivate package(targetPtr);
                 ptrCreatureStats->getAiSequence().stack(package, ptr, true);
@@ -286,14 +286,14 @@ void DedicatedActor::setAi()
 
             if (aiAction == mwmp::BaseActorList::COMBAT)
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Starting combat with target");
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Starting combat with target");
 
                 MWMechanics::AiCombat package(targetPtr);
                 ptrCreatureStats->getAiSequence().stack(package, ptr, true);
             }
             else if (aiAction == mwmp::BaseActorList::ESCORT)
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Being escorted by target, for duration %i, to coordinates %f, %f, %f",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Being escorted by target, for duration %i, to coordinates %f, %f, %f",
                     aiDuration, aiCoordinates.pos[0], aiCoordinates.pos[1], aiCoordinates.pos[2]);
 
                 MWMechanics::AiEscort package(targetPtr.getCellRef().getRefId(), aiDuration,
@@ -302,7 +302,7 @@ void DedicatedActor::setAi()
             }
             else if (aiAction == mwmp::BaseActorList::FOLLOW)
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Following target");
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Following target");
 
                 MWMechanics::AiFollow package(targetPtr);
                 package.allowAnyDistance(true);

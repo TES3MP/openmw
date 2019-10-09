@@ -1,6 +1,6 @@
 #include "Cells.hpp"
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
 
 #include <apps/openmw-mp/Script/ScriptFunctions.hpp>
@@ -92,7 +92,7 @@ void CellFunctions::SetCell(unsigned short pid, const char *cellDescription) noe
     Player *player;
     GET_PLAYER(pid, player,);
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Script is moving %s from %s to %s", player->npc.mName.c_str(),
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Script is moving %s from %s to %s", player->npc.mName.c_str(),
                        player->cell.getDescription().c_str(), cellDescription);
 
     player->cell = Utils::getCellFromDescription(cellDescription);
@@ -103,7 +103,7 @@ void CellFunctions::SetExteriorCell(unsigned short pid, int x, int y) noexcept
     Player *player;
     GET_PLAYER(pid, player,);
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Script is moving %s from %s to %i,%i", player->npc.mName.c_str(),
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Script is moving %s from %s to %i,%i", player->npc.mName.c_str(),
                        player->cell.getDescription().c_str(), x, y);
 
     // If the player is currently in an interior, turn off the interior flag

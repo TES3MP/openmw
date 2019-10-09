@@ -1,4 +1,4 @@
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include <components/misc/rng.hpp>
 
@@ -240,18 +240,18 @@ bool MechanicsHelper::getSpellSuccess(std::string spellId, const MWWorld::Ptr& c
 
 void MechanicsHelper::processAttack(Attack attack, const MWWorld::Ptr& attacker)
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Processing attack from %s of type %i",
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Processing attack from %s of type %i",
         attacker.getClass().getName(attacker).c_str(), attack.type);
 
     if (!attack.pressed)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- success: %s", attack.success ? "true" : "false");
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- success: %s", attack.success ? "true" : "false");
 
         if (attack.success)
-            LOG_APPEND(Log::LOG_VERBOSE, "- damage: %f", attack.damage);
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "- damage: %f", attack.damage);
     }
 
-    LOG_APPEND(Log::LOG_VERBOSE, "- pressed: %s", attack.pressed ? "true" : "false");
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- pressed: %s", attack.pressed ? "true" : "false");
 
     MWMechanics::CreatureStats &attackerStats = attacker.getClass().getCreatureStats(attacker);
     MWWorld::Ptr victim;
@@ -334,7 +334,7 @@ void MechanicsHelper::processAttack(Attack attack, const MWWorld::Ptr& attacker)
 
         if (!weaponPtr.isEmpty())
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "- weapon: %s\n- isRanged: %s\n- applyWeaponEnchantment: %s\n- applyAmmoEnchantment: %s",
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "- weapon: %s\n- isRanged: %s\n- applyWeaponEnchantment: %s\n- applyAmmoEnchantment: %s",
                 weaponPtr.getCellRef().getRefId().c_str(), isRanged ? "true" : "false", attack.applyWeaponEnchantment ? "true" : "false",
                 attack.applyAmmoEnchantment ? "true" : "false");
 
@@ -395,7 +395,7 @@ void MechanicsHelper::processAttack(Attack attack, const MWWorld::Ptr& attacker)
             attack.instant = false;
         }
 
-        LOG_APPEND(Log::LOG_VERBOSE, "- spellId: %s", attack.spellId.c_str());
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- spellId: %s", attack.spellId.c_str());
     }
     else if (attack.type == attack.ITEM_MAGIC)
     {
@@ -415,7 +415,7 @@ void MechanicsHelper::processAttack(Attack attack, const MWWorld::Ptr& attacker)
             it = attacker.getClass().getContainerStore(attacker).add(attack.itemId, 1, attacker);
 
         inventoryStore.setSelectedEnchantItem(it);
-        LOG_APPEND(Log::LOG_VERBOSE, "- itemId: %s", attack.itemId.c_str());
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- itemId: %s", attack.itemId.c_str());
         MWBase::Environment::get().getWorld()->castSpell(attacker);
         inventoryStore.setSelectedEnchantItem(inventoryStore.end());
     }

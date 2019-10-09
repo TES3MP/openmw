@@ -9,6 +9,8 @@
 #include "../mwworld/containerstore.hpp"
 
 #include "../mwrender/animation.hpp"
+#include "weaponpriority.hpp"
+#include "weapontype.hpp"
 
 namespace MWWorld
 {
@@ -115,21 +117,6 @@ enum CharacterState {
     CharState_Block
 };
 
-enum WeaponType {
-    WeapType_None,
-
-    WeapType_HandToHand,
-    WeapType_OneHand,
-    WeapType_TwoHand,
-    WeapType_TwoWide,
-    WeapType_BowAndArrow,
-    WeapType_Crossbow,
-    WeapType_Thrown,
-    WeapType_PickProbe,
-
-    WeapType_Spell
-};
-
 enum UpperBodyCharacterState {
     UpperCharState_Nothing,
     UpperCharState_EquipingWeap,
@@ -188,7 +175,7 @@ class CharacterController : public MWRender::Animation::TextKeyListener
     JumpingState mJumpState;
     std::string mCurrentJump;
 
-    WeaponType mWeaponType;
+    int mWeaponType;
     std::string mCurrentWeapon;
 
     float mAttackStrength;
@@ -214,15 +201,18 @@ class CharacterController : public MWRender::Animation::TextKeyListener
 
     void refreshCurrentAnims(CharacterState idle, CharacterState movement, JumpingState jump, bool force=false);
     void refreshHitRecoilAnims();
-    void refreshJumpAnims(const WeaponInfo* weap, JumpingState jump, bool force=false);
-    void refreshMovementAnims(const WeaponInfo* weap, CharacterState movement, bool force=false);
-    void refreshIdleAnims(const WeaponInfo* weap, CharacterState idle, bool force=false);
+    void refreshJumpAnims(const std::string& weapShortGroup, JumpingState jump, CharacterState& idle, bool force = false);
+    void refreshMovementAnims(const std::string& weapShortGroup, CharacterState movement, CharacterState& idle, bool force = false);
+    void refreshIdleAnims(const std::string& weapShortGroup, CharacterState idle, bool force = false);
 
     void clearAnimQueue(bool clearPersistAnims = false);
 
-    bool updateWeaponState();
+    bool updateWeaponState(CharacterState& idle);
     bool updateCreatureState();
     void updateIdleStormState(bool inwater);
+
+    std::string chooseRandomAttackAnimation() const;
+    bool isRandomAttackAnimation(const std::string& group) const;
 
     bool isPersistentAnimPlaying();
 
@@ -240,7 +230,11 @@ class CharacterController : public MWRender::Animation::TextKeyListener
     /// @param num if non-NULL, the chosen animation number will be written here
     std::string chooseRandomGroup (const std::string& prefix, int* num = NULL) const;
 
-    bool updateCarriedLeftVisible(WeaponType weaptype) const;
+    bool updateCarriedLeftVisible(int weaptype) const;
+
+    std::string fallbackShortWeaponGroup(const std::string& baseGroupName, MWRender::Animation::BlendMask* blendMask = nullptr);
+
+    std::string getWeaponAnimation(int weaponType) const;
 
 public:
     CharacterController(const MWWorld::Ptr &ptr, MWRender::Animation *anim);
@@ -254,7 +248,10 @@ public:
 
     void updatePtr(const MWWorld::Ptr &ptr);
 
-    void update(float duration);
+    void update(float duration, bool animationOnly = false);
+
+    bool onOpen();
+    void onClose();
 
     void persistAnimationState();
     void unpersistAnimationState();
@@ -289,6 +286,7 @@ public:
     bool isTurning() const;
     bool isAttackingOrSpell() const;
 
+    void setVisibility(float visibility);
     void setAttackingOrSpell(bool attackingOrSpell);
     void castSpell(const std::string spellId, bool manualSpell=false);
     void setAIAttackType(const std::string& attackType);
@@ -307,8 +305,6 @@ public:
 
     void playSwishSound(float attackStrength);
 };
-
-    MWWorld::ContainerStoreIterator getActiveWeapon(CreatureStats &stats, MWWorld::InventoryStore &inv, WeaponType *weaptype);
 }
 
 #endif /* GAME_MWMECHANICS_CHARACTER_HPP */

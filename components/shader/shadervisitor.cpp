@@ -1,7 +1,5 @@
 #include "shadervisitor.hpp"
 
-#include <iostream>
-
 #include <osg/Texture>
 #include <osg/Material>
 #include <osg/Geometry>
@@ -10,6 +8,7 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <components/debug/debuglog.hpp>
 #include <components/resource/imagemanager.hpp>
 #include <components/vfs/manager.hpp>
 #include <components/sceneutil/riggeometry.hpp>
@@ -22,12 +21,11 @@ namespace Shader
 
     ShaderVisitor::ShaderRequirements::ShaderRequirements()
         : mShaderRequired(false)
-        , mColorMaterial(false)
-        , mVertexColorMode(GL_AMBIENT_AND_DIFFUSE)
+        , mColorMode(0)
         , mMaterialOverridden(false)
         , mNormalHeight(false)
         , mTexStageRequiringTangents(-1)
-        , mNode(NULL)
+        , mNode(nullptr)
     {
     }
 
@@ -39,8 +37,6 @@ namespace Shader
     ShaderVisitor::ShaderVisitor(ShaderManager& shaderManager, Resource::ImageManager& imageManager, const std::string &defaultVsTemplate, const std::string &defaultFsTemplate)
         : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
         , mForceShaders(false)
-        , mClampLighting(true)
-        , mForcePerPixelLighting(false)
         , mAllowedToModifyStateSets(true)
         , mAutoUseNormalMaps(false)
         , mAutoUseSpecularMaps(false)
@@ -55,16 +51,6 @@ namespace Shader
     void ShaderVisitor::setForceShaders(bool force)
     {
         mForceShaders = force;
-    }
-
-    void ShaderVisitor::setClampLighting(bool clamp)
-    {
-        mClampLighting = clamp;
-    }
-
-    void ShaderVisitor::setForcePerPixelLighting(bool force)
-    {
-        mForcePerPixelLighting = force;
     }
 
     void ShaderVisitor::apply(osg::Node& node)
@@ -101,15 +87,15 @@ namespace Shader
 
     void ShaderVisitor::applyStateSet(osg::ref_ptr<osg::StateSet> stateset, osg::Node& node)
     {
-        osg::StateSet* writableStateSet = NULL;
+        osg::StateSet* writableStateSet = nullptr;
         if (mAllowedToModifyStateSets)
             writableStateSet = node.getStateSet();
         const osg::StateSet::TextureAttributeList& texAttributes = stateset->getTextureAttributeList();
         if (!texAttributes.empty())
         {
-            const osg::Texture* diffuseMap = NULL;
-            const osg::Texture* normalMap = NULL;
-            const osg::Texture* specularMap = NULL;
+            const osg::Texture* diffuseMap = nullptr;
+            const osg::Texture* normalMap = nullptr;
+            const osg::Texture* specularMap = nullptr;
             for(unsigned int unit=0;unit<texAttributes.size();++unit)
             {
                 const osg::StateAttribute *attr = stateset->getTextureAttribute(unit, osg::StateAttribute::TEXTURE);
@@ -147,12 +133,12 @@ namespace Shader
                                 specularMap = texture;
                         }
                         else
-                            std::cerr << "ShaderVisitor encountered unknown texture " << texture << std::endl;
+                            Log(Debug::Error) << "ShaderVisitor encountered unknown texture " << texture;
                     }
                 }
             }
 
-            if (mAutoUseNormalMaps && diffuseMap != NULL && normalMap == NULL && diffuseMap->getImage(0))
+            if (mAutoUseNormalMaps && diffuseMap != nullptr && normalMap == nullptr && diffuseMap->getImage(0))
             {
                 std::string normalMapFileName = diffuseMap->getImage(0)->getFileName();
 
@@ -177,6 +163,7 @@ namespace Shader
                 if (image)
                 {
                     osg::ref_ptr<osg::Texture2D> normalMapTex (new osg::Texture2D(image));
+                    normalMapTex->setTextureSize(image->s(), image->t());
                     normalMapTex->setWrap(osg::Texture::WRAP_S, diffuseMap->getWrap(osg::Texture::WRAP_S));
                     normalMapTex->setWrap(osg::Texture::WRAP_T, diffuseMap->getWrap(osg::Texture::WRAP_T));
                     normalMapTex->setFilter(osg::Texture::MIN_FILTER, diffuseMap->getFilter(osg::Texture::MIN_FILTER));
@@ -194,13 +181,15 @@ namespace Shader
                     mRequirements.back().mNormalHeight = normalHeight;
                 }
             }
-            if (mAutoUseSpecularMaps && diffuseMap != NULL && specularMap == NULL && diffuseMap->getImage(0))
+            if (mAutoUseSpecularMaps && diffuseMap != nullptr && specularMap == nullptr && diffuseMap->getImage(0))
             {
                 std::string specularMapFileName = diffuseMap->getImage(0)->getFileName();
                 boost::replace_last(specularMapFileName, ".", mSpecularMapPattern + ".");
                 if (mImageManager.getVFS()->exists(specularMapFileName))
                 {
-                    osg::ref_ptr<osg::Texture2D> specularMapTex (new osg::Texture2D(mImageManager.getImage(specularMapFileName)));
+                    osg::ref_ptr<osg::Image> image (mImageManager.getImage(specularMapFileName));
+                    osg::ref_ptr<osg::Texture2D> specularMapTex (new osg::Texture2D(image));
+                    specularMapTex->setTextureSize(image->s(), image->t());
                     specularMapTex->setWrap(osg::Texture::WRAP_S, diffuseMap->getWrap(osg::Texture::WRAP_S));
                     specularMapTex->setWrap(osg::Texture::WRAP_T, diffuseMap->getWrap(osg::Texture::WRAP_T));
                     specularMapTex->setFilter(osg::Texture::MIN_FILTER, diffuseMap->getFilter(osg::Texture::MIN_FILTER));
@@ -216,6 +205,13 @@ namespace Shader
                     mRequirements.back().mShaderRequired = true;
                 }
             }
+
+            if (diffuseMap)
+            {
+                if (!writableStateSet)
+                    writableStateSet = getWritableStateSet(node);
+                writableStateSet->addUniform(new osg::Uniform("useDiffuseMapForShadowAlpha", true));
+            }
         }
 
         const osg::StateSet::AttributeList& attributes = stateset->getAttributeList();
@@ -229,8 +225,29 @@ namespace Shader
                         mRequirements.back().mMaterialOverridden = true;
 
                     const osg::Material* mat = static_cast<const osg::Material*>(it->second.first.get());
-                    mRequirements.back().mColorMaterial = (mat->getColorMode() != osg::Material::OFF);
-                    mRequirements.back().mVertexColorMode = mat->getColorMode();
+
+                    if (!writableStateSet)
+                        writableStateSet = getWritableStateSet(node);
+
+                    int colorMode;
+                    switch (mat->getColorMode())
+                    {
+                    case osg::Material::OFF:
+                        colorMode = 0;
+                        break;
+                    case GL_AMBIENT:
+                        colorMode = 3;
+                        break;
+                    default:
+                    case GL_AMBIENT_AND_DIFFUSE:
+                        colorMode = 2;
+                        break;
+                    case GL_EMISSION:
+                        colorMode = 1;
+                        break;
+                    }
+
+                    mRequirements.back().mColorMode = colorMode;
                 }
             }
         }
@@ -253,7 +270,7 @@ namespace Shader
             return;
 
         osg::Node& node = *reqs.mNode;
-        osg::StateSet* writableStateSet = NULL;
+        osg::StateSet* writableStateSet = nullptr;
         if (mAllowedToModifyStateSets)
             writableStateSet = node.getOrCreateStateSet();
         else
@@ -271,29 +288,9 @@ namespace Shader
             defineMap[texIt->second + std::string("UV")] = std::to_string(texIt->first);
         }
 
-        if (!reqs.mColorMaterial)
-            defineMap["colorMode"] = "0";
-        else
-        {
-            switch (reqs.mVertexColorMode)
-            {
-            case GL_AMBIENT:
-                defineMap["colorMode"] = "3";
-                break;
-            default:
-            case GL_AMBIENT_AND_DIFFUSE:
-                defineMap["colorMode"] = "2";
-                break;
-            case GL_EMISSION:
-                defineMap["colorMode"] = "1";
-                break;
-            }
-        }
-
-        defineMap["forcePPL"] = mForcePerPixelLighting ? "1" : "0";
-        defineMap["clamp"] = mClampLighting ? "1" : "0";
-
         defineMap["parallax"] = reqs.mNormalHeight ? "1" : "0";
+
+        writableStateSet->addUniform(new osg::Uniform("colorMode", reqs.mColorMode));
 
         osg::ref_ptr<osg::Shader> vertexShader (mShaderManager.getShader(mDefaultVsTemplate, defineMap, osg::Shader::VERTEX));
         osg::ref_ptr<osg::Shader> fragmentShader (mShaderManager.getShader(mDefaultFsTemplate, defineMap, osg::Shader::FRAGMENT));
@@ -320,7 +317,7 @@ namespace Shader
             // make sure that all UV sets are there
             for (std::map<int, std::string>::const_iterator it = reqs.mTextures.begin(); it != reqs.mTextures.end(); ++it)
             {
-                if (sourceGeometry.getTexCoordArray(it->first) == NULL)
+                if (sourceGeometry.getTexCoordArray(it->first) == nullptr)
                 {
                     sourceGeometry.setTexCoordArray(it->first, sourceGeometry.getTexCoordArray(0));
                     changed = true;
@@ -341,7 +338,7 @@ namespace Shader
 
     void ShaderVisitor::apply(osg::Geometry& geometry)
     {
-        bool needPop = (geometry.getStateSet() != NULL);
+        bool needPop = (geometry.getStateSet() != nullptr);
         if (geometry.getStateSet()) // TODO: check if stateset affects shader permutation before pushing it
         {
             pushRequirements(geometry);
@@ -364,7 +361,7 @@ namespace Shader
     void ShaderVisitor::apply(osg::Drawable& drawable)
     {
         // non-Geometry drawable (e.g. particle system)
-        bool needPop = (drawable.getStateSet() != NULL);
+        bool needPop = (drawable.getStateSet() != nullptr);
 
         if (drawable.getStateSet())
         {

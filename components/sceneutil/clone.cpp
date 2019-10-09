@@ -1,12 +1,10 @@
 #include "clone.hpp"
 
 #include <osg/StateSet>
-#include <osg/Version>
 
 #include <osgParticle/ParticleProcessor>
 #include <osgParticle/ParticleSystemUpdater>
 #include <osgParticle/Emitter>
-#include <osgParticle/Program>
 
 #include <components/sceneutil/morphgeometry.hpp>
 
@@ -26,7 +24,7 @@ namespace SceneUtil
     osg::StateSet* CopyOp::operator ()(const osg::StateSet* stateset) const
     {
         if (!stateset)
-            return NULL;
+            return nullptr;
         if (stateset->getDataVariance() == osg::StateSet::DYNAMIC)
             return osg::clone(stateset, *this);
         return const_cast<osg::StateSet*>(stateset);

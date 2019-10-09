@@ -36,7 +36,7 @@ namespace MWSound
         virtual std::vector<std::string> enumerateHrtf() = 0;
         virtual void setHrtf(const std::string &hrtfname, HrtfMode hrtfmode) = 0;
 
-        virtual std::pair<Sound_Handle,size_t> loadSound(const std::string &fname) = 0;
+        virtual std::pair<Sound_Handle, size_t> loadSound(const std::string &fname) = 0;
         virtual size_t unloadSound(Sound_Handle data) = 0;
 
         virtual bool playSound(Sound *sound, Sound_Handle data, float offset) = 0;
@@ -45,7 +45,7 @@ namespace MWSound
         virtual bool isSoundPlaying(Sound *sound) = 0;
         virtual void updateSound(Sound *sound) = 0;
 
-        virtual bool streamSound(DecoderPtr decoder, Stream *sound) = 0;
+        virtual bool streamSound(DecoderPtr decoder, Stream *sound, bool getLoudnessData = false) = 0;
         virtual bool streamSound3D(DecoderPtr decoder, Stream *sound, bool getLoudnessData) = 0;
         virtual void finishStream(Stream *sound) = 0;
         virtual double getStreamDelay(Stream *sound) = 0;
@@ -69,7 +69,7 @@ namespace MWSound
         bool mInitialized;
 
         Sound_Output(SoundManager &mgr)
-          : mManager(mgr), mInitialized(false)
+            : mManager(mgr), mInitialized(false)
         { }
     public:
         virtual ~Sound_Output() { }

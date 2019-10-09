@@ -5,7 +5,7 @@
 #ifndef OPENMW_ACTORPROCESSOR_HPP
 #define OPENMW_ACTORPROCESSOR_HPP
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
 #include <components/openmw-mp/Packets/Actor/ActorPacket.hpp>
 #include "../ObjectList.hpp"

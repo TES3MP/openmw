@@ -21,17 +21,17 @@ namespace mwmp
 
         virtual void Do(PlayerPacket &packet, BasePlayer *player)
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_RESURRECT from server");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_RESURRECT from server");
             
             if (isLocal())
             {
-                LOG_APPEND(Log::LOG_INFO, "- Packet was about me with resurrectType of %i", player->resurrectType);
+                LOG_APPEND(MWMPLog::LOG_INFO, "- Packet was about me with resurrectType of %i", player->resurrectType);
 
                 static_cast<LocalPlayer*>(player)->resurrect();
             }
             else if (player != 0)
             {
-                LOG_APPEND(Log::LOG_INFO, "- Packet was about %s", player->npc.mName.c_str());
+                LOG_APPEND(MWMPLog::LOG_INFO, "- Packet was about %s", player->npc.mName.c_str());
 
                 player->creatureStats.mDead = false;
                 if (player->creatureStats.mDynamic[0].mMod < 1)

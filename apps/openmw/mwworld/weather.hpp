@@ -40,6 +40,13 @@ namespace MWWorld
 {
     class TimeStamp;
 
+    enum NightDayMode
+    {
+        Default = 0,
+        ExteriorNight = 1,
+        InteriorDay = 2
+    };
+
     struct WeatherSetting
     {
         float mPreSunriseTime;
@@ -74,13 +81,13 @@ namespace MWWorld
             }
         }
 
-        void addSetting(const Fallback::Map& fallback, const std::string& type)
+        void addSetting(const std::string& type)
         {
             WeatherSetting setting = {
-                fallback.getFallbackFloat("Weather_" + type + "_Pre-Sunrise_Time"),
-                fallback.getFallbackFloat("Weather_" + type + "_Post-Sunrise_Time"),
-                fallback.getFallbackFloat("Weather_" + type + "_Pre-Sunset_Time"),
-                fallback.getFallbackFloat("Weather_" + type + "_Post-Sunset_Time")
+                Fallback::Map::getFloat("Weather_" + type + "_Pre-Sunrise_Time"),
+                Fallback::Map::getFloat("Weather_" + type + "_Post-Sunrise_Time"),
+                Fallback::Map::getFloat("Weather_" + type + "_Pre-Sunset_Time"),
+                Fallback::Map::getFloat("Weather_" + type + "_Post-Sunset_Time")
             };
 
             mSunriseTransitions[type] = setting;
@@ -109,7 +116,6 @@ namespace MWWorld
     {
     public:
         Weather(const std::string& name,
-                const Fallback::Map& fallback,
                 float stormWindSpeed,
                 float rainSpeed,
                 float dlFactor,
@@ -223,7 +229,7 @@ namespace MWWorld
     class MoonModel
     {
     public:
-        MoonModel(const std::string& name, const Fallback::Map& fallback);
+        MoonModel(const std::string& name);
 
         MWRender::MoonState calculateState(const TimeStamp& gameTime) const;
 
@@ -253,9 +259,7 @@ namespace MWWorld
     {
     public:
         // Have to pass fallback and Store, can't use singleton since World isn't fully constructed yet at the time
-        WeatherManager(MWRender::RenderingManager& rendering,
-                       const Fallback::Map& fallback,
-                       MWWorld::ESMStore& store);
+        WeatherManager(MWRender::RenderingManager& rendering, MWWorld::ESMStore& store);
         ~WeatherManager();
 
         /**
@@ -289,6 +293,7 @@ namespace MWWorld
         void stopSounds();
 
         float getWindSpeed() const;
+        NightDayMode getNightDayMode() const;
 
         /// Are we in an ash or blight storm?
         bool isInStorm() const;
@@ -374,6 +379,7 @@ namespace MWWorld
         bool mFastForward;
         float mWeatherUpdateTime;
         float mTransitionFactor;
+        NightDayMode mNightDayMode;
         int mCurrentWeather;
         int mNextWeather;
         int mQueuedWeather;
@@ -395,7 +401,6 @@ namespace MWWorld
         */
 
         void addWeather(const std::string& name,
-                        const Fallback::Map& fallback,
                         float dlFactor, float dlOffset,
                         const std::string& particleEffect = "");
 

@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cctype>
 #include <sstream>
-#include <algorithm>
 #include <iterator>
 
 #include "exception.hpp"
@@ -159,7 +158,7 @@ namespace Compiler
         TokenLoc loc (mLoc);
         mLoc.mLiteral.clear();
 
-        mErrorHandler.error ("syntax error", loc);
+        mErrorHandler.error ("Syntax error", loc);
         throw SourceException();
     }
 
@@ -306,10 +305,22 @@ namespace Compiler
         int i = 0;
 
         std::string lowerCase = Misc::StringUtils::lowerCase(name);
-
+        bool isKeyword = false;
         for (; sKeywords[i]; ++i)
             if (lowerCase==sKeywords[i])
+            {
+                isKeyword = true;
                 break;
+            }
+
+        // Russian localization and some mods use a quirk - add newline character directly
+        // to compiled bytecode via HEX-editor to implement multiline messageboxes.
+        // Of course, original editor will not compile such script.
+        // Allow messageboxes to bybass the "incomplete string or name" error.
+        if (lowerCase == "messagebox")
+            enableIgnoreNewlines();
+        else if (isKeyword)
+            mIgnoreNewline = false;
 
         if (sKeywords[i])
         {
@@ -357,9 +368,14 @@ namespace Compiler
 //                }
                 else if (c=='\n')
                 {
-                    error = true;
-                    mErrorHandler.error ("incomplete string or name", mLoc);
-                    break;
+                    if (mIgnoreNewline)
+                        mErrorHandler.warning ("string contains newline character, make sure that it is intended", mLoc);
+                    else
+                    {
+                        error = true;
+                        mErrorHandler.error ("incomplete string or name", mLoc);
+                        break;
+                    }
                 }
             }
             else if (!(c=='"' && name.empty()))
@@ -502,6 +518,11 @@ namespace Compiler
                     if (get (c) && c!='=') // <== is a allowed as an alternative to <=  :(
                         putback (c);
                 }
+                else if (c == '<' || c == '>') // Treat <> and << as <
+                {
+                    special = S_cmpLT;
+                    mErrorHandler.warning ("Invalid operator, treating it as <", mLoc);
+                }
                 else
                 {
                     putback (c);
@@ -524,6 +545,11 @@ namespace Compiler
 
                     if (get (c) && c!='=') // >== is a allowed as an alternative to >=  :(
                         putback (c);
+                }
+                else if (c == '<' || c == '>') // Treat >< and >> as >
+                {
+                    special = S_cmpGT;
+                    mErrorHandler.warning ("Invalid operator, treating it as >", mLoc);
                 }
                 else
                 {
@@ -578,7 +604,7 @@ namespace Compiler
         const Extensions *extensions)
     : mErrorHandler (errorHandler), mStream (inputStream), mExtensions (extensions),
       mPutback (Putback_None), mPutbackCode(0), mPutbackInteger(0), mPutbackFloat(0),
-      mStrictKeywords (false), mTolerantNames (false)
+      mStrictKeywords (false), mTolerantNames (false), mIgnoreNewline(false)
     {
     }
 
@@ -629,6 +655,11 @@ namespace Compiler
 
         if (mExtensions)
             mExtensions->listKeywords (keywords);
+    }
+
+    void Scanner::enableIgnoreNewlines()
+    {
+        mIgnoreNewline = true;
     }
 
     void Scanner::enableStrictKeywords()

@@ -1,7 +1,7 @@
 #ifndef OPENMW_OBJECTPROCESSSOR_HPP
 #define OPENMW_OBJECTPROCESSSOR_HPP
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
 #include <components/openmw-mp/Packets/Object/ObjectPacket.hpp>
 #include "../ObjectList.hpp"

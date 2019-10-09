@@ -34,6 +34,7 @@
 #include "../mwrender/objects.hpp"
 #include "../mwrender/renderinginterface.hpp"
 #include "../mwmechanics/actorutil.hpp"
+#include "../mwmechanics/weapontype.hpp"
 
 #include "../mwgui/tooltips.hpp"
 
@@ -383,16 +384,11 @@ namespace MWClass
                 if(weapon == invStore.end())
                     return std::make_pair(1,"");
 
-                if(weapon->getTypeName() == typeid(ESM::Weapon).name() &&
-                        (weapon->get<ESM::Weapon>()->mBase->mData.mType == ESM::Weapon::LongBladeTwoHand ||
-                weapon->get<ESM::Weapon>()->mBase->mData.mType == ESM::Weapon::BluntTwoClose ||
-                weapon->get<ESM::Weapon>()->mBase->mData.mType == ESM::Weapon::BluntTwoWide ||
-                weapon->get<ESM::Weapon>()->mBase->mData.mType == ESM::Weapon::SpearTwoWide ||
-                weapon->get<ESM::Weapon>()->mBase->mData.mType == ESM::Weapon::AxeTwoHand ||
-                weapon->get<ESM::Weapon>()->mBase->mData.mType == ESM::Weapon::MarksmanBow ||
-                weapon->get<ESM::Weapon>()->mBase->mData.mType == ESM::Weapon::MarksmanCrossbow))
+                if (weapon != invStore.end() && weapon->getTypeName() == typeid(ESM::Weapon).name())
                 {
-                    return std::make_pair(3,"");
+                    const MWWorld::LiveCellRef<ESM::Weapon> *ref = weapon->get<ESM::Weapon>();
+                    if (MWMechanics::getWeaponType(ref->mBase->mData.mType)->mFlags & ESM::WeaponType::TwoHanded)
+                        return std::make_pair(3, "");
                 }
                 return std::make_pair(1,"");
             }

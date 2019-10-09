@@ -5,19 +5,22 @@
 #include <osg/Geometry>
 #include <osg/Array>
 #include <osg/LOD>
+#include <osg/Switch>
 #include <osg/TexGen>
 #include <osg/ValueObject>
 
 // resource
+#include <components/debug/debuglog.hpp>
+#include <components/misc/constants.hpp>
 #include <components/misc/stringops.hpp>
 #include <components/misc/resourcehelpers.hpp>
 #include <components/resource/imagemanager.hpp>
+#include <components/sceneutil/util.hpp>
 
 // particle
 #include <osgParticle/ParticleSystem>
 #include <osgParticle/ParticleSystemUpdater>
 #include <osgParticle/ConstantRateCounter>
-#include <osgParticle/Shooter>
 #include <osgParticle/BoxPlacer>
 #include <osgParticle/ModularProgram>
 
@@ -199,7 +202,7 @@ namespace NifOsg
             }
 
             const Nif::Record *r = nif->getRoot(0);
-            assert(r != NULL);
+            assert(r != nullptr);
 
             if(r->recType != Nif::RC_NiSequenceStreamHelper)
             {
@@ -219,9 +222,9 @@ namespace NifOsg
 
             extractTextKeys(static_cast<const Nif::NiTextKeyExtraData*>(extra.getPtr()), target.mTextKeys);
 
-            extra = extra->extra;
+            extra = extra->next;
             Nif::ControllerPtr ctrl = seq->controller;
-            for(;!extra.empty() && !ctrl.empty();(extra=extra->extra),(ctrl=ctrl->next))
+            for(;!extra.empty() && !ctrl.empty();(extra=extra->next),(ctrl=ctrl->next))
             {
                 if(extra->recType != Nif::RC_NiStringExtraData || ctrl->recType != Nif::RC_NiKeyframeController)
                 {
@@ -241,10 +244,8 @@ namespace NifOsg
                 osg::ref_ptr<NifOsg::KeyframeController> callback(new NifOsg::KeyframeController(key->data.getPtr()));
                 callback->setFunction(std::shared_ptr<NifOsg::ControllerFunction>(new NifOsg::ControllerFunction(key)));
 
-                if (target.mKeyframeControllers.find(strdata->string) != target.mKeyframeControllers.end())
-                    std::cerr << "Warning: controller " << strdata->string << " present more than once in " << nif->getFilename() << ", ignoring later version" << std::endl;
-                else
-                    target.mKeyframeControllers[strdata->string] = callback;
+                if (!target.mKeyframeControllers.emplace(strdata->string, callback).second)
+                    Log(Debug::Verbose) << "Controller " << strdata->string << " present more than once in " << nif->getFilename() << ", ignoring later version";
             }
         }
 
@@ -256,12 +257,12 @@ namespace NifOsg
             const Nif::Record* r = nif->getRoot(0);
 
             const Nif::Node* nifNode = dynamic_cast<const Nif::Node*>(r);
-            if (nifNode == NULL)
+            if (nifNode == nullptr)
                 nif->fail("First root was not a node, but a " + r->recName);
 
             osg::ref_ptr<TextKeyMapHolder> textkeys (new TextKeyMapHolder);
 
-            osg::ref_ptr<osg::Node> created = handleNode(nifNode, NULL, imageManager, std::vector<int>(), 0, false, false, false, &textkeys->mTextKeys);
+            osg::ref_ptr<osg::Node> created = handleNode(nifNode, nullptr, imageManager, std::vector<int>(), 0, false, false, false, &textkeys->mTextKeys);
 
             if (nif->getUseSkinning())
             {
@@ -296,7 +297,7 @@ namespace NifOsg
                 {
                     // Get the lowest numbered recIndex of the NiTexturingProperty root node.
                     // This is what is overridden when a spell effect "particle texture" is used.
-                    if (nifNode->parent == NULL && !mFoundFirstRootTexturingProperty && props[i].getPtr()->recType == Nif::RC_NiTexturingProperty)
+                    if (nifNode->parent == nullptr && !mFoundFirstRootTexturingProperty && props[i].getPtr()->recType == Nif::RC_NiTexturingProperty)
                     {
                         mFirstRootTextureIndex = props[i].getPtr()->recIndex;
                         mFoundFirstRootTexturingProperty = true;
@@ -323,6 +324,7 @@ namespace NifOsg
         osg::ref_ptr<osg::LOD> handleLodNode(const Nif::NiLODNode* niLodNode)
         {
             osg::ref_ptr<osg::LOD> lod (new osg::LOD);
+            lod->setName(niLodNode->name);
             lod->setCenterMode(osg::LOD::USER_DEFINED_CENTER);
             lod->setCenter(niLodNode->lodCenter);
             for (unsigned int i=0; i<niLodNode->lodLevels.size(); ++i)
@@ -334,10 +336,18 @@ namespace NifOsg
             return lod;
         }
 
+        osg::ref_ptr<osg::Switch> handleSwitchNode(const Nif::NiSwitchNode* niSwitchNode)
+        {
+            osg::ref_ptr<osg::Switch> switchNode (new osg::Switch);
+            switchNode->setName(niSwitchNode->name);
+            switchNode->setNewChildDefaultValue(false);
+            return switchNode;
+        }
+
         osg::ref_ptr<osg::Image> handleSourceTexture(const Nif::NiSourceTexture* st, Resource::ImageManager* imageManager)
         {
             if (!st)
-                return NULL;
+                return nullptr;
 
             osg::ref_ptr<osg::Image> image;
             if (!st->external && !st->data.empty())
@@ -356,20 +366,20 @@ namespace NifOsg
         {
             if (nifNode->recType != Nif::RC_NiTextureEffect)
             {
-                std::cerr << "Unhandled effect " << nifNode->recName << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unhandled effect " << nifNode->recName << " in " << mFilename;
                 return;
             }
 
             const Nif::NiTextureEffect* textureEffect = static_cast<const Nif::NiTextureEffect*>(nifNode);
             if (textureEffect->textureType != Nif::NiTextureEffect::Environment_Map)
             {
-                std::cerr << "Unhandled NiTextureEffect type " << textureEffect->textureType << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unhandled NiTextureEffect type " << textureEffect->textureType << " in " << mFilename;
                 return;
             }
 
             if (textureEffect->texture.empty())
             {
-                std::cerr << "NiTextureEffect missing source texture in " << mFilename << std::endl;
+                Log(Debug::Info) << "NiTextureEffect missing source texture in " << mFilename;
                 return;
             }
 
@@ -386,17 +396,20 @@ namespace NifOsg
                 texGen->setMode(osg::TexGen::SPHERE_MAP);
                 break;
             default:
-                std::cerr << "Unhandled NiTextureEffect coordGenType " << textureEffect->coordGenType << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unhandled NiTextureEffect coordGenType " << textureEffect->coordGenType << " in " << mFilename;
                 return;
             }
 
-            osg::ref_ptr<osg::Texture2D> texture2d (new osg::Texture2D(handleSourceTexture(textureEffect->texture.getPtr(), imageManager)));
+            osg::ref_ptr<osg::Image> image (handleSourceTexture(textureEffect->texture.getPtr(), imageManager));
+            osg::ref_ptr<osg::Texture2D> texture2d (new osg::Texture2D(image));
+            if (image)
+                texture2d->setTextureSize(image->s(), image->t());
             texture2d->setName("envMap");
             unsigned int clamp = static_cast<unsigned int>(textureEffect->clamp);
             int wrapT = (clamp) & 0x1;
             int wrapS = (clamp >> 1) & 0x1;
-            texture2d->setWrap(osg::Texture::WRAP_S, wrapS ? osg::Texture::REPEAT : osg::Texture::CLAMP);
-            texture2d->setWrap(osg::Texture::WRAP_T, wrapT ? osg::Texture::REPEAT : osg::Texture::CLAMP);
+            texture2d->setWrap(osg::Texture::WRAP_S, wrapS ? osg::Texture::REPEAT : osg::Texture::CLAMP_TO_EDGE);
+            texture2d->setWrap(osg::Texture::WRAP_T, wrapT ? osg::Texture::REPEAT : osg::Texture::CLAMP_TO_EDGE);
 
             osg::ref_ptr<osg::TexEnvCombine> texEnv = new osg::TexEnvCombine;
             texEnv->setCombine_Alpha(osg::TexEnvCombine::REPLACE);
@@ -421,9 +434,25 @@ namespace NifOsg
             osg::ref_ptr<osg::Group> node;
             osg::Object::DataVariance dataVariance = osg::Object::UNSPECIFIED;
 
+            // TODO: it is unclear how to handle transformations of LOD and Switch nodes and controllers for them.
             switch (nifNode->recType)
             {
+            case Nif::RC_NiLODNode:
+            {
+                const Nif::NiLODNode* niLodNode = static_cast<const Nif::NiLODNode*>(nifNode);
+                node = handleLodNode(niLodNode);
+                dataVariance = osg::Object::STATIC;
+                break;
+            }
+            case Nif::RC_NiSwitchNode:
+            {
+                const Nif::NiSwitchNode* niSwitchNode = static_cast<const Nif::NiSwitchNode*>(nifNode);
+                node = handleSwitchNode(niSwitchNode);
+                dataVariance = osg::Object::STATIC;
+                break;
+            }
             case Nif::RC_NiTriShape:
+            case Nif::RC_NiTriStrips:
             case Nif::RC_NiAutoNormalParticles:
             case Nif::RC_NiRotatingParticles:
                 // Leaf nodes in the NIF hierarchy, so won't be able to dynamically attach children.
@@ -463,10 +492,10 @@ namespace NifOsg
         }
 
         osg::ref_ptr<osg::Node> handleNode(const Nif::Node* nifNode, osg::Group* parentNode, Resource::ImageManager* imageManager,
-                                std::vector<int> boundTextures, int animflags, bool skipMeshes, bool hasMarkers, bool isAnimated, TextKeyMap* textKeys, osg::Node* rootNode=NULL)
+                                std::vector<int> boundTextures, int animflags, bool skipMeshes, bool hasMarkers, bool isAnimated, TextKeyMap* textKeys, osg::Node* rootNode=nullptr)
         {
-            if (rootNode != NULL && Misc::StringUtils::ciEqual(nifNode->name, "Bounding Box"))
-                return NULL;
+            if (rootNode != nullptr && Misc::StringUtils::ciEqual(nifNode->name, "Bounding Box"))
+                return nullptr;
 
             osg::ref_ptr<osg::Group> node = createNode(nifNode);
 
@@ -495,7 +524,7 @@ namespace NifOsg
             node->getOrCreateUserDataContainer()->addUserObject(
                 new NodeUserData(nifNode->recIndex, nifNode->trafo.scale, nifNode->trafo.rotation));
 
-            for (Nif::ExtraPtr e = nifNode->extra; !e.empty(); e = e->extra)
+            for (Nif::ExtraPtr e = nifNode->extra; !e.empty(); e = e->next)
             {
                 if(e->recType == Nif::RC_NiTextKeyExtraData && textKeys)
                 {
@@ -511,6 +540,10 @@ namespace NifOsg
                     {
                         // Marker objects. These meshes are only visible in the editor.
                         hasMarkers = true;
+                    }
+                    else if(sd->string == "BONE")
+                    {
+                        node->getOrCreateUserDataContainer()->addDescription("CustomBone");
                     }
                 }
             }
@@ -547,7 +580,7 @@ namespace NifOsg
                 node->setDataVariance(osg::Object::DYNAMIC);
             }
 
-            if (nifNode->recType == Nif::RC_NiTriShape && isAnimated) // the same thing for animated NiTriShapes
+            if ((nifNode->recType == Nif::RC_NiTriShape || nifNode->recType == Nif::RC_NiTriStrips) && isAnimated) // Same thing for animated shapes
             {
                 node->setDataVariance(osg::Object::DYNAMIC);
             }
@@ -556,17 +589,25 @@ namespace NifOsg
 
             applyNodeProperties(nifNode, node, composite, imageManager, boundTextures, animflags);
 
-            if (nifNode->recType == Nif::RC_NiTriShape && !skipMeshes)
+            if ((nifNode->recType == Nif::RC_NiTriShape || nifNode->recType == Nif::RC_NiTriStrips) && !skipMeshes)
             {
-                const Nif::NiTriShape* triShape = static_cast<const Nif::NiTriShape*>(nifNode);
-                const std::string nodeName = Misc::StringUtils::lowerCase(triShape->name);
-                static const std::string pattern = "tri editormarker";
-                if (!hasMarkers || nodeName.compare(0, pattern.size(), pattern) != 0)
+                const std::string nodeName = Misc::StringUtils::lowerCase(nifNode->name);
+                static const std::string markerName = "tri editormarker";
+                static const std::string shadowName = "shadow";
+                static const std::string shadowName2 = "tri shadow";
+                const bool isMarker = hasMarkers && !nodeName.compare(0, markerName.size(), markerName);
+                if (!isMarker && nodeName.compare(0, shadowName.size(), shadowName) && nodeName.compare(0, shadowName2.size(), shadowName2))
                 {
-                    if (triShape->skin.empty())
-                        handleTriShape(triShape, node, composite, boundTextures, animflags);
+                    Nif::NiSkinInstancePtr skin;
+                    if (nifNode->recType == Nif::RC_NiTriShape)
+                        skin = static_cast<const Nif::NiTriShape*>(nifNode)->skin;
+                    else // if (nifNode->recType == Nif::RC_NiTriStrips)
+                        skin = static_cast<const Nif::NiTriStrips*>(nifNode)->skin;
+
+                    if (skin.empty())
+                        handleTriShape(nifNode, node, composite, boundTextures, animflags);
                     else
-                        handleSkinnedTriShape(triShape, node, composite, boundTextures, animflags);
+                        handleSkinnedTriShape(nifNode, node, composite, boundTextures, animflags);
 
                     if (!nifNode->controller.empty())
                         handleMeshControllers(nifNode, node, composite, boundTextures, animflags);
@@ -581,16 +622,9 @@ namespace NifOsg
 
             // Note: NiTriShapes are not allowed to have KeyframeControllers (the vanilla engine just crashes when there is one).
             // We can take advantage of this constraint for optimizations later.
-            if (nifNode->recType != Nif::RC_NiTriShape && !nifNode->controller.empty() && node->getDataVariance() == osg::Object::DYNAMIC)
+            if (nifNode->recType != Nif::RC_NiTriShape && nifNode->recType != Nif::RC_NiTriStrips
+                    && !nifNode->controller.empty() && node->getDataVariance() == osg::Object::DYNAMIC)
                 handleNodeControllers(nifNode, static_cast<osg::MatrixTransform*>(node.get()), animflags);
-
-            if (nifNode->recType == Nif::RC_NiLODNode)
-            {
-                const Nif::NiLODNode* niLodNode = static_cast<const Nif::NiLODNode*>(nifNode);
-                osg::ref_ptr<osg::LOD> lod = handleLodNode(niLodNode);
-                node->addChild(lod); // unsure if LOD should be above or below this node's transform
-                node = lod;
-            }
 
             const Nif::NiNode *ninode = dynamic_cast<const Nif::NiNode*>(nifNode);
             if(ninode)
@@ -610,6 +644,16 @@ namespace NifOsg
                 }
             }
 
+            if (nifNode->recType == Nif::RC_NiSwitchNode)
+            {
+                const Nif::NiSwitchNode* niSwitchNode = static_cast<const Nif::NiSwitchNode*>(nifNode);
+                node->asSwitch()->setSingleChildOn(niSwitchNode->initialIndex);
+                if (niSwitchNode->name == Constants::NightDayLabel && !SceneUtil::hasUserDescription(rootNode, Constants::NightDayLabel))
+                    rootNode->getOrCreateUserDataContainer()->addDescription(Constants::NightDayLabel);
+                else if (niSwitchNode->name == Constants::HerbalismLabel && !SceneUtil::hasUserDescription(rootNode, Constants::HerbalismLabel))
+                    rootNode->getOrCreateUserDataContainer()->addDescription(Constants::HerbalismLabel);
+            }
+
             return node;
         }
 
@@ -622,9 +666,14 @@ namespace NifOsg
                 if (ctrl->recType == Nif::RC_NiUVController)
                 {
                     const Nif::NiUVController *niuvctrl = static_cast<const Nif::NiUVController*>(ctrl.getPtr());
+                    const int uvSet = niuvctrl->uvSet;
                     std::set<int> texUnits;
+                    // UVController should work only for textures which use a given UV Set, usually 0.
                     for (unsigned int i=0; i<boundTextures.size(); ++i)
-                        texUnits.insert(i);
+                    {
+                        if (boundTextures[i] == uvSet)
+                            texUnits.insert(i);
+                    }
 
                     osg::ref_ptr<UVController> uvctrl = new UVController(niuvctrl->data.getPtr(), texUnits);
                     setupController(niuvctrl, uvctrl, animflags);
@@ -637,7 +686,7 @@ namespace NifOsg
                 else if(ctrl->recType == Nif::RC_NiGeomMorpherController)
                 {} // handled in handleTriShape
                 else
-                    std::cerr << "Unhandled controller " << ctrl->recName << " on node " << nifNode->recIndex << " in " << mFilename << std::endl;
+                    Log(Debug::Info) << "Unhandled controller " << ctrl->recName << " on node " << nifNode->recIndex << " in " << mFilename;
             }
         }
 
@@ -662,8 +711,12 @@ namespace NifOsg
                 {
                     handleVisController(static_cast<const Nif::NiVisController*>(ctrl.getPtr()), transformNode, animflags);
                 }
+                else if (ctrl->recType == Nif::RC_NiRollController)
+                {
+                    handleRollController(static_cast<const Nif::NiRollController*>(ctrl.getPtr()), transformNode, animflags);
+                }
                 else
-                    std::cerr << "Unhandled controller " << ctrl->recName << " on node " << nifNode->recIndex << " in " << mFilename << std::endl;
+                    Log(Debug::Info) << "Unhandled controller " << ctrl->recName << " on node " << nifNode->recIndex << " in " << mFilename;
             }
         }
 
@@ -671,6 +724,13 @@ namespace NifOsg
         {
             osg::ref_ptr<VisController> callback(new VisController(visctrl->data.getPtr()));
             setupController(visctrl, callback, animflags);
+            node->addUpdateCallback(callback);
+        }
+
+        void handleRollController(const Nif::NiRollController* rollctrl, osg::Node* node, int animflags)
+        {
+            osg::ref_ptr<RollController> callback(new RollController(rollctrl->data.getPtr()));
+            setupController(rollctrl, callback, animflags);
             node->addUpdateCallback(callback);
         }
 
@@ -690,12 +750,18 @@ namespace NifOsg
                 else if (ctrl->recType == Nif::RC_NiMaterialColorController)
                 {
                     const Nif::NiMaterialColorController* matctrl = static_cast<const Nif::NiMaterialColorController*>(ctrl.getPtr());
-                    osg::ref_ptr<MaterialColorController> osgctrl(new MaterialColorController(matctrl->data.getPtr()));
+                    // Two bits that correspond to the controlled material color.
+                    // 00: Ambient
+                    // 01: Diffuse
+                    // 10: Specular
+                    // 11: Emissive
+                    MaterialColorController::TargetColor targetColor = static_cast<MaterialColorController::TargetColor>((matctrl->flags >> 4) & 3);
+                    osg::ref_ptr<MaterialColorController> osgctrl(new MaterialColorController(matctrl->data.getPtr(), targetColor));
                     setupController(matctrl, osgctrl, animflags);
                     composite->addController(osgctrl);
                 }
                 else
-                    std::cerr << "Unexpected material controller " << ctrl->recType << " in " << mFilename << std::endl;
+                    Log(Debug::Info) << "Unexpected material controller " << ctrl->recType << " in " << mFilename;
             }
         }
 
@@ -717,15 +783,18 @@ namespace NifOsg
 
                         // inherit wrap settings from the target slot
                         osg::Texture2D* inherit = dynamic_cast<osg::Texture2D*>(stateset->getTextureAttribute(flipctrl->mTexSlot, osg::StateAttribute::TEXTURE));
-                        osg::Texture2D::WrapMode wrapS = osg::Texture2D::CLAMP;
-                        osg::Texture2D::WrapMode wrapT = osg::Texture2D::CLAMP;
+                        osg::Texture2D::WrapMode wrapS = osg::Texture2D::CLAMP_TO_EDGE;
+                        osg::Texture2D::WrapMode wrapT = osg::Texture2D::CLAMP_TO_EDGE;
                         if (inherit)
                         {
                             wrapS = inherit->getWrap(osg::Texture2D::WRAP_S);
                             wrapT = inherit->getWrap(osg::Texture2D::WRAP_T);
                         }
 
-                        osg::ref_ptr<osg::Texture2D> texture (new osg::Texture2D(handleSourceTexture(st.getPtr(), imageManager)));
+                        osg::ref_ptr<osg::Image> image (handleSourceTexture(st.getPtr(), imageManager));
+                        osg::ref_ptr<osg::Texture2D> texture (new osg::Texture2D(image));
+                        if (image)
+                            texture->setTextureSize(image->s(), image->t());
                         texture->setWrap(osg::Texture::WRAP_S, wrapS);
                         texture->setWrap(osg::Texture::WRAP_T, wrapT);
                         textures.push_back(texture);
@@ -735,17 +804,17 @@ namespace NifOsg
                     composite->addController(callback);
                 }
                 else
-                    std::cerr << "Unexpected texture controller " << ctrl->recName << " in " << mFilename << std::endl;
+                    Log(Debug::Info) << "Unexpected texture controller " << ctrl->recName << " in " << mFilename;
             }
         }
 
-        void handleParticlePrograms(Nif::ExtraPtr affectors, Nif::ExtraPtr colliders, osg::Group *attachTo, osgParticle::ParticleSystem* partsys, osgParticle::ParticleProcessor::ReferenceFrame rf)
+        void handleParticlePrograms(Nif::NiParticleModifierPtr affectors, Nif::NiParticleModifierPtr colliders, osg::Group *attachTo, osgParticle::ParticleSystem* partsys, osgParticle::ParticleProcessor::ReferenceFrame rf)
         {
             osgParticle::ModularProgram* program = new osgParticle::ModularProgram;
             attachTo->addChild(program);
             program->setParticleSystem(partsys);
             program->setReferenceFrame(rf);
-            for (; !affectors.empty(); affectors = affectors->extra)
+            for (; !affectors.empty(); affectors = affectors->next)
             {
                 if (affectors->recType == Nif::RC_NiParticleGrowFade)
                 {
@@ -768,9 +837,9 @@ namespace NifOsg
                     // unused
                 }
                 else
-                    std::cerr << "Unhandled particle modifier " << affectors->recName << " in " << mFilename << std::endl;
+                    Log(Debug::Info) << "Unhandled particle modifier " << affectors->recName << " in " << mFilename;
             }
-            for (; !colliders.empty(); colliders = colliders->extra)
+            for (; !colliders.empty(); colliders = colliders->next)
             {
                 if (colliders->recType == Nif::RC_NiPlanarCollider)
                 {
@@ -783,14 +852,14 @@ namespace NifOsg
                     program->addOperator(new SphericalCollider(sphericalcollider));
                 }
                 else
-                    std::cerr << "Unhandled particle collider " << colliders->recName << " in " << mFilename << std::endl;
+                    Log(Debug::Info) << "Unhandled particle collider " << colliders->recName << " in " << mFilename;
             }
         }
 
         // Load the initial state of the particle system, i.e. the initial particles and their positions, velocity and colors.
         void handleParticleInitialState(const Nif::Node* nifNode, osgParticle::ParticleSystem* partsys, const Nif::NiParticleSystemController* partctrl)
         {
-            const Nif::NiAutoNormalParticlesData *particledata = NULL;
+            const Nif::NiAutoNormalParticlesData *particledata = nullptr;
             if(nifNode->recType == Nif::RC_NiAutoNormalParticles)
                 particledata = static_cast<const Nif::NiAutoNormalParticles*>(nifNode)->data.getPtr();
             else if(nifNode->recType == Nif::RC_NiRotatingParticles)
@@ -821,7 +890,9 @@ namespace NifOsg
                 if (particle.vertex < int(particledata->colors.size()))
                     partcolor = particledata->colors.at(particle.vertex);
 
-                float size = particledata->sizes.at(particle.vertex) * partctrl->size;
+                float size = partctrl->size;
+                if (particle.vertex < int(particledata->sizes.size()))
+                    size *= particledata->sizes.at(particle.vertex);
 
                 created->setSizeRange(osgParticle::rangef(size, size));
                 box.expandBy(osg::BoundingSphere(position, size));
@@ -872,7 +943,7 @@ namespace NifOsg
             osg::ref_ptr<ParticleSystem> partsys (new ParticleSystem);
             partsys->setSortMode(osgParticle::ParticleSystem::SORT_BACK_TO_FRONT);
 
-            const Nif::NiParticleSystemController* partctrl = NULL;
+            const Nif::NiParticleSystemController* partctrl = nullptr;
             for (Nif::ControllerPtr ctrl = nifNode->controller; !ctrl.empty(); ctrl = ctrl->next)
             {
                 if (!(ctrl->flags & Nif::NiNode::ControllerFlag_Active))
@@ -880,11 +951,11 @@ namespace NifOsg
                 if(ctrl->recType == Nif::RC_NiParticleSystemController || ctrl->recType == Nif::RC_NiBSPArrayController)
                     partctrl = static_cast<Nif::NiParticleSystemController*>(ctrl.getPtr());
                 else
-                    std::cerr << "Unhandled controller " << ctrl->recName << " on node " << nifNode->recIndex << " in " << mFilename << std::endl;
+                    Log(Debug::Info) << "Unhandled controller " << ctrl->recName << " on node " << nifNode->recIndex << " in " << mFilename;
             }
             if (!partctrl)
             {
-                std::cerr << "No particle controller found in " << mFilename << std::endl;
+                Log(Debug::Info) << "No particle controller found in " << mFilename;
                 return;
             }
 
@@ -924,7 +995,7 @@ namespace NifOsg
                 rootNode->accept(find);
                 if (!find.mFound)
                 {
-                    std::cerr << "can't find emitter node, wrong node order? in " << mFilename << std::endl;
+                    Log(Debug::Info) << "can't find emitter node, wrong node order? in " << mFilename;
                     return;
                 }
                 osg::Group* emitterNode = find.mFound;
@@ -976,57 +1047,96 @@ namespace NifOsg
             }
         }
 
-        void triShapeToGeometry(const Nif::NiTriShape *triShape, osg::Geometry *geometry, osg::Node* parentNode, SceneUtil::CompositeStateSetUpdater* composite, const std::vector<int>& boundTextures, int animflags)
+        void triCommonToGeometry(osg::Geometry *geometry, const std::vector<osg::Vec3f>& vertices, const std::vector<osg::Vec3f>& normals, const std::vector<std::vector<osg::Vec2f>>& uvlist, const std::vector<osg::Vec4f>& colors, const std::vector<int>& boundTextures, const std::string& name)
         {
-            const Nif::NiTriShapeData* data = triShape->data.getPtr();
-
-            {
-                geometry->setVertexArray(new osg::Vec3Array(data->vertices.size(), &data->vertices[0]));
-                if (!data->normals.empty())
-                    geometry->setNormalArray(new osg::Vec3Array(data->normals.size(), &data->normals[0]), osg::Array::BIND_PER_VERTEX);
-            }
+            if (!vertices.empty())
+                geometry->setVertexArray(new osg::Vec3Array(vertices.size(), vertices.data()));
+            if (!normals.empty())
+                geometry->setNormalArray(new osg::Vec3Array(normals.size(), normals.data()), osg::Array::BIND_PER_VERTEX);
+            if (!colors.empty())
+                geometry->setColorArray(new osg::Vec4Array(colors.size(), colors.data()), osg::Array::BIND_PER_VERTEX);
 
             int textureStage = 0;
-            for (std::vector<int>::const_iterator it = boundTextures.begin(); it != boundTextures.end(); ++it,++textureStage)
+            for (const int uvSet : boundTextures)
             {
-                int uvSet = *it;
-                if (uvSet >= (int)data->uvlist.size())
+                if (uvSet >= (int)uvlist.size())
                 {
-                    std::cerr << "Warning: out of bounds UV set " << uvSet << " on TriShape \"" << triShape->name << "\" in " << mFilename << std::endl;
-                    if (!data->uvlist.empty())
-                        geometry->setTexCoordArray(textureStage, new osg::Vec2Array(data->uvlist[0].size(), &data->uvlist[0][0]), osg::Array::BIND_PER_VERTEX);
+                    Log(Debug::Verbose) << "Out of bounds UV set " << uvSet << " on shape \"" << name << "\" in " << mFilename;
+                    if (!uvlist.empty())
+                        geometry->setTexCoordArray(textureStage, new osg::Vec2Array(uvlist[0].size(), uvlist[0].data()), osg::Array::BIND_PER_VERTEX);
                     continue;
                 }
 
-                geometry->setTexCoordArray(textureStage, new osg::Vec2Array(data->uvlist[uvSet].size(), &data->uvlist[uvSet][0]), osg::Array::BIND_PER_VERTEX);
+                geometry->setTexCoordArray(textureStage, new osg::Vec2Array(uvlist[uvSet].size(), uvlist[uvSet].data()), osg::Array::BIND_PER_VERTEX);
+                textureStage++;
             }
+        }
 
-            if (!data->colors.empty())
-                geometry->setColorArray(new osg::Vec4Array(data->colors.size(), &data->colors[0]), osg::Array::BIND_PER_VERTEX);
-
-            geometry->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::TRIANGLES,
-                                                                  data->triangles.size(),
-                                                                  (unsigned short*)&data->triangles[0]));
+        void triShapeToGeometry(const Nif::Node *nifNode, osg::Geometry *geometry, osg::Node* parentNode, SceneUtil::CompositeStateSetUpdater* composite, const std::vector<int>& boundTextures, int animflags)
+        {
+            bool vertexColorsPresent = false;
+            if (nifNode->recType == Nif::RC_NiTriShape)
+            {
+                const Nif::NiTriShape* triShape = static_cast<const Nif::NiTriShape*>(nifNode);
+                if (!triShape->data.empty())
+                {
+                    const Nif::NiTriShapeData* data = triShape->data.getPtr();
+                    vertexColorsPresent = !data->colors.empty();
+                    triCommonToGeometry(geometry, data->vertices, data->normals, data->uvlist, data->colors, boundTextures, triShape->name);
+                    if (!data->triangles.empty())
+                        geometry->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::TRIANGLES, data->triangles.size(),
+                                                                                (unsigned short*)data->triangles.data()));
+                }
+            }
+            else
+            {
+                const Nif::NiTriStrips* triStrips = static_cast<const Nif::NiTriStrips*>(nifNode);
+                if (!triStrips->data.empty())
+                {
+                    const Nif::NiTriStripsData* data = triStrips->data.getPtr();
+                    vertexColorsPresent = !data->colors.empty();
+                    triCommonToGeometry(geometry, data->vertices, data->normals, data->uvlist, data->colors, boundTextures, triStrips->name);
+                    if (!data->strips.empty())
+                    {
+                        for (const std::vector<unsigned short>& strip : data->strips)
+                        {
+                            // Can't make a triangle from less than three vertices.
+                            if (strip.size() < 3)
+                                continue;
+                            geometry->addPrimitiveSet(new osg::DrawElementsUShort(osg::PrimitiveSet::TRIANGLE_STRIP, strip.size(), 
+                                                                                (unsigned short*)strip.data()));
+                        }
+                    }
+                }
+            }
 
             // osg::Material properties are handled here for two reasons:
             // - if there are no vertex colors, we need to disable colorMode.
             // - there are 3 "overlapping" nif properties that all affect the osg::Material, handling them
             //   above the actual renderable would be tedious.
             std::vector<const Nif::Property*> drawableProps;
-            collectDrawableProperties(triShape, drawableProps);
-            applyDrawableProperties(parentNode, drawableProps, composite, !data->colors.empty(), animflags, false);
+            collectDrawableProperties(nifNode, drawableProps);
+            applyDrawableProperties(parentNode, drawableProps, composite, vertexColorsPresent, animflags, false);
         }
 
-        void handleTriShape(const Nif::NiTriShape* triShape, osg::Group* parentNode, SceneUtil::CompositeStateSetUpdater* composite, const std::vector<int>& boundTextures, int animflags)
+        void handleTriShape(const Nif::Node* nifNode, osg::Group* parentNode, SceneUtil::CompositeStateSetUpdater* composite, const std::vector<int>& boundTextures, int animflags)
         {
+            assert(nifNode->recType == Nif::RC_NiTriShape || nifNode->recType == Nif::RC_NiTriStrips);
             osg::ref_ptr<osg::Drawable> drawable;
-            for (Nif::ControllerPtr ctrl = triShape->controller; !ctrl.empty(); ctrl = ctrl->next)
+            osg::ref_ptr<osg::Geometry> geom (new osg::Geometry);
+            triShapeToGeometry(nifNode, geom, parentNode, composite, boundTextures, animflags);
+            Nif::ControllerPtr ctrl;
+            if (nifNode->recType == Nif::RC_NiTriShape)
+                ctrl = static_cast<const Nif::NiTriShape*>(nifNode)->controller;
+            else
+                ctrl = static_cast<const Nif::NiTriStrips*>(nifNode)->controller;
+            for (; !ctrl.empty(); ctrl = ctrl->next)
             {
                 if (!(ctrl->flags & Nif::NiNode::ControllerFlag_Active))
                     continue;
                 if(ctrl->recType == Nif::RC_NiGeomMorpherController)
                 {
-                    drawable = handleMorphGeometry(static_cast<const Nif::NiGeomMorpherController*>(ctrl.getPtr()), triShape, parentNode, composite, boundTextures, animflags);
+                    drawable = handleMorphGeometry(static_cast<const Nif::NiGeomMorpherController*>(ctrl.getPtr()), geom, parentNode, composite, boundTextures, animflags);
 
                     osg::ref_ptr<GeomMorpherController> morphctrl = new GeomMorpherController(
                                 static_cast<const Nif::NiGeomMorpherController*>(ctrl.getPtr())->data.getPtr());
@@ -1035,25 +1145,15 @@ namespace NifOsg
                     break;
                 }
             }
-
             if (!drawable.get())
-            {
-                osg::ref_ptr<osg::Geometry> geom (new osg::Geometry);
                 drawable = geom;
-                triShapeToGeometry(triShape, geom, parentNode, composite, boundTextures, animflags);
-            }
-
-            drawable->setName(triShape->name);
-
+            drawable->setName(nifNode->name);
             parentNode->addChild(drawable);
         }
 
-        osg::ref_ptr<osg::Drawable> handleMorphGeometry(const Nif::NiGeomMorpherController* morpher, const Nif::NiTriShape *triShape, osg::Node* parentNode, SceneUtil::CompositeStateSetUpdater* composite, const std::vector<int>& boundTextures, int animflags)
+        osg::ref_ptr<osg::Drawable> handleMorphGeometry(const Nif::NiGeomMorpherController* morpher, osg::ref_ptr<osg::Geometry> sourceGeometry, osg::Node* parentNode, SceneUtil::CompositeStateSetUpdater* composite, const std::vector<int>& boundTextures, int animflags)
         {
             osg::ref_ptr<SceneUtil::MorphGeometry> morphGeom = new SceneUtil::MorphGeometry;
-
-            osg::ref_ptr<osg::Geometry> sourceGeometry (new osg::Geometry);
-            triShapeToGeometry(triShape, sourceGeometry, parentNode, composite, boundTextures, animflags);
             morphGeom->setSourceGeometry(sourceGeometry);
 
             const std::vector<Nif::NiMorphData::MorphData>& morphs = morpher->data.getPtr()->mMorphs;
@@ -1061,43 +1161,46 @@ namespace NifOsg
                 return morphGeom;
             // Note we are not interested in morph 0, which just contains the original vertices
             for (unsigned int i = 1; i < morphs.size(); ++i)
-                morphGeom->addMorphTarget(new osg::Vec3Array(morphs[i].mVertices.size(), &morphs[i].mVertices[0]), 0.f);
+                morphGeom->addMorphTarget(new osg::Vec3Array(morphs[i].mVertices.size(), morphs[i].mVertices.data()), 0.f);
 
             return morphGeom;
         }
 
-        void handleSkinnedTriShape(const Nif::NiTriShape *triShape, osg::Group *parentNode, SceneUtil::CompositeStateSetUpdater* composite,
+        void handleSkinnedTriShape(const Nif::Node *nifNode, osg::Group *parentNode, SceneUtil::CompositeStateSetUpdater* composite,
                                           const std::vector<int>& boundTextures, int animflags)
         {
+            assert(nifNode->recType == Nif::RC_NiTriShape || nifNode->recType == Nif::RC_NiTriStrips);
             osg::ref_ptr<osg::Geometry> geometry (new osg::Geometry);
-            triShapeToGeometry(triShape, geometry, parentNode, composite, boundTextures, animflags);
-
+            triShapeToGeometry(nifNode, geometry, parentNode, composite, boundTextures, animflags);
             osg::ref_ptr<SceneUtil::RigGeometry> rig(new SceneUtil::RigGeometry);
             rig->setSourceGeometry(geometry);
-            rig->setName(triShape->name);
-
-            const Nif::NiSkinInstance *skin = triShape->skin.getPtr();
+            rig->setName(nifNode->name);
 
             // Assign bone weights
             osg::ref_ptr<SceneUtil::RigGeometry::InfluenceMap> map (new SceneUtil::RigGeometry::InfluenceMap);
 
+            Nif::NiSkinInstancePtr skinPtr;
+            if (nifNode->recType == Nif::RC_NiTriShape)
+                skinPtr = static_cast<const Nif::NiTriShape*>(nifNode)->skin;
+            else
+                skinPtr = static_cast<const Nif::NiTriStrips*>(nifNode)->skin;
+            const Nif::NiSkinInstance *skin = skinPtr.getPtr();
             const Nif::NiSkinData *data = skin->data.getPtr();
             const Nif::NodeList &bones = skin->bones;
             for(size_t i = 0;i < bones.length();i++)
             {
-                std::string boneName = bones[i].getPtr()->name;
+                std::string boneName = Misc::StringUtils::lowerCase(bones[i].getPtr()->name);
 
                 SceneUtil::RigGeometry::BoneInfluence influence;
                 const std::vector<Nif::NiSkinData::VertWeight> &weights = data->bones[i].weights;
                 for(size_t j = 0;j < weights.size();j++)
                 {
-                    std::pair<unsigned short, float> indexWeight = std::make_pair(weights[j].vertex, weights[j].weight);
-                    influence.mWeights.insert(indexWeight);
+                    influence.mWeights.emplace_back(weights[j].vertex, weights[j].weight);
                 }
                 influence.mInvBindMatrix = data->bones[i].trafo.toMatrix();
                 influence.mBoundSphere = osg::BoundingSpheref(data->bones[i].boundSphereCenter, data->bones[i].boundSphereRadius);
 
-                map->mMap.insert(std::make_pair(boneName, influence));
+                map->mData.emplace_back(boneName, influence);
             }
             rig->setInfluenceMap(map);
 
@@ -1120,7 +1223,7 @@ namespace NifOsg
             case 9: return osg::BlendFunc::ONE_MINUS_DST_ALPHA;
             case 10: return osg::BlendFunc::SRC_ALPHA_SATURATE;
             default:
-                std::cerr<< "Unexpected blend mode: "<< mode << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unexpected blend mode: "<< mode << " in " << mFilename;
                 return osg::BlendFunc::SRC_ALPHA;
             }
         }
@@ -1138,7 +1241,7 @@ namespace NifOsg
             case 6: return osg::AlphaFunc::GEQUAL;
             case 7: return osg::AlphaFunc::NEVER;
             default:
-                std::cerr << "Unexpected blend mode: " << mode << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unexpected blend mode: " << mode << " in " << mFilename;
                 return osg::AlphaFunc::LEQUAL;
             }
         }
@@ -1156,7 +1259,7 @@ namespace NifOsg
             case 6: return osg::Stencil::GEQUAL;
             case 7: return osg::Stencil::NEVER; // NifSkope says this is GL_ALWAYS, but in MW it's GL_NEVER
             default:
-                std::cerr << "Unexpected stencil function: " << func << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unexpected stencil function: " << func << " in " << mFilename;
                 return osg::Stencil::NEVER;
             }
         }
@@ -1172,7 +1275,7 @@ namespace NifOsg
             case 4: return osg::Stencil::DECR;
             case 5: return osg::Stencil::INVERT;
             default:
-                std::cerr << "Unexpected stencil operation: " << op << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unexpected stencil operation: " << op << " in " << mFilename;
                 return osg::Stencil::KEEP;
             }
         }
@@ -1185,32 +1288,34 @@ namespace NifOsg
             switch (pixelData->fmt)
             {
             case Nif::NiPixelData::NIPXFMT_RGB8:
+            case Nif::NiPixelData::NIPXFMT_PAL8:
                 pixelformat = GL_RGB;
                 break;
             case Nif::NiPixelData::NIPXFMT_RGBA8:
+            case Nif::NiPixelData::NIPXFMT_PALA8:
                 pixelformat = GL_RGBA;
                 break;
             default:
-                std::cerr << "Unhandled internal pixel format " << pixelData->fmt << " in " << mFilename << std::endl;
-                return NULL;
+                Log(Debug::Info) << "Unhandled internal pixel format " << pixelData->fmt << " in " << mFilename;
+                return nullptr;
             }
 
             if (pixelData->mipmaps.empty())
-                return NULL;
+                return nullptr;
 
             int width = 0;
             int height = 0;
 
             std::vector<unsigned int> mipmapVector;
-            for (unsigned int i=0; i<pixelData->mipmaps.size()-3; ++i)
+            for (unsigned int i=0; i<pixelData->mipmaps.size(); ++i)
             {
                 const Nif::NiPixelData::Mipmap& mip = pixelData->mipmaps[i];
 
                 size_t mipSize = mip.height * mip.width * pixelData->bpp / 8;
                 if (mipSize + mip.dataOffset > pixelData->data.size())
                 {
-                    std::cerr << "Warning: Internal texture's mipmap data out of bounds, ignoring texture" << std::endl;
-                    return NULL;
+                    Log(Debug::Info) << "Internal texture's mipmap data out of bounds, ignoring texture";
+                    return nullptr;
                 }
 
                 if (i != 0)
@@ -1224,14 +1329,63 @@ namespace NifOsg
 
             if (width <= 0 || height <= 0)
             {
-                std::cerr << "Warning: Internal Texture Width and height must be non zero, ignoring texture" << std::endl;
-                return NULL;
+                Log(Debug::Info) << "Internal Texture Width and height must be non zero, ignoring texture";
+                return nullptr;
             }
 
-            unsigned char* data = new unsigned char[pixelData->data.size()];
-            memcpy(data, &pixelData->data[0], pixelData->data.size());
+            const std::vector<unsigned char>& pixels = pixelData->data;
+            switch (pixelData->fmt)
+            {
+            case Nif::NiPixelData::NIPXFMT_RGB8:
+            case Nif::NiPixelData::NIPXFMT_RGBA8:
+            {
+                unsigned char* data = new unsigned char[pixels.size()];
+                memcpy(data, pixels.data(), pixels.size());
+                image->setImage(width, height, 1, pixelformat, pixelformat, GL_UNSIGNED_BYTE, data, osg::Image::USE_NEW_DELETE);
+                break;
+            }
+            case Nif::NiPixelData::NIPXFMT_PAL8:
+            case Nif::NiPixelData::NIPXFMT_PALA8:
+            {
+                if (pixelData->palette.empty() || pixelData->bpp != 8)
+                {
+                    Log(Debug::Info) << "Palettized texture in " << mFilename << " is invalid, ignoring";
+                    return nullptr;
+                }
+                // We're going to convert the indices that pixel data contains
+                // into real colors using the palette.
+                const std::vector<unsigned int>& palette = pixelData->palette->colors;
+                if (pixelData->fmt == Nif::NiPixelData::NIPXFMT_PAL8)
+                {
+                    unsigned char* data = new unsigned char[pixels.size() * 3];
+                    for (size_t i = 0; i < pixels.size(); i++)
+                    {
+                        unsigned int color = palette[pixels[i]];
+                        data[i * 3 + 0] = (color >>  0) & 0xFF;
+                        data[i * 3 + 1] = (color >>  8) & 0xFF;
+                        data[i * 3 + 2] = (color >> 16) & 0xFF;
+                    }
+                    image->setImage(width, height, 1, pixelformat, pixelformat, GL_UNSIGNED_BYTE, data, osg::Image::USE_NEW_DELETE);
+                }
+                else // if (fmt = NIPXFMT_PALA8)
+                {
+                    unsigned char* data = new unsigned char[pixels.size() * 4];
+                    for (size_t i = 0; i < pixels.size(); i++)
+                    {
+                        unsigned int color = palette[pixels[i]];
+                        data[i * 4 + 0] = (color >>  0) & 0xFF;
+                        data[i * 4 + 1] = (color >>  8) & 0xFF;
+                        data[i * 4 + 2] = (color >> 16) & 0xFF;
+                        data[i * 4 + 3] = (color >> 24) & 0xFF;
+                    }
+                    image->setImage(width, height, 1, pixelformat, pixelformat, GL_UNSIGNED_BYTE, data, osg::Image::USE_NEW_DELETE);
+                }
+                break;
+            }
+            default:
+                return nullptr;
+            }
 
-            image->setImage(width, height, 1, pixelformat, pixelformat, GL_UNSIGNED_BYTE, data, osg::Image::USE_NEW_DELETE);
             image->setMipmapLevels(mipmapVector);
             image->flipVertical();
 
@@ -1248,6 +1402,7 @@ namespace NifOsg
                 boundTextures.clear();
             }
 
+            // If this loop is changed such that the base texture isn't guaranteed to end up in texture unit 0, the shadow casting shader will need to be updated accordingly.
             for (int i=0; i<Nif::NiTexturingProperty::NumTextures; ++i)
             {
                 if (texprop->textures[i].inUse)
@@ -1266,12 +1421,12 @@ namespace NifOsg
                         {
                             // Not used by the vanilla engine. MCP (Morrowind Code Patch) adds an option to use Gloss maps:
                             // "- Gloss map fix. Morrowind removed gloss map entries from model files after loading them. This stops Morrowind from removing them."
-                            //std::cerr << "NiTexturingProperty::GlossTexture in " << mFilename << " not currently used." << std::endl;
+                            // Log(Debug::Info) << "NiTexturingProperty::GlossTexture in " << mFilename << " not currently used.";
                             continue;
                         }
                         default:
                         {
-                            std::cerr << "Warning: unhandled texture stage " << i << " in " << mFilename << std::endl;
+                            Log(Debug::Info) << "Unhandled texture stage " << i << " in " << mFilename;
                             continue;
                         }
                     }
@@ -1279,7 +1434,7 @@ namespace NifOsg
                     const Nif::NiTexturingProperty::Texture& tex = texprop->textures[i];
                     if(tex.texture.empty() && texprop->controller.empty())
                     {
-                        std::cerr << "Warning: texture layer " << i << " is in use but empty in " << mFilename << std::endl;
+                        Log(Debug::Verbose) << "Texture layer " << i << " is in use but empty in " << mFilename;
                         continue;
                     }
 
@@ -1290,6 +1445,8 @@ namespace NifOsg
                         const Nif::NiSourceTexture *st = tex.texture.getPtr();
                         osg::ref_ptr<osg::Image> image = handleSourceTexture(st, imageManager);
                         texture2d = new osg::Texture2D(image);
+                        if (image)
+                            texture2d->setTextureSize(image->s(), image->t());
                     }
                     else
                         texture2d = new osg::Texture2D;
@@ -1298,8 +1455,8 @@ namespace NifOsg
                     int wrapT = (clamp) & 0x1;
                     int wrapS = (clamp >> 1) & 0x1;
 
-                    texture2d->setWrap(osg::Texture::WRAP_S, wrapS ? osg::Texture::REPEAT : osg::Texture::CLAMP);
-                    texture2d->setWrap(osg::Texture::WRAP_T, wrapT ? osg::Texture::REPEAT : osg::Texture::CLAMP);
+                    texture2d->setWrap(osg::Texture::WRAP_S, wrapS ? osg::Texture::REPEAT : osg::Texture::CLAMP_TO_EDGE);
+                    texture2d->setWrap(osg::Texture::WRAP_T, wrapT ? osg::Texture::REPEAT : osg::Texture::CLAMP_TO_EDGE);
 
                     int texUnit = boundTextures.size();
 
@@ -1477,7 +1634,7 @@ namespace NifOsg
                 break;
             }
             default:
-                std::cerr << "Unhandled " << property->recName << " in " << mFilename << std::endl;
+                Log(Debug::Info) << "Unhandled " << property->recName << " in " << mFilename;
                 break;
             }
         }

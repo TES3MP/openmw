@@ -6,6 +6,7 @@
 
 #include <boost/format.hpp>
 
+#include <components/misc/constants.hpp>
 #include <components/misc/rng.hpp>
 #include <components/settings/settings.hpp>
 
@@ -14,7 +15,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
 #include "../mwmp/PlayerList.hpp"
@@ -45,6 +46,7 @@
 #include "npcstats.hpp"
 #include "actorutil.hpp"
 #include "aifollow.hpp"
+#include "weapontype.hpp"
 
 namespace MWMechanics
 {
@@ -926,8 +928,9 @@ namespace MWMechanics
         bool isProjectile = false;
         if (item.getTypeName() == typeid(ESM::Weapon).name())
         {
-            const MWWorld::LiveCellRef<ESM::Weapon> *ref = item.get<ESM::Weapon>();
-            isProjectile = ref->mBase->mData.mType == ESM::Weapon::Arrow || ref->mBase->mData.mType == ESM::Weapon::Bolt || ref->mBase->mData.mType == ESM::Weapon::MarksmanThrown;
+            int type = item.get<ESM::Weapon>()->mBase->mData.mType;
+            ESM::WeaponType::Class weapclass = MWMechanics::getWeaponType(type)->mWeaponClass;
+            isProjectile = (weapclass == ESM::WeaponType::Thrown || weapclass == ESM::WeaponType::Ranged);
         }
 
         if (isProjectile || !mTarget.isEmpty())
@@ -1034,7 +1037,7 @@ namespace MWMechanics
     
         // A non-actor doesn't play its spell cast effects from a character controller, so play them here
         if (!mCaster.getClass().isActor())
-            playSpellCastingEffects(mId);
+            playSpellCastingEffects(mId, false);
 
         inflict(mCaster, mCaster, spell->mEffects, ESM::RT_Self);
 
@@ -1110,31 +1113,60 @@ namespace MWMechanics
         return true;
     }
 
-    void CastSpell::playSpellCastingEffects(const std::string &spellid){
-       
+    void CastSpell::playSpellCastingEffects(const std::string &spellid, bool enchantment)
+    {
         const MWWorld::ESMStore& store = MWBase::Environment::get().getWorld()->getStore();
-        const ESM::Spell *spell = store.get<ESM::Spell>().find(spellid);
+        if (enchantment)
+        {
+            const ESM::Enchantment *spell = store.get<ESM::Enchantment>().find(spellid);
+            playSpellCastingEffects(spell->mEffects.mList);
 
-        for (std::vector<ESM::ENAMstruct>::const_iterator iter = spell->mEffects.mList.begin();
-            iter != spell->mEffects.mList.end(); ++iter)
+        }
+        else
+        {
+            const ESM::Spell *spell = store.get<ESM::Spell>().find(spellid);
+            playSpellCastingEffects(spell->mEffects.mList);
+        }
+    }
+
+    void CastSpell::playSpellCastingEffects(const std::vector<ESM::ENAMstruct>& effects)
+    {
+        const MWWorld::ESMStore& store = MWBase::Environment::get().getWorld()->getStore();
+        std::vector<std::string> addedEffects;
+        for (std::vector<ESM::ENAMstruct>::const_iterator iter = effects.begin(); iter != effects.end(); ++iter)
         {
             const ESM::MagicEffect *effect;
             effect = store.get<ESM::MagicEffect>().find(iter->mEffectID);
 
             MWRender::Animation* animation = MWBase::Environment::get().getWorld()->getAnimation(mCaster);
 
-            if (animation && mCaster.getClass().isActor()) // TODO: Non-actors should also create a spell cast vfx even if they are disabled (animation == NULL)
+            const ESM::Static* castStatic;
+
+            if (!effect->mCasting.empty())
+                castStatic = store.get<ESM::Static>().find(effect->mCasting);
+            else
+                castStatic = store.get<ESM::Static>().find("VFX_DefaultCast");
+
+            // check if the effect was already added
+            if (std::find(addedEffects.begin(), addedEffects.end(), "meshes\\" + castStatic->mModel) != addedEffects.end())
+                continue;
+
+            std::string texture = effect->mParticle;
+
+            osg::Vec3f pos(mCaster.getRefData().getPosition().asVec3());
+
+            if (animation)
             {
-                const ESM::Static* castStatic;
-
-                if (!effect->mCasting.empty())
-                    castStatic = store.get<ESM::Static>().find (effect->mCasting);
-                else
-                    castStatic = store.get<ESM::Static>().find ("VFX_DefaultCast");
-
-                std::string texture = effect->mParticle;
-
                 animation->addEffect("meshes\\" + castStatic->mModel, effect->mIndex, false, "", texture);
+            }
+            else
+            {
+                // If the caster has no animation, add the effect directly to the effectManager
+                // We should scale it manually
+                osg::Vec3f bounds(MWBase::Environment::get().getWorld()->getHalfExtents(mCaster) * 2.f / Constants::UnitsPerFoot);
+                float scale = std::max({ bounds.x() / 3.f, bounds.y() / 3.f, bounds.z() / 6.f });
+                float meshScale = !mCaster.getClass().isActor() ? mCaster.getCellRef().getScale() : 1.0f;
+                MWBase::Environment::get().getWorld()->spawnEffect("meshes\\" + castStatic->mModel, effect->mParticle, pos, scale * meshScale);
             }
 
             if (animation && !mCaster.getClass().isActor())
@@ -1144,11 +1176,13 @@ namespace MWMechanics
                 "alteration", "conjuration", "destruction", "illusion", "mysticism", "restoration"
             };
 
+            addedEffects.push_back("meshes\\" + castStatic->mModel);
+
             MWBase::SoundManager *sndMgr = MWBase::Environment::get().getSoundManager();
-            if(!effect->mCastSound.empty())
+            if (!effect->mCastSound.empty())
                 sndMgr->playSound3D(mCaster, effect->mCastSound, 1.0f, 1.0f);
             else
-                sndMgr->playSound3D(mCaster, schools[effect->mData.mSchool]+" cast", 1.0f, 1.0f);
+                sndMgr->playSound3D(mCaster, schools[effect->mData.mSchool] + " cast", 1.0f, 1.0f);
         }
     }
 

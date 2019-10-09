@@ -1,7 +1,7 @@
 #ifndef OPENMW_WORLDSTATEPROCESSOR_HPP
 #define OPENMW_WORLDSTATEPROCESSOR_HPP
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
 #include <components/openmw-mp/Packets/Worldstate/WorldstatePacket.hpp>
 #include "BaseClientPacketProcessor.hpp"

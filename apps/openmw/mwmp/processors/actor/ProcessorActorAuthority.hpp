@@ -18,7 +18,7 @@ namespace mwmp
 
         virtual void Do(ActorPacket &packet, ActorList &actorList)
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received %s about %s", strPacketID.c_str(), actorList.cell.getDescription().c_str());
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received %s about %s", strPacketID.c_str(), actorList.cell.getDescription().c_str());
             mwmp::CellController *cellController = Main::get().getCellController();
 
             // Never initialize LocalActors in a cell that is no longer loaded, if the server's packet arrived too late
@@ -30,7 +30,7 @@ namespace mwmp
 
                 if (isLocal())
                 {
-                    LOG_APPEND(Log::LOG_INFO, "- The new authority is me");
+                    LOG_APPEND(MWMPLog::LOG_INFO, "- The new authority is me");
                     cell->uninitializeDedicatedActors();
                     cell->initializeLocalActors();
                     cell->updateLocal(true);
@@ -40,14 +40,14 @@ namespace mwmp
                     BasePlayer *player = PlayerList::getPlayer(guid);
 
                     if (player != 0)
-                        LOG_APPEND(Log::LOG_INFO, "- The new authority is %s", player->npc.mName.c_str());
+                        LOG_APPEND(MWMPLog::LOG_INFO, "- The new authority is %s", player->npc.mName.c_str());
 
                     cell->uninitializeLocalActors();
                 }
             }
             else
             {
-                LOG_APPEND(Log::LOG_INFO, "- Ignoring it because that cell isn't loaded");
+                LOG_APPEND(MWMPLog::LOG_INFO, "- Ignoring it because that cell isn't loaded");
             }
         }
     };

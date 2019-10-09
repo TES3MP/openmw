@@ -1,5 +1,5 @@
 #include <components/openmw-mp/NetworkMessages.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "PacketActorAnimPlay.hpp"
 
 using namespace mwmp;

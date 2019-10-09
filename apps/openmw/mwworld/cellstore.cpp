@@ -10,7 +10,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
 #include "../mwmp/CellController.hpp"
@@ -249,7 +249,7 @@ namespace MWWorld
             if (found->second != from)
             {
                 
-                LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Storage: %s owned %s which it gave to %s which isn't %s, which should result in a crash\n",
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Storage: %s owned %s which it gave to %s which isn't %s, which should result in a crash\n",
                     this->getCell()->getDescription().c_str(),
                     object.getBase()->mRef.getRefId().c_str(),
                     found->second->getCell()->getDescription().c_str(),
@@ -325,7 +325,7 @@ namespace MWWorld
 
                     Add extra debug for multiplayer purposes
                 */
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Storage: %s's original cell %s gives it from %s to %s\n",
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Storage: %s's original cell %s gives it from %s to %s\n",
                     object.getBase()->mRef.getRefId().c_str(),
                     originalCell->getCell()->getDescription().c_str(),
                     this->getCell()->getDescription().c_str(),

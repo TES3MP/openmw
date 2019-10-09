@@ -1,16 +1,22 @@
 #include "worldimp.hpp"
 
 #include <stdio.h>
+#include <algorithm>
 
 #include <osg/Group>
 #include <osg/ComputeBoundsVisitor>
+
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletCollision/CollisionShapes/btCompoundShape.h>
+
+#include <components/debug/debuglog.hpp>
 
 /*
     Start of tes3mp addition
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
 #include "../mwmp/PlayerList.hpp"
@@ -28,14 +34,21 @@
 #include <components/esm/esmwriter.hpp>
 #include <components/esm/cellid.hpp>
 
+#include <components/misc/constants.hpp>
 #include <components/misc/resourcehelpers.hpp>
 #include <components/misc/rng.hpp>
 
 #include <components/files/collections.hpp>
 
+#include <components/resource/bulletshape.hpp>
 #include <components/resource/resourcesystem.hpp>
 
 #include <components/sceneutil/positionattitudetransform.hpp>
+
+#include <components/detournavigator/debug.hpp>
+#include <components/detournavigator/navigatorimpl.hpp>
+#include <components/detournavigator/navigatorstub.hpp>
+#include <components/detournavigator/recastglobalallocator.hpp>
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/soundmanager.hpp"
@@ -57,7 +70,6 @@
 #include "../mwrender/camera.hpp"
 #include "../mwrender/vismask.hpp"
 
-#include "../mwscript/interpretercontext.hpp"
 #include "../mwscript/globalscripts.hpp"
 
 #include "../mwclass/door.hpp"
@@ -65,6 +77,7 @@
 #include "../mwphysics/physicssystem.hpp"
 #include "../mwphysics/actor.hpp"
 #include "../mwphysics/collisiontype.hpp"
+#include "../mwphysics/object.hpp"
 
 #include "player.hpp"
 #include "manualref.hpp"
@@ -160,28 +173,23 @@ namespace MWWorld
             mRendering->setSkyEnabled(false);
     }
 
-    World::World (
+    World::World(
         osgViewer::Viewer* viewer,
         osg::ref_ptr<osg::Group> rootNode,
         Resource::ResourceSystem* resourceSystem, SceneUtil::WorkQueue* workQueue,
         const Files::Collections& fileCollections,
         const std::vector<std::string>& contentFiles,
-        ToUTF8::Utf8Encoder* encoder, const std::map<std::string,std::string>& fallbackMap,
-        int activationDistanceOverride, const std::string& startCell, const std::string& startupScript,
-            const std::string& resourcePath, const std::string& userDataPath)
-    : mResourceSystem(resourceSystem), mFallback(fallbackMap), mLocalScripts (mStore),
-      mSky (true), mCells (mStore, mEsm),
-      mGodMode(false), mScriptsEnabled(true), mContentFiles (contentFiles), mUserDataPath(userDataPath),
-      mActivationDistanceOverride (activationDistanceOverride), mStartupScript(startupScript),
-      mStartCell (startCell), mDistanceToFacedObject(-1), mTeleportEnabled(true),
-      mLevitationEnabled(true), mGoToJail(false), mDaysInPrison(0), mSpellPreloadTimer(0.f)
+        ToUTF8::Utf8Encoder* encoder, int activationDistanceOverride,
+        const std::string& startCell, const std::string& startupScript,
+        const std::string& resourcePath, const std::string& userDataPath)
+        : mResourceSystem(resourceSystem), mLocalScripts(mStore),
+        mSky(true), mCells(mStore, mEsm),
+        mGodMode(false), mScriptsEnabled(true), mContentFiles(contentFiles), mUserDataPath(userDataPath),
+        mActivationDistanceOverride(activationDistanceOverride),
+        mStartCell(startCell), mDistanceToFacedObject(-1), mTeleportEnabled(true),
+        mLevitationEnabled(true), mGoToJail(false), mDaysInPrison(0),
+        mPlayerTraveling(false), mPlayerInJail(false), mSpellPreloadTimer(0.f)
     {
-        mPhysics.reset(new MWPhysics::PhysicsSystem(resourceSystem, rootNode));
-        mRendering.reset(new MWRender::RenderingManager(viewer, rootNode, resourceSystem, workQueue, &mFallback, resourcePath));
-        mProjectileManager.reset(new ProjectileManager(mRendering->getLightRoot(), resourceSystem, mRendering.get(), mPhysics.get()));
-
-        mRendering->preloadCommonAssets();
-
         mEsm.resize(contentFiles.size());
         Loading::Listener* listener = MWBase::Environment::get().getWindowManager()->getLoadingScreen();
         listener->loadingOn();
@@ -208,11 +216,30 @@ namespace MWWorld
         mStore.setUp(true);
         mStore.movePlayerRecord();
 
-        mSwimHeightScale = mStore.get<ESM::GameSetting>().find("fSwimHeightScale")->getFloat();
+        mSwimHeightScale = mStore.get<ESM::GameSetting>().find("fSwimHeightScale")->mValue.getFloat();
 
-        mWeatherManager.reset(new MWWorld::WeatherManager(*mRendering, mFallback, mStore));
+        mPhysics.reset(new MWPhysics::PhysicsSystem(resourceSystem, rootNode));
 
-        mWorldScene.reset(new Scene(*mRendering.get(), mPhysics.get()));
+        if (auto navigatorSettings = DetourNavigator::makeSettingsFromSettingsManager())
+        {
+            navigatorSettings->mMaxClimb = MWPhysics::sStepSizeUp;
+            navigatorSettings->mMaxSlope = MWPhysics::sMaxSlope;
+            navigatorSettings->mSwimHeightScale = mSwimHeightScale;
+            DetourNavigator::RecastGlobalAllocator::init();
+            mNavigator.reset(new DetourNavigator::NavigatorImpl(*navigatorSettings));
+        }
+        else
+        {
+            mNavigator.reset(new DetourNavigator::NavigatorStub());
+        }
+
+        mRendering.reset(new MWRender::RenderingManager(viewer, rootNode, resourceSystem, workQueue, resourcePath, *mNavigator));
+        mProjectileManager.reset(new ProjectileManager(mRendering->getLightRoot(), resourceSystem, mRendering.get(), mPhysics.get()));
+        mRendering->preloadCommonAssets();
+
+        mWeatherManager.reset(new MWWorld::WeatherManager(*mRendering, mStore));
+
+        mWorldScene.reset(new Scene(*mRendering.get(), mPhysics.get(), *mNavigator));
     }
 
     void World::fillGlobalVariables()
@@ -246,7 +273,7 @@ namespace MWWorld
         // we don't want old weather to persist on a new game
         // Note that if reset later, the initial ChangeWeather that the chargen script calls will be lost.
         mWeatherManager.reset();
-        mWeatherManager.reset(new MWWorld::WeatherManager(*mRendering.get(), mFallback, mStore));
+        mWeatherManager.reset(new MWWorld::WeatherManager(*mRendering.get(), mStore));
 
         if (!bypass)
         {
@@ -300,7 +327,7 @@ namespace MWWorld
 
         if (!bypass)
         {
-            std::string video = mFallback.getFallbackString("Movies_New_Game");
+            const std::string& video = Fallback::Map::getString("Movies_New_Game");
             if (!video.empty())
                 MWBase::Environment::get().getWindowManager()->playVideo(video, true);
         }
@@ -308,9 +335,6 @@ namespace MWWorld
         // enable collision
         if (!mPhysics->toggleCollisionMode())
             mPhysics->toggleCollisionMode();
-
-        if (!mStartupScript.empty())
-            MWBase::Environment::get().getWindowManager()->executeInConsole(mStartupScript);
 
         MWBase::Environment::get().getWindowManager()->updatePlayer();
     }
@@ -542,11 +566,6 @@ namespace MWWorld
         }
 
         return 0;
-    }
-
-    const Fallback::Map *World::getFallback() const
-    {
-        return &mFallback;
     }
 
     CellStore *World::getExterior (int x, int y)
@@ -1446,16 +1465,17 @@ namespace MWWorld
         return newPtr;
     }
 
-    MWWorld::Ptr World::moveObjectImp(const Ptr& ptr, float x, float y, float z, bool movePhysics)
+    MWWorld::Ptr World::moveObjectImp(const Ptr& ptr, float x, float y, float z, bool movePhysics, bool moveToActive)
     {
-        CellStore *cell = ptr.getCell();
+        int cellX, cellY;
+        positionToIndex(x, y, cellX, cellY);
 
-        if (cell->isExterior()) {
-            int cellX, cellY;
-            positionToIndex(x, y, cellX, cellY);
+        CellStore* cell = ptr.getCell();
+        CellStore* newCell = getExterior(cellX, cellY);
+        bool isCellActive = getPlayerPtr().isInCell() && getPlayerPtr().getCell()->isExterior() && mWorldScene->isCellActive(*newCell);
 
-            cell = getExterior(cellX, cellY);
-        }
+        if (cell->isExterior() || (moveToActive && isCellActive && ptr.getClass().isActor()))
+            cell = newCell;
 
         return moveObject(ptr, cell, x, y, z, movePhysics);
     }
@@ -1470,6 +1490,11 @@ namespace MWWorld
         ptr.getCellRef().setScale(scale);
 
         mWorldScene->updateObjectScale(ptr);
+    }
+
+    void World::rotateObject(const Ptr& ptr, float x, float y, float z, bool adjust)
+    {
+        rotateObjectImp(ptr, osg::Vec3f(x, y, z), adjust);
     }
 
     void World::rotateObjectImp (const Ptr& ptr, const osg::Vec3f& rot, bool adjust)
@@ -1550,11 +1575,6 @@ namespace MWWorld
         osg::Vec3f traced = mPhysics->traceDown(actor, pos, dist*1.1f);
         if (traced != pos)
             moveObject(actor, actor.getCell(), traced.x(), traced.y(), traced.z());
-    }
-
-    void World::rotateObject (const Ptr& ptr,float x,float y,float z, bool adjust)
-    {
-        rotateObjectImp(ptr, osg::Vec3f(x, y, z), adjust);
     }
 
     void World::rotateWorldObject (const Ptr& ptr, osg::Quat rotate)
@@ -1713,10 +1733,71 @@ namespace MWWorld
         MWPhysics::PhysicsSystem::RayResult result = mPhysics->castRay(a, b, MWWorld::Ptr(), std::vector<MWWorld::Ptr>(), mask);
         return result.mHit;
     }
+    
+    bool World::rotateDoor(const Ptr door, MWWorld::DoorState state, float duration)
+    {
+        const ESM::Position& objPos = door.getRefData().getPosition();
+        float oldRot = objPos.rot[2];
+
+        float minRot = door.getCellRef().getPosition().rot[2];
+        float maxRot = minRot + osg::DegreesToRadians(90.f);
+
+        float diff = duration * osg::DegreesToRadians(90.f);
+        float targetRot = std::min(std::max(minRot, oldRot + diff * (state == MWWorld::DoorState::Opening ? 1 : -1)), maxRot);
+        rotateObject(door, objPos.rot[0], objPos.rot[1], targetRot);
+
+        bool reached = (targetRot == maxRot && state != MWWorld::DoorState::Idle) || targetRot == minRot;
+
+        /// \todo should use convexSweepTest here
+        bool collisionWithActor = false;
+        std::vector<MWWorld::Ptr> collisions = mPhysics->getCollisions(door, MWPhysics::CollisionType_Door, MWPhysics::CollisionType_Actor);
+        for (MWWorld::Ptr& ptr : collisions)
+        {
+            if (ptr.getClass().isActor())
+            {
+                collisionWithActor = true;
+
+                // Collided with actor, ask actor to try to avoid door
+                if (ptr != getPlayerPtr())
+                {
+                    MWMechanics::AiSequence& seq = ptr.getClass().getCreatureStats(ptr).getAiSequence();
+                    if (seq.getTypeId() != MWMechanics::AiPackage::TypeIdAvoidDoor) //Only add it once
+                        seq.stack(MWMechanics::AiAvoidDoor(door), ptr);
+                }
+
+                // we need to undo the rotation
+                rotateObject(door, objPos.rot[0], objPos.rot[1], oldRot);
+                reached = false;
+            }
+        }
+
+        // Cancel door closing sound if collision with actor is detected
+        if (collisionWithActor)
+        {
+            const ESM::Door* ref = door.get<ESM::Door>()->mBase;
+
+            if (state == MWWorld::DoorState::Opening)
+            {
+                const std::string& openSound = ref->mOpenSound;
+                if (!openSound.empty() && MWBase::Environment::get().getSoundManager()->getSoundPlaying(door, openSound))
+                    MWBase::Environment::get().getSoundManager()->stopSound3D(door, openSound);
+            }
+            else if (state == MWWorld::DoorState::Closing)
+            {
+                const std::string& closeSound = ref->mCloseSound;
+                if (!closeSound.empty() && MWBase::Environment::get().getSoundManager()->getSoundPlaying(door, closeSound))
+                    MWBase::Environment::get().getSoundManager()->stopSound3D(door, closeSound);
+            }
+        }
+
+        // the rotation order we want to use
+        mWorldScene->updateObjectRotation(door, false);
+        return reached;
+    }
 
     void World::processDoors(float duration)
     {
-        std::map<MWWorld::Ptr, int>::iterator it = mDoorStates.begin();
+        auto it = mDoorStates.begin();
         while (it != mDoorStates.end())
         {
             if (!mWorldScene->isCellActive(*it->first.getCell()) || !it->first.getRefData().getBaseNode())
@@ -1728,51 +1809,34 @@ namespace MWWorld
             }
             else
             {
-                const ESM::Position& objPos = it->first.getRefData().getPosition();
-                float oldRot = objPos.rot[2];
-
-                float minRot = it->first.getCellRef().getPosition().rot[2];
-                float maxRot = minRot + osg::DegreesToRadians(90.f);
-
-                float diff = duration * osg::DegreesToRadians(90.f);
-                float targetRot = std::min(std::max(minRot, oldRot + diff * (it->second == 1 ? 1 : -1)), maxRot);
-                rotateObject(it->first, objPos.rot[0], objPos.rot[1], targetRot);
-
-                bool reached = (targetRot == maxRot && it->second) || targetRot == minRot;
-
-                /// \todo should use convexSweepTest here
-                std::vector<MWWorld::Ptr> collisions = mPhysics->getCollisions(it->first, MWPhysics::CollisionType_Door, MWPhysics::CollisionType_Actor);
-                for (std::vector<MWWorld::Ptr>::iterator cit = collisions.begin(); cit != collisions.end(); ++cit)
-                {
-                    MWWorld::Ptr ptr = *cit;
-                    if (ptr.getClass().isActor())
-                    {
-                        // Collided with actor, ask actor to try to avoid door
-                        if(ptr != getPlayerPtr() ) {
-                            MWMechanics::AiSequence& seq = ptr.getClass().getCreatureStats(ptr).getAiSequence();
-                            if(seq.getTypeId() != MWMechanics::AiPackage::TypeIdAvoidDoor) //Only add it once
-                                seq.stack(MWMechanics::AiAvoidDoor(it->first),ptr);
-                        }
-
-                        // we need to undo the rotation
-                        rotateObject(it->first, objPos.rot[0], objPos.rot[1], oldRot);
-                        reached = false;
-                    }
-                }
-
-                // the rotation order we want to use
-                mWorldScene->updateObjectRotation(it->first, false);
+                bool reached = rotateDoor(it->first, it->second, duration);
 
                 if (reached)
                 {
                     // Mark as non-moving
-                    it->first.getClass().setDoorState(it->first, 0);
+                    it->first.getClass().setDoorState(it->first, MWWorld::DoorState::Idle);
                     mDoorStates.erase(it++);
                 }
                 else
                     ++it;
             }
         }
+    }
+
+    void World::setActorCollisionMode(const MWWorld::Ptr& ptr, bool internal, bool external)
+    {
+        MWPhysics::Actor *physicActor = mPhysics->getActor(ptr);
+        if (physicActor && physicActor->getCollisionMode() != internal)
+        {
+            physicActor->enableCollisionMode(internal);
+            physicActor->enableCollisionBody(external);
+        }
+    }
+
+    bool World::isActorCollisionEnabled(const MWWorld::Ptr& ptr)
+    {
+        MWPhysics::Actor *physicActor = mPhysics->getActor(ptr);
+        return physicActor && physicActor->getCollisionMode();
     }
 
     bool World::toggleCollisionMode()
@@ -1914,7 +1978,7 @@ namespace MWWorld
         bool isFirstPerson = mRendering->getCamera()->isFirstPerson();
         if (isWerewolf && isFirstPerson)
         {
-            float werewolfFov = mFallback.getFallbackFloat("General_Werewolf_FOV");
+            float werewolfFov = Fallback::Map::getFloat("General_Werewolf_FOV");
             if (werewolfFov != 0)
                 mRendering->overrideFieldOfView(werewolfFov);
             MWBase::Environment::get().getWindowManager()->setWerewolfOverlay(true);
@@ -2083,6 +2147,11 @@ namespace MWWorld
     int World::getCurrentWeather() const
     {
         return mWeatherManager->getWeatherID();
+    }
+
+    unsigned int World::getNightDayMode() const
+    {
+        return mWeatherManager->getNightDayMode();
     }
 
     void World::changeWeather(const std::string& region, const unsigned int id)
@@ -2505,11 +2574,6 @@ namespace MWWorld
         mRendering->allowVanityMode(allow);
     }
 
-    void World::togglePlayerLooking(bool enable)
-    {
-        mRendering->togglePlayerLooking(enable);
-    }
-
     void World::changeVanityModeScale(float factor)
     {
         mRendering->changeVanityModeScale(factor);
@@ -2613,21 +2677,21 @@ namespace MWWorld
 
     void World::activateDoor(const MWWorld::Ptr& door)
     {
-        int state = door.getClass().getDoorState(door);
+        auto state = door.getClass().getDoorState(door);
         switch (state)
         {
-        case 0:
+        case MWWorld::DoorState::Idle:
             if (door.getRefData().getPosition().rot[2] == door.getCellRef().getPosition().rot[2])
-                state = 1; // if closed, then open
+                state = MWWorld::DoorState::Opening; // if closed, then open
             else
-                state = 2; // if open, then close
+                state = MWWorld::DoorState::Closing; // if open, then close
             break;
-        case 2:
-            state = 1; // if closing, then open
+        case MWWorld::DoorState::Closing:
+            state = MWWorld::DoorState::Opening; // if closing, then open
             break;
-        case 1:
+        case MWWorld::DoorState::Opening:
         default:
-            state = 2; // if opening, then close
+            state = MWWorld::DoorState::Closing; // if opening, then close
             break;
         }
 
@@ -2639,7 +2703,7 @@ namespace MWWorld
         mwmp::ObjectList *objectList = mwmp::Main::get().getNetworking()->getObjectList();
         objectList->reset();
         objectList->packetOrigin = mwmp::CLIENT_GAMEPLAY;
-        objectList->addDoorState(door, state);
+        objectList->addDoorState(door, static_cast<int>(state));
         objectList->sendDoorState();
         /*
             End of tes3mp addition
@@ -2649,7 +2713,7 @@ namespace MWWorld
         mDoorStates[door] = state;
     }
 
-    void World::activateDoor(const Ptr &door, int state)
+    void World::activateDoor(const Ptr &door, MWWorld::DoorState state)
     {
         /*
             Start of tes3mp addition
@@ -2659,7 +2723,7 @@ namespace MWWorld
         mwmp::ObjectList *objectList = mwmp::Main::get().getNetworking()->getObjectList();
         objectList->reset();
         objectList->packetOrigin = mwmp::CLIENT_GAMEPLAY;
-        objectList->addDoorState(door, state);
+        objectList->addDoorState(door, static_cast<int>(state));
         objectList->sendDoorState();
         /*
             End of tes3mp addition
@@ -2667,7 +2731,7 @@ namespace MWWorld
 
         door.getClass().setDoorState(door, state);
         mDoorStates[door] = state;
-        if (state == 0)
+        if (state == MWWorld::DoorState::Idle)
             mDoorStates.erase(door);
     }
 
@@ -2676,10 +2740,10 @@ namespace MWWorld
 
         Allow the saving of door states without going through World::activateDoor()
     */
-    void World::saveDoorState(const Ptr &door, int state)
+    void World::saveDoorState(const Ptr &door, MWWorld::DoorState state)
     {
         mDoorStates[door] = state;
-        if (state == 0)
+        if (state == MWWorld::DoorState::Idle)
             mDoorStates.erase(door);
     }
     /*
@@ -3185,7 +3249,7 @@ namespace MWWorld
             target = getFacedObject();
 
         // if the faced object can not be activated, do not use it
-        if (!target.isEmpty() && !target.getClass().canBeActivated(target))
+        if (!target.isEmpty() && !target.getClass().hasToolTip(target))
             target = NULL;
 
         if (target.isEmpty())
@@ -3245,7 +3309,7 @@ namespace MWWorld
                 {
                     target = result2.mHitObject;
                     hitPosition = result2.mHitPointWorld;
-                    if (dist2 > getMaxActivationDistance() && !target.isEmpty() && !target.getClass().canBeActivated(target))
+                    if (dist2 > getMaxActivationDistance() && !target.isEmpty() && !target.getClass().hasToolTip(target))
                         target = NULL;
                 }
             }
@@ -3788,34 +3852,18 @@ namespace MWWorld
         if (ptr == getPlayerPtr() && Settings::Manager::getBool("hit fader", "GUI"))
             return;
 
-        int type = ptr.getClass().getBloodTexture(ptr);
-        std::string texture;
-        switch (type)
-        {
-        case 2:
-            texture = getFallback()->getFallbackString("Blood_Texture_2");
-            break;
-        case 1:
-            texture = getFallback()->getFallbackString("Blood_Texture_1");
-            break;
-        case 0:
-        default:
-            texture = getFallback()->getFallbackString("Blood_Texture_0");
-            break;
-        }
+        std::string texture = Fallback::Map::getString("Blood_Texture_" + std::to_string(ptr.getClass().getBloodTexture(ptr)));
+        if (texture.empty())
+            texture = Fallback::Map::getString("Blood_Texture_0");
 
-        std::stringstream modelName;
-        modelName << "Blood_Model_";
-        int roll = Misc::Rng::rollDice(3); // [0, 2]
-        modelName << roll;
-        std::string model = "meshes\\" + getFallback()->getFallbackString(modelName.str());
+        std::string model = "meshes\\" + Fallback::Map::getString("Blood_Model_" + std::to_string(Misc::Rng::rollDice(3))); // [0, 2]
 
         mRendering->spawnEffect(model, texture, worldPosition, 1.0f, false);
     }
 
-    void World::spawnEffect(const std::string &model, const std::string &textureOverride, const osg::Vec3f &worldPos)
+    void World::spawnEffect(const std::string &model, const std::string &textureOverride, const osg::Vec3f &worldPos, float scale, bool isMagicVFX)
     {
-        mRendering->spawnEffect(model, textureOverride, worldPos);
+        mRendering->spawnEffect(model, textureOverride, worldPos, scale, isMagicVFX);
     }
 
     void World::explodeSpell(const osg::Vec3f& origin, const ESM::EffectList& effects, const Ptr& caster, const Ptr& ignore, ESM::RangeType rangeType,
@@ -3833,7 +3881,7 @@ namespace MWWorld
             if (fromProjectile && effectIt->mArea <= 0)
                 continue; // Don't play explosion for projectiles with 0-area effects
 
-            if (!fromProjectile && effectIt->mRange == ESM::RT_Touch && (!ignore.isEmpty()) && (!ignore.getClass().isActor() && !ignore.getClass().canBeActivated(ignore)))
+            if (!fromProjectile && effectIt->mRange == ESM::RT_Touch && (!ignore.isEmpty()) && (!ignore.getClass().isActor() && !ignore.getClass().hasToolTip(ignore)))
                 continue; // Don't play explosion for touch spells on non-activatable objects except when spell is from the projectile enchantment
 
             // Spawn the explosion orb effect
@@ -3996,6 +4044,35 @@ namespace MWWorld
             if (it->mRange == ESM::RT_Target)
                 preload(mWorldScene.get(), mStore, effect->mBolt);
         }
+    }
+
+    DetourNavigator::Navigator* World::getNavigator() const
+    {
+        return mNavigator.get();
+    }
+
+    void World::updateActorPath(const MWWorld::ConstPtr& actor, const std::deque<osg::Vec3f>& path,
+        const osg::Vec3f& halfExtents, const osg::Vec3f& start, const osg::Vec3f& end) const
+    {
+        mRendering->updateActorPath(actor, path, halfExtents, start, end);
+    }
+
+    void World::removeActorPath(const MWWorld::ConstPtr& actor) const
+    {
+        mRendering->removeActorPath(actor);
+    }
+
+    void World::setNavMeshNumberToRender(const std::size_t value)
+    {
+        mRendering->setNavMeshNumber(value);
+    }
+
+    osg::Vec3f World::getPathfindingHalfExtents(const MWWorld::ConstPtr& actor) const
+    {
+        if (actor.isInCell() && actor.getCell()->isExterior())
+            return mDefaultHalfExtents; // Using default half extents for better performance
+        else
+            return getHalfExtents(actor);
     }
 
 }

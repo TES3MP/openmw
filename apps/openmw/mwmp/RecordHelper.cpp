@@ -1,4 +1,4 @@
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include "../mwbase/environment.hpp"
 
@@ -110,7 +110,7 @@ void RecordHelper::overrideCreatureRecord(const mwmp::CreatureRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -166,7 +166,7 @@ void RecordHelper::overrideCreatureRecord(const mwmp::CreatureRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 
@@ -180,7 +180,7 @@ void RecordHelper::overrideNpcRecord(const mwmp::NpcRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -191,12 +191,12 @@ void RecordHelper::overrideNpcRecord(const mwmp::NpcRecord& record)
     {
         if (!doesRaceRecordExist(recordData.mRace))
         {
-            LOG_APPEND(Log::LOG_INFO, "-- Ignoring new NPC record with invalid race provided");
+            LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring new NPC record with invalid race provided");
             return;
         }
         else if (!doesClassRecordExist(recordData.mClass))
         {
-            LOG_APPEND(Log::LOG_INFO, "-- Ignoring new NPC record with invalid class provided");
+            LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring new NPC record with invalid class provided");
             return;
         }
         else
@@ -279,7 +279,7 @@ void RecordHelper::overrideNpcRecord(const mwmp::NpcRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 
@@ -293,7 +293,7 @@ void RecordHelper::overrideEnchantmentRecord(const mwmp::EnchantmentRecord& reco
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -303,7 +303,7 @@ void RecordHelper::overrideEnchantmentRecord(const mwmp::EnchantmentRecord& reco
     {
         if (recordData.mEffects.mList.empty())
         {
-            LOG_APPEND(Log::LOG_INFO, "-- Ignoring new enchantment record with no effects");
+            LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring new enchantment record with no effects");
             return;
         }
         else
@@ -334,7 +334,7 @@ void RecordHelper::overrideEnchantmentRecord(const mwmp::EnchantmentRecord& reco
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 }
@@ -345,7 +345,7 @@ void RecordHelper::overridePotionRecord(const mwmp::PotionRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -390,7 +390,7 @@ void RecordHelper::overridePotionRecord(const mwmp::PotionRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 
@@ -404,7 +404,7 @@ void RecordHelper::overrideSpellRecord(const mwmp::SpellRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -440,7 +440,7 @@ void RecordHelper::overrideSpellRecord(const mwmp::SpellRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 }
@@ -451,7 +451,7 @@ void RecordHelper::overrideArmorRecord(const mwmp::ArmorRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -462,7 +462,7 @@ void RecordHelper::overrideArmorRecord(const mwmp::ArmorRecord& record)
     {
         if (!recordData.mEnchant.empty() && !doesEnchantmentRecordExist(recordData.mEnchant))
         {
-            LOG_APPEND(Log::LOG_INFO, "-- Ignoring new armor record with invalid enchantmentId %s", recordData.mEnchant.c_str());
+            LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring new armor record with invalid enchantmentId %s", recordData.mEnchant.c_str());
             return;
         }
         else
@@ -505,7 +505,7 @@ void RecordHelper::overrideArmorRecord(const mwmp::ArmorRecord& record)
             if (doesEnchantmentRecordExist(recordData.mEnchant))
                 finalData.mEnchant = recordData.mEnchant;
             else
-                LOG_APPEND(Log::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
+                LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
         }
 
         if (record.baseOverrides.hasEnchantmentCharge)
@@ -521,7 +521,7 @@ void RecordHelper::overrideArmorRecord(const mwmp::ArmorRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 
@@ -535,7 +535,7 @@ void RecordHelper::overrideBookRecord(const mwmp::BookRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -546,7 +546,7 @@ void RecordHelper::overrideBookRecord(const mwmp::BookRecord& record)
     {
         if (!recordData.mEnchant.empty() && !doesEnchantmentRecordExist(recordData.mEnchant))
         {
-            LOG_APPEND(Log::LOG_INFO, "-- Ignoring new book record with invalid enchantmentId %s", recordData.mEnchant.c_str());
+            LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring new book record with invalid enchantmentId %s", recordData.mEnchant.c_str());
             return;
         }
         else
@@ -587,7 +587,7 @@ void RecordHelper::overrideBookRecord(const mwmp::BookRecord& record)
             if (doesEnchantmentRecordExist(recordData.mEnchant))
                 finalData.mEnchant = recordData.mEnchant;
             else
-                LOG_APPEND(Log::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
+                LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
         }
 
         if (record.baseOverrides.hasEnchantmentCharge)
@@ -600,7 +600,7 @@ void RecordHelper::overrideBookRecord(const mwmp::BookRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 
@@ -614,7 +614,7 @@ void RecordHelper::overrideClothingRecord(const mwmp::ClothingRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -625,7 +625,7 @@ void RecordHelper::overrideClothingRecord(const mwmp::ClothingRecord& record)
     {
         if (!recordData.mEnchant.empty() && !doesEnchantmentRecordExist(recordData.mEnchant))
         {
-            LOG_APPEND(Log::LOG_INFO, "-- Ignoring new clothing record with invalid enchantmentId %s", recordData.mEnchant.c_str());
+            LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring new clothing record with invalid enchantmentId %s", recordData.mEnchant.c_str());
             return;
         }
         else
@@ -660,7 +660,7 @@ void RecordHelper::overrideClothingRecord(const mwmp::ClothingRecord& record)
             if (doesEnchantmentRecordExist(recordData.mEnchant))
                 finalData.mEnchant = recordData.mEnchant;
             else
-                LOG_APPEND(Log::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
+                LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
         }
 
         if (record.baseOverrides.hasEnchantmentCharge)
@@ -676,7 +676,7 @@ void RecordHelper::overrideClothingRecord(const mwmp::ClothingRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 
@@ -690,7 +690,7 @@ void RecordHelper::overrideMiscellaneousRecord(const mwmp::MiscellaneousRecord& 
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -732,7 +732,7 @@ void RecordHelper::overrideMiscellaneousRecord(const mwmp::MiscellaneousRecord& 
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 
@@ -746,7 +746,7 @@ void RecordHelper::overrideWeaponRecord(const mwmp::WeaponRecord& record)
 
     if (recordData.mId.empty())
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with no id provided");
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with no id provided");
         return;
     }
 
@@ -757,7 +757,7 @@ void RecordHelper::overrideWeaponRecord(const mwmp::WeaponRecord& record)
     {
         if (!recordData.mEnchant.empty() && !doesEnchantmentRecordExist(recordData.mEnchant))
         {
-            LOG_APPEND(Log::LOG_INFO, "-- Ignoring new weapon record with invalid enchantmentId %s", recordData.mEnchant.c_str());
+            LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring new weapon record with invalid enchantmentId %s", recordData.mEnchant.c_str());
             return;
         }
         else
@@ -822,7 +822,7 @@ void RecordHelper::overrideWeaponRecord(const mwmp::WeaponRecord& record)
             if (doesEnchantmentRecordExist(recordData.mEnchant))
                 finalData.mEnchant = recordData.mEnchant;
             else
-                LOG_APPEND(Log::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
+                LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring invalid enchantmentId %s", recordData.mEnchant.c_str());
         }
 
         if (record.baseOverrides.hasEnchantmentCharge)
@@ -835,7 +835,7 @@ void RecordHelper::overrideWeaponRecord(const mwmp::WeaponRecord& record)
     }
     else
     {
-        LOG_APPEND(Log::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
+        LOG_APPEND(MWMPLog::LOG_INFO, "-- Ignoring record override with invalid baseId %s", record.baseId.c_str());
         return;
     }
 

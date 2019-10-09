@@ -2,7 +2,7 @@
 
 #include <components/misc/stringops.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Version.hpp>
 
 #include <apps/openmw-mp/Script/ScriptFunctions.hpp>
@@ -33,7 +33,7 @@ void ServerFunctions::Kick(unsigned short pid) noexcept
     Player *player;
     GET_PLAYER(pid, player,);
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Kicking player %s (%i)", player->npc.mName.c_str(), player->getId());
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Kicking player %s (%i)", player->npc.mName.c_str(), player->getId());
     mwmp::Networking::getPtr()->kickPlayer(player->guid);
     player->setLoadState(Player::KICKED);
 }
@@ -189,7 +189,7 @@ void ServerFunctions::SetRuleValue(const char *key, double value) noexcept
 void ServerFunctions::AddDataFileRequirement(const char *dataFilename, const char *checksumString) noexcept
 {
     auto &samples = mwmp::Networking::getPtr()->getSamples();
-    
+
     auto it = std::find_if(samples.begin(), samples.end(), [&dataFilename](mwmp::PacketPreInit::PluginPair &item) {
         return item.first == dataFilename;
     });
@@ -214,7 +214,7 @@ void ServerFunctions::AddDataFileRequirement(const char *dataFilename, const cha
         samples.emplace_back(dataFilename, checksumList);
 
         auto masterClient = mwmp::Networking::getPtr()->getMasterClient();
-        
+
         if (masterClient)
             masterClient->PushPlugin({dataFilename, checksum});
     }

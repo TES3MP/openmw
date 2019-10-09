@@ -24,7 +24,7 @@ namespace mwmp
             {
                 if (!isRequest())
                 {
-                    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "ID_PLAYER_POSITION changed by server");
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "ID_PLAYER_POSITION changed by server");
 
                     static_cast<LocalPlayer*>(player)->setPosition();
                 }

@@ -40,16 +40,16 @@ namespace MWRender
     class RippleSimulation
     {
     public:
-        RippleSimulation(osg::Group* parent, Resource::ResourceSystem* resourceSystem, const Fallback::Map* fallback);
+        RippleSimulation(osg::Group* parent, Resource::ResourceSystem* resourceSystem);
         ~RippleSimulation();
 
         /// @param dt Time since the last frame
         void update(float dt);
 
         /// adds an emitter, position will be tracked automatically
-        void addEmitter (const MWWorld::ConstPtr& ptr, float scale = 1.f, float force = 1.f);
-        void removeEmitter (const MWWorld::ConstPtr& ptr);
-        void updateEmitterPtr (const MWWorld::ConstPtr& old, const MWWorld::ConstPtr& ptr);
+        void addEmitter(const MWWorld::ConstPtr& ptr, float scale = 1.f, float force = 1.f);
+        void removeEmitter(const MWWorld::ConstPtr& ptr);
+        void updateEmitterPtr(const MWWorld::ConstPtr& old, const MWWorld::ConstPtr& ptr);
         void removeCell(const MWWorld::CellStore* store);
 
         void emitRipple(const osg::Vec3f& pos);

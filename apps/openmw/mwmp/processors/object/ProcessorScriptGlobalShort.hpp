@@ -15,7 +15,7 @@ namespace mwmp
 
         virtual void Do(ObjectPacket &packet, ObjectList &objectList)
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Received %s", strPacketID.c_str());
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Received %s", strPacketID.c_str());
             objectList.setGlobalShorts();
         }
     };

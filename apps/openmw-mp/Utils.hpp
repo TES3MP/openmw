@@ -10,10 +10,10 @@
 #include <components/esm/loadcell.hpp>
 
 #include <components/openmw-mp/Utils.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #if (!defined(DEBUG_PRINTF) && defined(DEBUG))
-#define DEBUG_PRINTF(...) LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, __VA_ARGS__)
+#define DEBUG_PRINTF(...) LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, __VA_ARGS__)
 #else
 #define DEBUG_PRINTF(...)
 #endif

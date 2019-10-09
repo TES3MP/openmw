@@ -471,22 +471,7 @@ namespace MWGui
 
     void LocalMapBase::requestMapRender(const MWWorld::CellStore *cell)
     {
-        std::set<const MWWorld::CellStore*> cells;
-        if (!cell->isExterior())
-            cells.insert(cell);
-        else
-        {
-            for (int dX=-mCellDistance; dX<=mCellDistance; ++dX)
-            {
-                for (int dY=-mCellDistance; dY<=mCellDistance; ++dY)
-                {
-                    const MWWorld::CellStore* gridCell = MWBase::Environment::get().getWorld()->getExterior (cell->getCell()->getGridX()+dX, cell->getCell()->getGridY()+dY);
-                    cells.insert(gridCell);
-                }
-            }
-        }
-
-        mLocalMapRender->requestMap(cells);
+        mLocalMapRender->requestMap(cell);
     }
 
     void LocalMapBase::redraw()

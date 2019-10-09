@@ -2,7 +2,7 @@
 // Created by koncord on 20.07.16.
 //
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Base/BasePlayer.hpp>
 
 #include <SDL_system.h>
@@ -219,7 +219,7 @@ void mwmp::GUIController::update(float dt)
 
     if (pressedButton != -1 && calledInteractiveMessage)
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Pressed: %d", pressedButton);
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Pressed: %d", pressedButton);
         calledInteractiveMessage = false;
         Main::get().getLocalPlayer()->guiMessageBox.data = MyGUI::utility::toString(pressedButton);
         Main::get().getNetworking()->getPlayerPacket(ID_GUI_MESSAGEBOX)->setPlayer(Main::get().getLocalPlayer());
@@ -285,7 +285,7 @@ ESM::CustomMarker mwmp::GUIController::createMarker(const RakNet::RakNetGUID &gu
     ESM::CustomMarker mEditingMarker;
     if (!player)
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Unknown player guid: %s", guid.ToString());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Unknown player guid: %s", guid.ToString());
         return mEditingMarker;
     }
 

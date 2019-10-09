@@ -21,10 +21,10 @@ namespace mwmp
 
         virtual void Do(PlayerPacket &packet, BasePlayer *player)
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_DEATH from server");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_DEATH from server");
             if (isLocal())
             {
-                LOG_APPEND(Log::LOG_INFO, "- Packet was about me");
+                LOG_APPEND(MWMPLog::LOG_INFO, "- Packet was about me");
 
                 player->creatureStats.mDead = true;
 
@@ -37,7 +37,7 @@ namespace mwmp
             }
             else if (player != 0)
             {
-                LOG_APPEND(Log::LOG_INFO, "- Packet was about %s", player->npc.mName.c_str());
+                LOG_APPEND(MWMPLog::LOG_INFO, "- Packet was about %s", player->npc.mName.c_str());
 
                 MWMechanics::DynamicStat<float> health;
                 player->creatureStats.mDead = true;

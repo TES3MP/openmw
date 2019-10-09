@@ -39,14 +39,13 @@ namespace MWSound
     // Extra play flags, not intended for caller use
     enum PlayModeEx {
         Play_2D = 0,
-        Play_3D = 1<<31
+        Play_3D = 1 << 31
     };
 
     class SoundManager : public MWBase::SoundManager
     {
         const VFS::Manager* mVFS;
 
-        Fallback::Map mFallback;
         std::unique_ptr<Sound_Output> mOutput;
 
         // Caches available music tracks by <playlist name, (sound files) >
@@ -75,7 +74,7 @@ namespace MWSound
         size_t mBufferCacheMax;
         size_t mBufferCacheSize;
 
-        typedef std::unordered_map<std::string,Sound_Buffer*> NameBufferMap;
+        typedef std::unordered_map<std::string, Sound_Buffer*> NameBufferMap;
         NameBufferMap mBufferNameMap;
 
         // NOTE: unused buffers are stored in front-newest order.
@@ -88,12 +87,13 @@ namespace MWSound
         std::unique_ptr<std::deque<Stream>> mStreams;
         std::vector<Stream*> mUnusedStreams;
 
-        typedef std::pair<MWBase::Sound*,Sound_Buffer*> SoundBufferRefPair;
+        typedef std::pair<MWBase::Sound*, Sound_Buffer*> SoundBufferRefPair;
         typedef std::vector<SoundBufferRefPair> SoundBufferRefPairList;
-        typedef std::map<MWWorld::ConstPtr,SoundBufferRefPairList> SoundMap;
+        typedef std::map<MWWorld::ConstPtr, SoundBufferRefPairList> SoundMap;
         SoundMap mActiveSounds;
 
-        typedef std::map<MWWorld::ConstPtr,Stream*> SaySoundMap;
+        typedef std::map<MWWorld::ConstPtr, Stream*> SaySoundMap;
+        SaySoundMap mSaySoundsQueue;
         SaySoundMap mActiveSaySounds;
 
         typedef std::vector<Stream*> TrackList;
@@ -117,7 +117,7 @@ namespace MWSound
         Sound_Buffer *lookupSound(const std::string &soundId) const;
         Sound_Buffer *loadSound(const std::string &soundId);
 
-        // returns a decoder to start streaming
+        // returns a decoder to start streaming, or nullptr if the sound was not found
         DecoderPtr loadVoice(const std::string &voicefile);
 
         Sound *getSoundRef();
@@ -149,7 +149,7 @@ namespace MWSound
         ///< Stop the given object from playing given sound buffer.
 
     public:
-        SoundManager(const VFS::Manager* vfs, const std::map<std::string, std::string>& fallbackMap, bool useSound);
+        SoundManager(const VFS::Manager* vfs, bool useSound);
         virtual ~SoundManager();
 
         virtual void processChangedSettings(const Settings::CategorySettingVector& settings);
@@ -168,6 +168,9 @@ namespace MWSound
         ///< Start playing music from the selected folder
         /// \param name of the folder that contains the playlist
 
+        virtual void playTitleMusic();
+        ///< Start playing title music
+
         virtual void say(const MWWorld::ConstPtr &reference, const std::string& filename);
         ///< Make an actor say some text.
         /// \param filename name of a sound file in "Sound/" in the data directory.
@@ -176,10 +179,13 @@ namespace MWSound
         ///< Say some text, without an actor ref
         /// \param filename name of a sound file in "Sound/" in the data directory.
 
-        virtual bool sayDone(const MWWorld::ConstPtr &reference=MWWorld::ConstPtr()) const;
+        virtual bool sayActive(const MWWorld::ConstPtr &reference = MWWorld::ConstPtr()) const;
         ///< Is actor not speaking?
 
-        virtual void stopSay(const MWWorld::ConstPtr &reference=MWWorld::ConstPtr());
+        virtual bool sayDone(const MWWorld::ConstPtr &reference = MWWorld::ConstPtr()) const;
+        ///< For scripting backward compatibility
+
+        virtual void stopSay(const MWWorld::ConstPtr &reference = MWWorld::ConstPtr());
         ///< Stop an actor speaking
 
         virtual float getSaySoundLoudness(const MWWorld::ConstPtr& reference) const;
@@ -198,18 +204,18 @@ namespace MWSound
         /// returned by \ref playTrack). Only intended to be called by the track
         /// decoder's read method.
 
-        virtual Sound *playSound(const std::string& soundId, float volume, float pitch, Type type=Type::Sfx, PlayMode mode=PlayMode::Normal, float offset=0);
+        virtual Sound *playSound(const std::string& soundId, float volume, float pitch, Type type = Type::Sfx, PlayMode mode = PlayMode::Normal, float offset = 0);
         ///< Play a sound, independently of 3D-position
         ///< @param offset Number of seconds into the sound to start playback.
 
         virtual Sound *playSound3D(const MWWorld::ConstPtr &reference, const std::string& soundId,
-                                   float volume, float pitch, Type type=Type::Sfx,
-                                   PlayMode mode=PlayMode::Normal, float offset=0);
+            float volume, float pitch, Type type = Type::Sfx,
+            PlayMode mode = PlayMode::Normal, float offset = 0);
         ///< Play a 3D sound attached to an MWWorld::Ptr. Will be updated automatically with the Ptr's position, unless Play_NoTrack is specified.
         ///< @param offset Number of seconds into the sound to start playback.
 
         virtual Sound *playSound3D(const osg::Vec3f& initialPos, const std::string& soundId,
-                                   float volume, float pitch, Type type, PlayMode mode, float offset=0);
+            float volume, float pitch, Type type, PlayMode mode, float offset = 0);
         ///< Play a 3D sound at \a initialPos. If the sound should be moving, it must be updated using Sound::setPosition.
         ///< @param offset Number of seconds into the sound to start playback.
 
@@ -248,7 +254,7 @@ namespace MWSound
 
         virtual void setListenerPosDir(const osg::Vec3f &pos, const osg::Vec3f &dir, const osg::Vec3f &up, bool underwater);
 
-        virtual void updatePtr (const MWWorld::ConstPtr& old, const MWWorld::ConstPtr& updated);
+        virtual void updatePtr(const MWWorld::ConstPtr& old, const MWWorld::ConstPtr& updated);
 
         virtual void clear();
     };

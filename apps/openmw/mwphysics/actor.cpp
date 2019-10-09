@@ -5,7 +5,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
 #include "../mwmp/PlayerList.hpp"
@@ -207,6 +207,11 @@ void Actor::updateScale()
 osg::Vec3f Actor::getHalfExtents() const
 {
     return osg::componentMultiply(mHalfExtents, mScale);
+}
+
+osg::Vec3f Actor::getOriginalHalfExtents() const
+{
+    return mHalfExtents;
 }
 
 osg::Vec3f Actor::getRenderingHalfExtents() const

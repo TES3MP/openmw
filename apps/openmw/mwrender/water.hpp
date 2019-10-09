@@ -50,8 +50,6 @@ namespace MWRender
     /// Water rendering
     class Water
     {
-        static const int CELL_SIZE = 8192;
-
         osg::ref_ptr<osg::Uniform> mRainIntensityUniform;
 
         osg::ref_ptr<osg::Group> mParent;
@@ -59,7 +57,6 @@ namespace MWRender
         osg::ref_ptr<osg::PositionAttitudeTransform> mWaterNode;
         osg::ref_ptr<osg::Geometry> mWaterGeom;
         Resource::ResourceSystem* mResourceSystem;
-        const Fallback::Map* mFallback;
         osg::ref_ptr<osgUtil::IncrementalCompileOperation> mIncrementalCompileOperation;
 
         std::unique_ptr<RippleSimulation> mSimulation;
@@ -72,6 +69,7 @@ namespace MWRender
         bool mEnabled;
         bool mToggled;
         float mTop;
+        bool mInterior;
 
         osg::Vec3f getSceneNodeCoordinates(int gridX, int gridY);
         void updateVisible();
@@ -86,8 +84,8 @@ namespace MWRender
 
     public:
         Water(osg::Group* parent, osg::Group* sceneRoot,
-              Resource::ResourceSystem* resourceSystem, osgUtil::IncrementalCompileOperation* ico, const Fallback::Map* fallback,
-              const std::string& resourcePath);
+            Resource::ResourceSystem* resourceSystem, osgUtil::IncrementalCompileOperation* ico,
+            const std::string& resourcePath);
         ~Water();
 
         void listAssetsToPreload(std::vector<std::string>& textures);
@@ -99,9 +97,9 @@ namespace MWRender
         bool isUnderwater(const osg::Vec3f& pos) const;
 
         /// adds an emitter, position will be tracked automatically using its scene node
-        void addEmitter (const MWWorld::Ptr& ptr, float scale = 1.f, float force = 1.f);
-        void removeEmitter (const MWWorld::Ptr& ptr);
-        void updateEmitterPtr (const MWWorld::Ptr& old, const MWWorld::Ptr& ptr);
+        void addEmitter(const MWWorld::Ptr& ptr, float scale = 1.f, float force = 1.f);
+        void removeEmitter(const MWWorld::Ptr& ptr);
+        void updateEmitterPtr(const MWWorld::Ptr& old, const MWWorld::Ptr& ptr);
         void emitRipple(const osg::Vec3f& pos);
 
         void removeCell(const MWWorld::CellStore* store); ///< remove all emitters in this cell

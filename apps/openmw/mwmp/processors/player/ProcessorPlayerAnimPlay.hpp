@@ -17,7 +17,7 @@ namespace mwmp
         {
             if (isLocal())
             {
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_ANIM_PLAY about LocalPlayer from server");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_ANIM_PLAY about LocalPlayer from server");
                 static_cast<LocalPlayer*>(player)->playAnimation();
             }
             else if (player != 0)

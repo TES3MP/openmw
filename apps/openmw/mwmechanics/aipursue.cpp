@@ -13,7 +13,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwgui/windowmanagerimp.hpp"
 #include "../mwmp/Main.hpp"
 #include "../mwmp/LocalPlayer.hpp"
@@ -97,7 +97,7 @@ bool AiPursue::execute (const MWWorld::Ptr& actor, CharacterController& characte
 
             Close the player's inventory or open container and cancel any drag and drops
         */
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "After being pursued by %s, diedSinceArrestAttempt is now false", actor.getCellRef().getRefId().c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "After being pursued by %s, diedSinceArrestAttempt is now false", actor.getCellRef().getRefId().c_str());
         mwmp::Main::get().getLocalPlayer()->diedSinceArrestAttempt = false;
         mwmp::Main::get().getLocalPlayer()->closeInventoryWindows();
         /*

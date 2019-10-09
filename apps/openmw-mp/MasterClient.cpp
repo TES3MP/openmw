@@ -9,7 +9,7 @@
 #include <thread>
 #include <RakPeerInterface.h>
 #include "MasterClient.hpp"
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Version.hpp>
 #include <components/openmw-mp/Master/PacketMasterAnnounce.hpp>
 #include "Networking.hpp"
@@ -134,12 +134,12 @@ bool MasterClient::Process(RakNet::Packet *packet)
             pma.SetReadStream(&rs);
             pma.Read();
             if (pma.GetFunc() == PacketMasterAnnounce::FUNCTION_KEEP)
-                LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Server data successfully updated on master server");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Server data successfully updated on master server");
             else if (pma.GetFunc() == PacketMasterAnnounce::FUNCTION_DELETE)
             {
                 if (timeout != 0)
                 {
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Update rate is too low,"
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Update rate is too low,"
                             " and the master server has deleted information about the server. Trying low rate...");
                     if ((timeout - step_rate) >= step_rate)
                         SetUpdateRate(timeout - step_rate);
@@ -148,7 +148,7 @@ bool MasterClient::Process(RakNet::Packet *packet)
             }
             break;
         default:
-            LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Received wrong packet from master server with id: %d", packet->data[0]);
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Received wrong packet from master server with id: %d", packet->data[0]);
             return false;
     }
     return true;
@@ -172,7 +172,7 @@ void MasterClient::Send(mwmp::PacketMasterAnnounce::Func func)
             case IS_SILENTLY_DISCONNECTING:
             case IS_DISCONNECTING:
             {
-                LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Cannot connect to master server: %s", masterServer.ToString());
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Cannot connect to master server: %s", masterServer.ToString());
                 return;
             }
             case IS_PENDING:

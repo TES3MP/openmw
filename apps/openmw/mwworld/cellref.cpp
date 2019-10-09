@@ -150,6 +150,22 @@ namespace MWWorld
         return mCellRef.mEnchantmentCharge;
     }
 
+    float CellRef::getNormalizedEnchantmentCharge(int maxCharge) const
+    {
+        if (maxCharge == 0)
+        {
+            return 0;
+        }
+        else if (mCellRef.mEnchantmentCharge == -1)
+        {
+            return 1;
+        }
+        else
+        {
+            return mCellRef.mEnchantmentCharge / static_cast<float>(maxCharge);
+        }
+    }
+
     void CellRef::setEnchantmentCharge(float charge)
     {
         if (charge != mCellRef.mEnchantmentCharge)
@@ -287,6 +303,19 @@ namespace MWWorld
             mChanged = true;
             mCellRef.mLockLevel = lockLevel;
         }
+    }
+
+    void CellRef::lock(int lockLevel)
+    {
+        if (lockLevel != 0)
+            setLockLevel(abs(lockLevel)); //Changes lock to locklevel, if positive
+        else
+            setLockLevel(ESM::UnbreakableLock); // If zero, set to max lock level
+    }
+
+    void CellRef::unlock()
+    {
+        setLockLevel(-abs(mCellRef.mLockLevel)); //Makes lockLevel negative
     }
 
     std::string CellRef::getKey() const

@@ -4,12 +4,10 @@
 
 #include <components/sceneutil/lightmanager.hpp>
 
+#include "compositemaprenderer.hpp"
+
 namespace Terrain
 {
-
-TerrainDrawable::TerrainDrawable()
-{
-}
 
 TerrainDrawable::TerrainDrawable(const TerrainDrawable &copy, const osg::CopyOp &copyop)
     : osg::Geometry(copy, copyop)
@@ -47,9 +45,27 @@ void TerrainDrawable::cull(osgUtil::CullVisitor *cv)
 
     osg::RefMatrix& matrix = *cv->getModelViewMatrix();
 
+    if (cv->getComputeNearFarMode() && bb.valid())
+    {
+        if (!cv->updateCalculatedNearFar(matrix, *this, false))
+            return;
+    }
+
     float depth = bb.valid() ? distance(bb.center(),matrix) : 0.0f;
     if (osg::isNaN(depth))
         return;
+
+    if (cv->getCurrentCamera()->getName() == "ShadowCamera")
+    {
+        cv->addDrawableAndDepth(this, &matrix, depth);
+        return;
+    }
+
+    if (mCompositeMap)
+    {
+        mCompositeMapRenderer->setImmediate(mCompositeMap);
+        mCompositeMap = nullptr;
+    }
 
     bool pushedLight = mLightListCallback && mLightListCallback->pushLightState(this, cv);
 

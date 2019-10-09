@@ -5,7 +5,7 @@
 #ifndef OPENMW_PLAYERPROCESSOR_HPP
 #define OPENMW_PLAYERPROCESSOR_HPP
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
 #include <components/openmw-mp/Packets/Player/PlayerPacket.hpp>
 #include "../LocalPlayer.hpp"

@@ -20,7 +20,7 @@ namespace mwmp
 
         virtual void Do(PlayerPacket &packet, BasePlayer *player)
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_JAIL from server");
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_JAIL from server");
             
             if (isLocal())
             {

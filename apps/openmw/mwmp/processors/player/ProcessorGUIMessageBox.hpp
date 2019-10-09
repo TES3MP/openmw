@@ -22,7 +22,7 @@ namespace mwmp
         {
             if (isLocal())
             {
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "ID_GUI_MESSAGEBOX, Type %d, MSG %s", player->guiMessageBox.type,
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "ID_GUI_MESSAGEBOX, Type %d, MSG %s", player->guiMessageBox.type,
                                    player->guiMessageBox.label.c_str());
 
                 switch(player->guiMessageBox.type)

@@ -24,7 +24,7 @@ namespace MWScript
     ScriptManager::ScriptManager (const MWWorld::ESMStore& store,
         Compiler::Context& compilerContext, int warningsMode,
         const std::vector<std::string>& scriptBlacklist)
-    : mErrorHandler (std::cerr), mStore (store),
+    : mErrorHandler (), mStore (store),
       mCompilerContext (compilerContext), mParser (mErrorHandler, mCompilerContext),
       mOpcodesInstalled (false), mGlobalScripts (store)
     {

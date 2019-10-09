@@ -28,7 +28,7 @@
 #include "ScriptFunction.hpp"
 #include "Types.hpp"
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #ifndef __PRETTY_FUNCTION__
 #define __PRETTY_FUNCTION__ __FUNCTION__
@@ -37,7 +37,7 @@
 #define GET_PLAYER(pid, pl, retvalue) \
      pl = Players::getPlayer(pid); \
      if (player == 0) {\
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "%s: Player with pid \'%d\' not found\n", __PRETTY_FUNCTION__, pid);\
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "%s: Player with pid \'%d\' not found\n", __PRETTY_FUNCTION__, pid);\
         /*ScriptFunctions::StopServer(1);*/ \
         return retvalue;\
 }

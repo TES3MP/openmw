@@ -30,7 +30,7 @@ namespace MWRender
     {
     public:
         CharacterPreview(osg::Group* parent, Resource::ResourceSystem* resourceSystem, const MWWorld::Ptr& character, int sizeX, int sizeY,
-                         const osg::Vec3f& position, const osg::Vec3f& lookAt);
+            const osg::Vec3f& position, const osg::Vec3f& lookAt);
         virtual ~CharacterPreview();
 
         int getTextureWidth() const;

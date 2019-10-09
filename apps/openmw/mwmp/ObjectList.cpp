@@ -8,7 +8,7 @@
 #include "CellController.hpp"
 #include "RecordHelper.hpp"
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include "../mwbase/world.hpp"
 #include "../mwbase/environment.hpp"
@@ -84,14 +84,14 @@ void ObjectList::addContainerItem(mwmp::BaseObject& baseObject, const MWWorld::P
     containerItem.soul = itemPtr.getCellRef().getSoul();
     containerItem.actionCount = actionCount;
 
-    LOG_APPEND(Log::LOG_VERBOSE, "--- Adding container item %s", containerItem.refId.c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "--- Adding container item %s", containerItem.refId.c_str());
 
     baseObject.containerItems.push_back(containerItem);
 }
 
 void ObjectList::addEntireContainer(const MWWorld::Ptr& ptr)
 {
-    LOG_APPEND(Log::LOG_VERBOSE, "-- Adding entire container %s %i-%i", ptr.getCellRef().getRefId().c_str(),
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Adding entire container %s %i-%i", ptr.getCellRef().getRefId().c_str(),
         ptr.getCellRef().getRefNum().mIndex, ptr.getCellRef().getMpNum());
 
     MWWorld::ContainerStore& containerStore = ptr.getClass().getContainerStore(ptr);
@@ -110,7 +110,7 @@ void ObjectList::editContainers(MWWorld::CellStore* cellStore)
 {
     bool isLocalEvent = guid == Main::get().getLocalPlayer()->guid;
 
-    LOG_APPEND(Log::LOG_VERBOSE, "- isLocalEvent? %s", isLocalEvent ? "true" : "false");
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- isLocalEvent? %s", isLocalEvent ? "true" : "false");
 
     BaseObject baseObject;
 
@@ -118,13 +118,13 @@ void ObjectList::editContainers(MWWorld::CellStore* cellStore)
     {
         baseObject = baseObjects.at(i);
 
-        LOG_APPEND(Log::LOG_VERBOSE, "- container cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- container cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                 ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             bool isCurrentContainer = false;
@@ -157,7 +157,7 @@ void ObjectList::editContainers(MWWorld::CellStore* cellStore)
 
             for (const auto &containerItem : baseObject.containerItems)
             {
-                //LOG_APPEND(Log::LOG_VERBOSE, "-- containerItem cellRef: %s, count: %i, actionCount: %i",
+                //LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- containerItem cellRef: %s, count: %i, actionCount: %i",
                 //    containerItem.refId.c_str(), containerItem.count, containerItem.actionCount);
 
                 if (containerItem.refId.find("$dynamic") != string::npos)
@@ -249,7 +249,7 @@ void ObjectList::editContainers(MWWorld::CellStore* cellStore)
                     invStore.autoEquip(ptrFound);
                 // autoEquip only works on NPCs, so use the closest alternative for creatures
                 else
-                    invStore.autoEquipShield(ptrFound);
+                    invStore.autoEquip(ptrFound);
             }
 
             // If this container was open for us, update its view
@@ -281,7 +281,7 @@ void ObjectList::activateObjects(MWWorld::CellStore* cellStore)
             if (baseObject.guid == Main::get().getLocalPlayer()->guid)
             {
                 ptrFound = Main::get().getLocalPlayer()->getPlayerPtr();
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Activated object is local player");
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Activated object is local player");
             }
             else
             {
@@ -290,17 +290,17 @@ void ObjectList::activateObjects(MWWorld::CellStore* cellStore)
                 if (player != 0)
                 {
                     ptrFound = player->getPtr();
-                    LOG_APPEND(Log::LOG_VERBOSE, "-- Activated object is player %s", player->npc.mName.c_str());
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Activated object is player %s", player->npc.mName.c_str());
                 }
                 else
                 {
-                    LOG_APPEND(Log::LOG_VERBOSE, "-- Could not find player to activatee!");
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Could not find player to activatee!");
                 }
             }
         }
         else
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Activated object is %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Activated object is %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
             ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
         }
 
@@ -311,13 +311,13 @@ void ObjectList::activateObjects(MWWorld::CellStore* cellStore)
             if (baseObject.activatingActor.isPlayer)
             {
                 activatingActorPtr = MechanicsHelper::getPlayerPtr(baseObject.activatingActor);
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Object has been activated by player %s",
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Object has been activated by player %s",
                     activatingActorPtr.getClass().getName(activatingActorPtr).c_str());
             }
             else
             {
                 activatingActorPtr = cellStore->searchExact(baseObject.activatingActor.refNum, baseObject.activatingActor.mpNum);
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Object has been activated by actor %s %i-%i", activatingActorPtr.getCellRef().getRefId().c_str(),
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Object has been activated by actor %s %i-%i", activatingActorPtr.getCellRef().getRefId().c_str(),
                     activatingActorPtr.getCellRef().getRefNum().mIndex, activatingActorPtr.getCellRef().getMpNum());
             }
 
@@ -345,7 +345,7 @@ void ObjectList::placeObjects(MWWorld::CellStore* cellStore)
 
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i, count: %i, charge: %i, enchantmentCharge: %.2f, soul: %s",
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i, count: %i, charge: %i, enchantmentCharge: %.2f, soul: %s",
             baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum, baseObject.count, baseObject.charge,
             baseObject.enchantmentCharge, baseObject.soul.c_str());
 
@@ -388,11 +388,11 @@ void ObjectList::placeObjects(MWWorld::CellStore* cellStore)
             }
             catch (std::exception&)
             {
-                LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Ignored placement of invalid object %s", baseObject.refId.c_str());
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Ignored placement of invalid object %s", baseObject.refId.c_str());
             }
         }
         else
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Object already existed!");
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Object already existed!");
     }
 }
 
@@ -400,7 +400,7 @@ void ObjectList::spawnObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(),
             baseObject.refNum, baseObject.mpNum);
 
         // Ignore generic dynamic refIds because they could be anything on other clients
@@ -408,7 +408,7 @@ void ObjectList::spawnObjects(MWWorld::CellStore* cellStore)
             continue;
         else if (!RecordHelper::doesCreatureRecordExist(baseObject.refId) && !RecordHelper::doesNpcRecordExist(baseObject.refId))
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Ignored spawning of invalid object %s", baseObject.refId.c_str());
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Ignored spawning of invalid object %s", baseObject.refId.c_str());
             continue;
         }
 
@@ -436,7 +436,7 @@ void ObjectList::spawnObjects(MWWorld::CellStore* cellStore)
 
                 if (masterPtr)
                 {
-                    LOG_APPEND(Log::LOG_VERBOSE, "-- Actor has master: %s", masterPtr.getCellRef().getRefId().c_str());
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Actor has master: %s", masterPtr.getCellRef().getRefId().c_str());
 
                     MWMechanics::AiFollow package(masterPtr);
                     creatureStats.getAiSequence().stack(package, newPtr);
@@ -458,7 +458,7 @@ void ObjectList::spawnObjects(MWWorld::CellStore* cellStore)
             }
         }
         else
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Actor already existed!");
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Actor already existed!");
     }
 }
 
@@ -466,13 +466,13 @@ void ObjectList::deleteObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             // If we are in a container, and it happens to be this object, exit it
@@ -497,19 +497,19 @@ void ObjectList::lockObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             if (baseObject.lockLevel > 0)
-                ptrFound.getClass().lock(ptrFound, baseObject.lockLevel);
+                ptrFound.getCellRef().lock(baseObject.lockLevel);
             else
-                ptrFound.getClass().unlock(ptrFound);
+                ptrFound.getCellRef().unlock();
         }
     }
 }
@@ -518,13 +518,13 @@ void ObjectList::triggerTrapObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                 ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             if (!baseObject.isDisarmed)
@@ -543,14 +543,14 @@ void ObjectList::scaleObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i, scale: %f", baseObject.refId.c_str(), baseObject.refNum,
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i, scale: %f", baseObject.refId.c_str(), baseObject.refNum,
             baseObject.mpNum, baseObject.scale);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             MWBase::Environment::get().getWorld()->scaleObject(ptrFound, baseObject.scale);
@@ -562,14 +562,14 @@ void ObjectList::setObjectStates(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i, state: %s", baseObject.refId.c_str(), baseObject.refNum,
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i, state: %s", baseObject.refId.c_str(), baseObject.refNum,
             baseObject.mpNum, baseObject.objectState ? "true" : "false");
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                 ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             if (baseObject.objectState)
@@ -584,13 +584,13 @@ void ObjectList::moveObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             MWBase::Environment::get().getWorld()->moveObject(ptrFound, baseObject.position.pos[0], baseObject.position.pos[1],
@@ -603,13 +603,13 @@ void ObjectList::rotateObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             MWBase::Environment::get().getWorld()->rotateObject(ptrFound,
@@ -622,13 +622,13 @@ void ObjectList::animateObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             MWBase::MechanicsManager * mechanicsManager = MWBase::Environment::get().getMechanicsManager();
@@ -642,17 +642,17 @@ void ObjectList::activateDoors(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
-            ptrFound.getClass().setDoorState(ptrFound, baseObject.doorState);
-            MWBase::Environment::get().getWorld()->saveDoorState(ptrFound, baseObject.doorState);
+            ptrFound.getClass().setDoorState(ptrFound, static_cast<MWWorld::DoorState>(baseObject.doorState));
+            MWBase::Environment::get().getWorld()->saveDoorState(ptrFound, static_cast<MWWorld::DoorState>(baseObject.doorState));
         }
     }
 }
@@ -661,13 +661,13 @@ void ObjectList::setDoorDestinations(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                 ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             ptrFound.getCellRef().setTeleport(baseObject.teleportState);
@@ -689,13 +689,13 @@ void ObjectList::runConsoleCommands(MWWorld::CellStore* cellStore)
 {
     MWBase::WindowManager *windowManager = MWBase::Environment::get().getWindowManager();
 
-    LOG_APPEND(Log::LOG_VERBOSE, "- Console command: %s", consoleCommand.c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Console command: %s", consoleCommand.c_str());
 
     if (baseObjects.empty())
     {
         windowManager->clearConsolePtr();
 
-        LOG_APPEND(Log::LOG_VERBOSE, "-- Running with no object reference");
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Running with no object reference");
         windowManager->executeCommandInConsole(consoleCommand);
     }
     else
@@ -708,7 +708,7 @@ void ObjectList::runConsoleCommands(MWWorld::CellStore* cellStore)
             {
                 if (baseObject.guid == Main::get().getLocalPlayer()->guid)
                 {
-                    LOG_APPEND(Log::LOG_VERBOSE, "-- Running on local player");
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Running on local player");
                     windowManager->setConsolePtr(Main::get().getLocalPlayer()->getPlayerPtr());
                     windowManager->executeCommandInConsole(consoleCommand);
                 }
@@ -718,7 +718,7 @@ void ObjectList::runConsoleCommands(MWWorld::CellStore* cellStore)
 
                     if (player != 0)
                     {
-                        LOG_APPEND(Log::LOG_VERBOSE, "-- Running on player %s", player->npc.mName.c_str());
+                        LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Running on player %s", player->npc.mName.c_str());
                         windowManager->setConsolePtr(player->getPtr());
                         windowManager->executeCommandInConsole(consoleCommand);
                     }
@@ -726,13 +726,13 @@ void ObjectList::runConsoleCommands(MWWorld::CellStore* cellStore)
             }
             else
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Running on object %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Running on object %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
 
                 MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
                 if (ptrFound)
                 {
-                    LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                         ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
                     windowManager->setConsolePtr(ptrFound);
@@ -749,14 +749,14 @@ void ObjectList::setLocalShorts(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i, index: %i, shortVal: %i", baseObject.refId.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i, index: %i, shortVal: %i", baseObject.refId.c_str(),
                    baseObject.refNum, baseObject.mpNum, baseObject.index, baseObject.shortVal);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             ptrFound.getRefData().getLocals().mShorts.at(baseObject.index) = baseObject.shortVal;
@@ -768,14 +768,14 @@ void ObjectList::setLocalFloats(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i, index: %i, floatVal: %f", baseObject.refId.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i, index: %i, floatVal: %f", baseObject.refId.c_str(),
                    baseObject.refNum, baseObject.mpNum, baseObject.index, baseObject.floatVal);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
 
         if (ptrFound)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             ptrFound.getRefData().getLocals().mFloats.at(baseObject.index) = baseObject.floatVal;
@@ -787,7 +787,7 @@ void ObjectList::setMemberShorts()
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s, index: %i, shortVal: %i", baseObject.refId.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s, index: %i, shortVal: %i", baseObject.refId.c_str(),
                    baseObject.index, baseObject.shortVal);
 
         // Mimic the way a Ptr is fetched in InterpreterContext for similar situations
@@ -795,7 +795,7 @@ void ObjectList::setMemberShorts()
 
         if (!ptrFound.isEmpty())
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                                ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
             std::string scriptId = ptrFound.getClass().getScript(ptrFound);
@@ -812,7 +812,7 @@ void ObjectList::setGlobalShorts()
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- varName: %s, shortVal: %i", baseObject.varName.c_str(), baseObject.shortVal);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- varName: %s, shortVal: %i", baseObject.varName.c_str(), baseObject.shortVal);
 
         MWBase::Environment::get().getWorld()->setGlobalInt(baseObject.varName, baseObject.shortVal);
     }
@@ -822,7 +822,7 @@ void ObjectList::playMusic()
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- filename: %s", baseObject.musicFilename.c_str());
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- filename: %s", baseObject.musicFilename.c_str());
 
         MWBase::Environment::get().getSoundManager()->streamMusic(baseObject.musicFilename);
     }
@@ -832,7 +832,7 @@ void ObjectList::playVideo()
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- filename: %s, allowSkipping: %s", baseObject.videoFilename.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- filename: %s, allowSkipping: %s", baseObject.videoFilename.c_str(),
             baseObject.allowSkipping ? "true" : "false");
 
         MWBase::Environment::get().getWindowManager()->playVideo(baseObject.videoFilename, baseObject.allowSkipping);
@@ -864,7 +864,7 @@ void ObjectList::addRequestedContainers(MWWorld::CellStore* cellStore, const std
 {
     for (const auto &baseObject : requestObjects)
     {
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(),
             baseObject.refNum, baseObject.mpNum);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum);
@@ -874,7 +874,7 @@ void ObjectList::addRequestedContainers(MWWorld::CellStore* cellStore, const std
             if (ptrFound.getClass().hasContainerStore(ptrFound))
                 addEntireContainer(ptrFound);
             else
-                LOG_APPEND(Log::LOG_VERBOSE, "-- Object lacks container store", ptrFound.getCellRef().getRefId().c_str());
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "-- Object lacks container store", ptrFound.getCellRef().getRefId().c_str());
         }
     }
 }
@@ -1140,10 +1140,10 @@ void ObjectList::sendObjectPlace()
     if (baseObjects.size() == 0)
         return;
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_OBJECT_PLACE about %s", cell.getDescription().c_str());
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_OBJECT_PLACE about %s", cell.getDescription().c_str());
 
     for (const auto &baseObject : baseObjects)
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s, count: %i", baseObject.refId.c_str(), baseObject.count);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s, count: %i", baseObject.refId.c_str(), baseObject.count);
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_OBJECT_PLACE)->setObjectList(this);
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_OBJECT_PLACE)->Send();
@@ -1154,10 +1154,10 @@ void ObjectList::sendObjectSpawn()
     if (baseObjects.size() == 0)
         return;
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_OBJECT_SPAWN about %s", cell.getDescription().c_str());
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_OBJECT_SPAWN about %s", cell.getDescription().c_str());
 
     for (const auto &baseObject : baseObjects)
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s-%i", baseObject.refId.c_str(), baseObject.refNum);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s-%i", baseObject.refId.c_str(), baseObject.refNum);
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_OBJECT_SPAWN)->setObjectList(this);
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_OBJECT_SPAWN)->Send();
@@ -1201,10 +1201,10 @@ void ObjectList::sendObjectAnimPlay()
 
 void ObjectList::sendDoorState()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_DOOR_STATE about %s", cell.getDescription().c_str());
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_DOOR_STATE about %s", cell.getDescription().c_str());
 
     for (const auto &baseObject : baseObjects)
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s-%i, state: %s", baseObject.refId.c_str(), baseObject.refNum,
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s-%i, state: %s", baseObject.refId.c_str(), baseObject.refNum,
                    baseObject.doorState ? "true" : "false");
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_DOOR_STATE)->setObjectList(this);
@@ -1225,10 +1225,10 @@ void ObjectList::sendVideoPlay()
 
 void ObjectList::sendScriptLocalShort()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_SCRIPT_LOCAL_SHORT about %s", cell.getDescription().c_str());
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_SCRIPT_LOCAL_SHORT about %s", cell.getDescription().c_str());
 
     for (const auto &baseObject : baseObjects)
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s-%i, index: %i, shortVal: %i", baseObject.refId.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s-%i, index: %i, shortVal: %i", baseObject.refId.c_str(),
                    baseObject.refNum, baseObject.index, baseObject.shortVal);
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_SCRIPT_LOCAL_SHORT)->setObjectList(this);
@@ -1237,10 +1237,10 @@ void ObjectList::sendScriptLocalShort()
 
 void ObjectList::sendScriptLocalFloat()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_SCRIPT_LOCAL_FLOAT about %s", cell.getDescription().c_str());
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_SCRIPT_LOCAL_FLOAT about %s", cell.getDescription().c_str());
 
     for (const auto &baseObject : baseObjects)
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s-%i, index: %i, floatVal: %f", baseObject.refId.c_str(), 
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s-%i, index: %i, floatVal: %f", baseObject.refId.c_str(), 
                    baseObject.refNum, baseObject.index, baseObject.floatVal);
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_SCRIPT_LOCAL_FLOAT)->setObjectList(this);
@@ -1249,10 +1249,10 @@ void ObjectList::sendScriptLocalFloat()
 
 void ObjectList::sendScriptMemberShort()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_SCRIPT_MEMBER_SHORT");
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_SCRIPT_MEMBER_SHORT");
 
     for (const auto &baseObject : baseObjects)
-        LOG_APPEND(Log::LOG_VERBOSE, "- cellRef: %s, index: %i, shortVal: %i", baseObject.refId.c_str(),
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- cellRef: %s, index: %i, shortVal: %i", baseObject.refId.c_str(),
                    baseObject.index, baseObject.shortVal);
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_SCRIPT_MEMBER_SHORT)->setObjectList(this);
@@ -1261,10 +1261,10 @@ void ObjectList::sendScriptMemberShort()
 
 void ObjectList::sendScriptGlobalShort()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_SCRIPT_GLOBAL_SHORT");
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_SCRIPT_GLOBAL_SHORT");
 
     for (const auto &baseObject : baseObjects)
-        LOG_APPEND(Log::LOG_VERBOSE, "- varName: %s, shortVal: %i", baseObject.varName.c_str(), baseObject.shortVal);
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- varName: %s, shortVal: %i", baseObject.varName.c_str(), baseObject.shortVal);
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_SCRIPT_GLOBAL_SHORT)->setObjectList(this);
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_SCRIPT_GLOBAL_SHORT)->Send();
@@ -1272,7 +1272,7 @@ void ObjectList::sendScriptGlobalShort()
 
 void ObjectList::sendContainer()
 {
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Sending ID_CONTAINER");
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Sending ID_CONTAINER");
 
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_CONTAINER)->setObjectList(this);
     mwmp::Main::get().getNetworking()->getObjectPacket(ID_CONTAINER)->Send();

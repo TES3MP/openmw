@@ -1,5 +1,5 @@
 #include <components/esm/cellid.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Utils.hpp>
 
 #include "../mwbase/environment.hpp"
@@ -77,7 +77,7 @@ void CellController::initializeCell(const ESM::Cell& cell)
     // If this key doesn't exist, create it
     if (cellsInitialized.count(mapIndex) == 0)
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Initializing mwmp::Cell %s", cell.getDescription().c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Initializing mwmp::Cell %s", cell.getDescription().c_str());
 
         MWWorld::CellStore *cellStore = getCellStore(cell);
 
@@ -86,7 +86,7 @@ void CellController::initializeCell(const ESM::Cell& cell)
         mwmp::Cell *mpCell = new mwmp::Cell(cellStore);
         cellsInitialized[mapIndex] = mpCell;
 
-        LOG_APPEND(Log::LOG_VERBOSE, "- Successfully initialized mwmp::Cell %s", cell.getDescription().c_str());
+        LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Successfully initialized mwmp::Cell %s", cell.getDescription().c_str());
     }
 }
 

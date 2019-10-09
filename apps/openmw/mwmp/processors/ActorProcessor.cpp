@@ -39,7 +39,7 @@ bool ActorProcessor::Process(RakNet::Packet &packet, ActorList &actorList)
             if (actorList.isValid)
                 processor.second->Do(*myPacket, actorList);
             else
-                LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Received %s that failed integrity check and was ignored!", processor.second->strPacketID.c_str());
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Received %s that failed integrity check and was ignored!", processor.second->strPacketID.c_str());
 
             return true;
         }

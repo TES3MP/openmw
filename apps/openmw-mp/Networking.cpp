@@ -5,7 +5,7 @@
 
 #include <components/misc/stringops.hpp>
 #include <components/openmw-mp/NetworkMessages.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Version.hpp>
 #include <components/openmw-mp/Packets/PacketPreInit.hpp>
 
@@ -98,14 +98,14 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
 
         if (!myPacket->isPacketValid())
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, "Invalid handshake packet from client at %s", packet->systemAddress.ToString());
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, "Invalid handshake packet from client at %s", packet->systemAddress.ToString());
             kickPlayer(player->guid);
             return;
         }
 
         if (player->isHandshaked())
         {
-            LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Wrong handshake with client at %s", packet->systemAddress.ToString());
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Wrong handshake with client at %s", packet->systemAddress.ToString());
             kickPlayer(player->guid);
             return;
         }
@@ -114,14 +114,14 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
         {
             if (isPassworded())
             {
-                LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Wrong server password %s used by client at %s",
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Wrong server password %s used by client at %s",
                     player->serverPassword.c_str(), packet->systemAddress.ToString());
                 kickPlayer(player->guid);
                 return;
             }
             else
             {
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Client at %s tried to join using password, despite the server not being passworded",
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Client at %s tried to join using password, despite the server not being passworded",
                     packet->systemAddress.ToString());
             }
         }
@@ -132,8 +132,8 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
     if (!player->isHandshaked())
     {
         player->incrementHandshakeAttempts();
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Have not completed handshake with client at %s", packet->systemAddress.ToString());
-        LOG_APPEND(Log::LOG_WARN, "- Attempts so far: %i", player->getHandshakeAttempts());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Have not completed handshake with client at %s", packet->systemAddress.ToString());
+        LOG_APPEND(MWMPLog::LOG_WARN, "- Attempts so far: %i", player->getHandshakeAttempts());
 
         if (player->getHandshakeAttempts() > 20)
             kickPlayer(player->guid, false);
@@ -160,7 +160,7 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
     }
     else if (packet->data[0] == ID_PLAYER_BASEINFO)
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_BASEINFO about %s", player->npc.mName.c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_BASEINFO about %s", player->npc.mName.c_str());
 
         myPacket->setPlayer(player);
         myPacket->Read();
@@ -178,7 +178,7 @@ void Networking::processPlayerPacket(RakNet::Packet *packet)
 
 
     if (!PlayerProcessor::Process(*packet))
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled PlayerPacket with identifier %i has arrived", packet->data[0]);
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled PlayerPacket with identifier %i has arrived", packet->data[0]);
 
 }
 
@@ -190,7 +190,7 @@ void Networking::processActorPacket(RakNet::Packet *packet)
         return;
 
     if (!ActorProcessor::Process(*packet, baseActorList))
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled ActorPacket with identifier %i has arrived", packet->data[0]);
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled ActorPacket with identifier %i has arrived", packet->data[0]);
 
 }
 
@@ -202,7 +202,7 @@ void Networking::processObjectPacket(RakNet::Packet *packet)
         return;
 
     if (!ObjectProcessor::Process(*packet, baseObjectList))
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled ObjectPacket with identifier %i has arrived", packet->data[0]);
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled ObjectPacket with identifier %i has arrived", packet->data[0]);
 
 }
 
@@ -214,7 +214,7 @@ void Networking::processWorldstatePacket(RakNet::Packet *packet)
         return;
 
     if (!WorldstateProcessor::Process(*packet, baseWorldstate))
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled WorldstatePacket with identifier %i has arrived", packet->data[0]);
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled WorldstatePacket with identifier %i has arrived", packet->data[0]);
 
 }
 
@@ -222,7 +222,7 @@ bool Networking::preInit(RakNet::Packet *packet, RakNet::BitStream &bsIn)
 {
     if (packet->data[0] != ID_GAME_PREINIT)
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "%s sent wrong first packet (ID_GAME_PREINIT was expected)",
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "%s sent wrong first packet (ID_GAME_PREINIT was expected)",
                            packet->systemAddress.ToString());
         peer->CloseConnection(packet->systemAddress, true);
     }
@@ -237,7 +237,7 @@ bool Networking::preInit(RakNet::Packet *packet, RakNet::BitStream &bsIn)
 
     if (!packetPreInit.isPacketValid() || dataFiles.empty())
     {
-        LOG_APPEND(Log::LOG_ERROR, "Invalid packetPreInit");
+        LOG_APPEND(MWMPLog::LOG_ERROR, "Invalid packetPreInit");
         peer->CloseConnection(packet->systemAddress, false); // close connection without notification
         return false;
     }
@@ -247,7 +247,7 @@ bool Networking::preInit(RakNet::Packet *packet, RakNet::BitStream &bsIn)
     {
         for (int i = 0; dataFile != dataFiles.end(); dataFile++, i++)
         {
-            LOG_APPEND(Log::LOG_VERBOSE, "- %X\t%s", dataFile->second[0], dataFile->first.c_str());
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "- %X\t%s", dataFile->second[0], dataFile->first.c_str());
             // Check if the filenames match, ignoring case
             if (Misc::StringUtils::ciEqual(samples[i].first, dataFile->first))
             {
@@ -271,14 +271,14 @@ bool Networking::preInit(RakNet::Packet *packet, RakNet::BitStream &bsIn)
     // If the loop above was broken, then the client's data files do not match the server's
     if (dataFileEnforcementState && dataFile != dataFiles.end())
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "%s was not allowed to connect due to incompatible data files", packet->systemAddress.ToString());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "%s was not allowed to connect due to incompatible data files", packet->systemAddress.ToString());
         packetPreInit.setChecksums(&samples);
         packetPreInit.Send(packet->systemAddress);
         peer->CloseConnection(packet->systemAddress, true);
     }
     else
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "%s was allowed to connect", packet->systemAddress.ToString());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "%s was allowed to connect", packet->systemAddress.ToString());
         PacketPreInit::PluginContainer tmp;
         packetPreInit.setChecksums(&tmp);
         packetPreInit.Send(packet->systemAddress);
@@ -314,7 +314,7 @@ void Networking::update(RakNet::Packet *packet, RakNet::BitStream &bsIn)
         processWorldstatePacket(packet);
     }
     else
-        LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled RakNet packet with identifier %i has arrived", packet->data[0]);
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled RakNet packet with identifier %i has arrived", packet->data[0]);
 }
 
 void Networking::newPlayer(RakNet::RakNetGUID guid)
@@ -325,7 +325,7 @@ void Networking::newPlayer(RakNet::RakNetGUID guid)
     playerPacketController->GetPacket(ID_PLAYER_CELL_CHANGE)->RequestData(guid);
     playerPacketController->GetPacket(ID_PLAYER_EQUIPMENT)->RequestData(guid);
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Sending info about other players to %lu", guid.g);
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Sending info about other players to %lu", guid.g);
 
     for (TPlayers::iterator pl = players->begin(); pl != players->end(); pl++) //sending other players to new player
     {
@@ -359,7 +359,7 @@ void Networking::newPlayer(RakNet::RakNetGUID guid)
         }
     }
 
-    LOG_APPEND(Log::LOG_WARN, "- Done");
+    LOG_APPEND(MWMPLog::LOG_WARN, "- Done");
 
 }
 
@@ -485,31 +485,31 @@ int Networking::mainLoop()
             switch (packet->data[0])
             {
                 case ID_REMOTE_DISCONNECTION_NOTIFICATION:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Client at %s has disconnected", packet->systemAddress.ToString());
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Client at %s has disconnected", packet->systemAddress.ToString());
                     break;
                 case ID_REMOTE_CONNECTION_LOST:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Client at %s has lost connection", packet->systemAddress.ToString());
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Client at %s has lost connection", packet->systemAddress.ToString());
                     break;
                 case ID_REMOTE_NEW_INCOMING_CONNECTION:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Client at %s has connected", packet->systemAddress.ToString());
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Client at %s has connected", packet->systemAddress.ToString());
                     break;
                 case ID_CONNECTION_REQUEST_ACCEPTED:    // client to server
                 {
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Our connection request has been accepted");
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Our connection request has been accepted");
                     break;
                 }
                 case ID_NEW_INCOMING_CONNECTION:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "A connection is incoming from %s", packet->systemAddress.ToString());
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "A connection is incoming from %s", packet->systemAddress.ToString());
                     break;
                 case ID_NO_FREE_INCOMING_CONNECTIONS:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "The server is full");
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "The server is full");
                     break;
                 case ID_DISCONNECTION_NOTIFICATION:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN,  "Client at %s has disconnected", packet->systemAddress.ToString());
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN,  "Client at %s has disconnected", packet->systemAddress.ToString());
                     disconnectPlayer(packet->guid);
                     break;
                 case ID_CONNECTION_LOST:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Client at %s has lost connection", packet->systemAddress.ToString());
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Client at %s has lost connection", packet->systemAddress.ToString());
                     disconnectPlayer(packet->guid);
                     break;
                 case ID_SND_RECEIPT_ACKED:

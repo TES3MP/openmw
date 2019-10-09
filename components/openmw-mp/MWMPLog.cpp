@@ -10,25 +10,20 @@
 #include <sstream>
 #include <vector>
 #include <boost/lexical_cast.hpp>
-#include "Log.hpp"
+#include "MWMPLog.hpp"
 
 using namespace std;
 
-Log *Log::sLog = nullptr;
+MWMPLog *MWMPLog::sLog = nullptr;
 
-Log::Log(int logLevel) : logLevel(logLevel)
-{
-
-}
-
-void Log::Create(int logLevel)
+void MWMPLog::Create(int logLevel)
 {
     if (sLog != nullptr)
         return;
-    sLog = new Log(logLevel);
+    sLog = new MWMPLog(logLevel);
 }
 
-void Log::Delete()
+void MWMPLog::Delete()
 {
     if (sLog == nullptr)
         return;
@@ -36,17 +31,17 @@ void Log::Delete()
     sLog = nullptr;
 }
 
-const Log &Log::Get()
+const MWMPLog &MWMPLog::Get()
 {
     return *sLog;
 }
 
-int Log::GetLevel()
+int MWMPLog::GetLevel()
 {
     return sLog->logLevel;
 }
 
-void Log::SetLevel(int level)
+void MWMPLog::SetLevel(int level)
 {
     sLog->logLevel = level;
 }
@@ -62,7 +57,7 @@ const char* getTime()
     return result;
 }
 
-void Log::print(int level, bool hasPrefix, const char *file, int line, const char *message, ...) const
+void MWMPLog::print(int level, bool hasPrefix, const char *file, int line, const char *message, ...) const
 {
     if (level < logLevel) return;
     std::stringstream sstr;
@@ -111,7 +106,7 @@ void Log::print(int level, bool hasPrefix, const char *file, int line, const cha
     cout << buf.data() << flush;
 }
 
-string Log::getFilenameTimestamp()
+string MWMPLog::getFilenameTimestamp()
 {
     time_t rawtime = time(0);
     struct tm *timeinfo = localtime(&rawtime);

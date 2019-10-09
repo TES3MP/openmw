@@ -5,8 +5,10 @@
 #include <osg/Referenced>
 #include <osg/Vec3f>
 
+#include <atomic>
 #include <memory>
 #include <set>
+#include <atomic>
 
 #include "defs.hpp"
 #include "cellborder.hpp"
@@ -22,6 +24,11 @@ namespace osg
 namespace Resource
 {
     class ResourceSystem;
+}
+
+namespace SceneUtil
+{
+    class WorkQueue;
 }
 
 namespace Terrain
@@ -42,7 +49,7 @@ namespace Terrain
         virtual ~View() {}
 
         /// Reset internal structure so that the next addition to the view will override the previous frame's contents.
-        virtual void reset(unsigned int frame) = 0;
+        virtual void reset() = 0;
     };
 
     /**
@@ -59,6 +66,9 @@ namespace Terrain
         World(osg::Group* parent, osg::Group* compileRoot, Resource::ResourceSystem* resourceSystem, Storage* storage, int nodeMask, int preCompileMask, int borderMask);
         virtual ~World();
 
+        /// Set a WorkQueue to delete objects in the background thread.
+        void setWorkQueue(SceneUtil::WorkQueue* workQueue);
+
         /// See CompositeMapRenderer::setTargetFrameRate
         void setTargetFrameRate(float rate);
 
@@ -72,7 +82,7 @@ namespace Terrain
         /// @note Thread safe.
         virtual void clearAssociatedCaches();
 
-        /// Load a terrain cell at maximum LOD and store it in the View for later use.
+        /// Load a terrain cell and store it in the View for later use.
         /// @note Thread safe.
         virtual void cacheCell(View* view, int x, int y) {}
 
@@ -90,15 +100,19 @@ namespace Terrain
 
         /// Create a View to use with preload feature. The caller is responsible for deleting the view.
         /// @note Thread safe.
-        virtual View* createView() { return NULL; }
+        virtual View* createView() { return nullptr; }
 
         /// @note Thread safe, as long as you do not attempt to load into the same view from multiple threads.
-        virtual void preload(View* view, const osg::Vec3f& eyePoint) {}
+
+        virtual void preload(View* view, const osg::Vec3f& viewPoint, std::atomic<bool>& abort) {}
+
+        /// Store a preloaded view into the cache with the intent that the next rendering traversal can use it.
+        /// @note Not thread safe.
+        virtual void storeView(const View* view, double referenceTime) {}
 
         virtual void reportStats(unsigned int frameNumber, osg::Stats* stats) {}
 
-        /// Set the default viewer (usually a Camera), used as viewpoint for any viewers that don't use their own viewpoint.
-        virtual void setDefaultViewer(osg::Object* obj) {}
+        virtual void setViewDistance(float distance) {}
 
         Storage* getStorage() { return mStorage; }
 
@@ -116,7 +130,7 @@ namespace Terrain
         std::unique_ptr<TextureManager> mTextureManager;
         std::unique_ptr<ChunkManager> mChunkManager;
 
-        std::unique_ptr<MWRender::CellBorder> mCellBorder;
+        std::unique_ptr<CellBorder> mCellBorder;
 
         bool mBorderVisible;
 

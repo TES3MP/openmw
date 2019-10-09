@@ -45,18 +45,17 @@ namespace MWRender
         void clear();
 
         /**
-         * Request a map render for the given cells. Render textures will be immediately created and can be retrieved with the getMapTexture function.
+         * Request a map render for the given cell. Render textures will be immediately created and can be retrieved with the getMapTexture function.
          */
-        void requestMap (std::set<const MWWorld::CellStore*> cells);
+        void requestMap(const MWWorld::CellStore* cell);
 
-        /**
-         * Remove map and fog textures for the given cell.
-         */
-        void removeCell (MWWorld::CellStore* cell);
+        void addCell(MWWorld::CellStore* cell);
 
-        osg::ref_ptr<osg::Texture2D> getMapTexture (int x, int y);
+        void removeCell(MWWorld::CellStore* cell);
 
-        osg::ref_ptr<osg::Texture2D> getFogOfWarTexture (int x, int y);
+        osg::ref_ptr<osg::Texture2D> getMapTexture(int x, int y);
+
+        osg::ref_ptr<osg::Texture2D> getFogOfWarTexture(int x, int y);
 
         void removeCamera(osg::Camera* cam);
 
@@ -77,8 +76,8 @@ namespace MWRender
          * @remarks This is used to draw a "fog of war" effect
          * to hide areas on the map the player has not discovered yet.
          */
-        void updatePlayer (const osg::Vec3f& position, const osg::Quat& orientation,
-                           float& u, float& v, int& x, int& y, osg::Vec3f& direction);
+        void updatePlayer(const osg::Vec3f& position, const osg::Quat& orientation,
+            float& u, float& v, int& x, int& y, osg::Vec3f& direction);
 
         /**
          * Save the fog of war for this cell to its CellStore.
@@ -89,14 +88,14 @@ namespace MWRender
         /**
          * Get the interior map texture index and normalized position on this texture, given a world position
          */
-        void worldToInteriorMapPosition (osg::Vec2f pos, float& nX, float& nY, int& x, int& y);
+        void worldToInteriorMapPosition(osg::Vec2f pos, float& nX, float& nY, int& x, int& y);
 
-        osg::Vec2f interiorMapToWorldPosition (float nX, float nY, int x, int y);
+        osg::Vec2f interiorMapToWorldPosition(float nX, float nY, int x, int y);
 
         /**
          * Check if a given position is explored by the player (i.e. not obscured by fog of war)
          */
-        bool isPositionExplored (float nX, float nY, int x, int y);
+        bool isPositionExplored(float nX, float nY, int x, int y);
 
         osg::Group* getRoot();
 
@@ -109,6 +108,9 @@ namespace MWRender
         CameraVector mActiveCameras;
 
         CameraVector mCamerasPendingRemoval;
+
+        typedef std::set<std::pair<int, int> > Grid;
+        Grid mCurrentGrid;
 
         struct MapSegment
         {
@@ -124,7 +126,7 @@ namespace MWRender
             osg::ref_ptr<osg::Texture2D> mFogOfWarTexture;
             osg::ref_ptr<osg::Image> mFogOfWarImage;
 
-            std::set<std::pair<int, int> > mGrid; // the grid that was active at the time of rendering this segment
+            Grid mGrid; // the grid that was active at the time of rendering this segment
 
             bool mHasFogState;
         };

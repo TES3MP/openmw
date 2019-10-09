@@ -5,6 +5,7 @@
 #include <osg/ComputeBoundsVisitor>
 
 #include <components/esm/loadligh.hpp>
+#include <components/fallback/fallback.hpp>
 
 #include "lightmanager.hpp"
 #include "lightcontroller.hpp"
@@ -15,37 +16,54 @@
 namespace SceneUtil
 {
 
-    void configureLight(osg::Light *light, float radius, bool isExterior, bool outQuadInLin, bool useQuadratic,
-                        float quadraticValue, float quadraticRadiusMult, bool useLinear, float linearRadiusMult, float linearValue)
+    void configureLight(osg::Light *light, float radius, bool isExterior)
     {
-        bool quadratic = useQuadratic && (!outQuadInLin || isExterior);
+        float quadraticAttenuation = 0.f;
+        float linearAttenuation = 0.f;
+        float constantAttenuation = 0.f;
 
-        float quadraticAttenuation = 0;
-        float linearAttenuation = 0;
-        if (quadratic)
-        {
-            float r = radius * quadraticRadiusMult;
-            quadraticAttenuation = quadraticValue / std::pow(r, 2);
-        }
+        static const bool useConstant = Fallback::Map::getBool("LightAttenuation_UseConstant");
+        static const bool useLinear = Fallback::Map::getBool("LightAttenuation_UseLinear");
+        static const bool useQuadratic = Fallback::Map::getBool("LightAttenuation_UseQuadratic");
+        static const float constantValue = Fallback::Map::getFloat("LightAttenuation_ConstantValue");
+        static const float linearValue = Fallback::Map::getFloat("LightAttenuation_LinearValue");
+        static const float quadraticValue = Fallback::Map::getFloat("LightAttenuation_QuadraticValue");
+        static const float linearRadiusMult = Fallback::Map::getFloat("LightAttenuation_LinearRadiusMult");
+        static const float quadraticRadiusMult = Fallback::Map::getFloat("LightAttenuation_QuadraticRadiusMult");
+        static const int linearMethod = Fallback::Map::getInt("LightAttenuation_LinearMethod");
+        static const int quadraticMethod = Fallback::Map::getInt("LightAttenuation_QuadraticMethod");
+        static const bool outQuadInLin = Fallback::Map::getBool("LightAttenuation_OutQuadInLin");
+
+        if (useConstant)
+            constantAttenuation = constantValue;
+
         if (useLinear)
         {
+            linearAttenuation = linearMethod == 0 ? linearValue : 0.01f;
             float r = radius * linearRadiusMult;
-            linearAttenuation = linearValue / r;
+            if (r && (linearMethod == 1 || linearMethod == 2))
+                linearAttenuation = linearValue / std::pow(r, linearMethod);
         }
 
+        if (useQuadratic && (!outQuadInLin || isExterior))
+        {
+            quadraticAttenuation = quadraticMethod == 0 ? quadraticValue : 0.01f;
+            float r = radius * quadraticRadiusMult;
+            if (r && (quadraticMethod == 1 || quadraticMethod == 2))
+                quadraticAttenuation = quadraticValue / std::pow(r, quadraticMethod);
+        }
+
+        light->setConstantAttenuation(constantAttenuation);
         light->setLinearAttenuation(linearAttenuation);
         light->setQuadraticAttenuation(quadraticAttenuation);
-        light->setConstantAttenuation(0.f);
     }
 
-    void addLight (osg::Group* node, const ESM::Light* esmLight, unsigned int partsysMask, unsigned int lightMask, bool isExterior, bool outQuadInLin, bool useQuadratic,
-                   float quadraticValue, float quadraticRadiusMult, bool useLinear, float linearRadiusMult,
-                   float linearValue)
+    void addLight (osg::Group* node, const ESM::Light* esmLight, unsigned int partsysMask, unsigned int lightMask, bool isExterior)
     {
         SceneUtil::FindByNameVisitor visitor("AttachLight");
         node->accept(visitor);
 
-        osg::Group* attachTo = NULL;
+        osg::Group* attachTo = nullptr;
         if (visitor.mFoundNode)
         {
             attachTo = visitor.mFoundNode;
@@ -67,13 +85,11 @@ namespace SceneUtil
             attachTo = trans;
         }
 
-        osg::ref_ptr<LightSource> lightSource = createLightSource(esmLight, lightMask, isExterior, outQuadInLin, useQuadratic, quadraticValue,
-                                                                  quadraticRadiusMult, useLinear, linearRadiusMult, linearValue);
+        osg::ref_ptr<LightSource> lightSource = createLightSource(esmLight, lightMask, isExterior);
         attachTo->addChild(lightSource);
     }
 
-    osg::ref_ptr<LightSource> createLightSource(const ESM::Light* esmLight, unsigned int lightMask, bool isExterior, bool outQuadInLin, bool useQuadratic, float quadraticValue,
-                                                float quadraticRadiusMult, bool useLinear, float linearRadiusMult, float linearValue, const osg::Vec4f& ambient)
+    osg::ref_ptr<LightSource> createLightSource(const ESM::Light* esmLight, unsigned int lightMask, bool isExterior, const osg::Vec4f& ambient)
     {
         osg::ref_ptr<SceneUtil::LightSource> lightSource (new SceneUtil::LightSource);
         osg::ref_ptr<osg::Light> light (new osg::Light);
@@ -82,8 +98,7 @@ namespace SceneUtil
         float radius = esmLight->mData.mRadius;
         lightSource->setRadius(radius);
 
-        configureLight(light, radius, isExterior, outQuadInLin, useQuadratic, quadraticValue,
-                                  quadraticRadiusMult, useLinear, linearRadiusMult, linearValue);
+        configureLight(light, radius, isExterior);
 
         osg::Vec4f diffuse = SceneUtil::colourFromRGB(esmLight->mData.mColor);
         if (esmLight->mData.mFlags & ESM::Light::Negative)

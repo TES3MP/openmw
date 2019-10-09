@@ -53,7 +53,7 @@ public:
             boundXYZ = nif->getVector3();
         }
 
-        parent = NULL;
+        parent = nullptr;
 
         isBone = false;
     }
@@ -64,7 +64,7 @@ public:
         props.post(nif);
     }
 
-    // Parent node, or NULL for the root node. As far as I'm aware, only
+    // Parent node, or nullptr for the root node. As far as I'm aware, only
     // NiNodes (or types derived from NiNodes) can be parents.
     NiNode *parent;
 
@@ -156,6 +156,29 @@ struct NiTriShape : Node
     }
 };
 
+struct NiTriStrips : Node
+{
+    NiTriStripsDataPtr data;
+    NiSkinInstancePtr skin;
+
+    void read(NIFStream *nif)
+    {
+        Node::read(nif);
+        data.read(nif);
+        skin.read(nif);
+    }
+
+    void post(NIFFile *nif)
+    {
+        Node::post(nif);
+        data.post(nif);
+        skin.post(nif);
+        if (!skin.empty())
+            nif->setUseSkinning(true);
+    }
+};
+
+
 struct NiCamera : Node
 {
     struct Camera
@@ -238,10 +261,12 @@ struct NiRotatingParticles : Node
 // A node used as the base to switch between child nodes, such as for LOD levels.
 struct NiSwitchNode : public NiNode
 {
+    unsigned int initialIndex;
+
     void read(NIFStream *nif)
     {
         NiNode::read(nif);
-        nif->getInt(); // unknown
+        initialIndex = nif->getUInt();
     }
 };
 

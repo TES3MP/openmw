@@ -1,4 +1,4 @@
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <apps/openmw/mwclass/creature.hpp>
 
 #include "../mwbase/environment.hpp"
@@ -36,11 +36,11 @@ void PlayerList::update(float dt)
 
 DedicatedPlayer *PlayerList::newPlayer(RakNet::RakNetGUID guid)
 {
-    LOG_APPEND(Log::LOG_INFO, "- Creating new DedicatedPlayer with guid %s", guid.ToString());
+    LOG_APPEND(MWMPLog::LOG_INFO, "- Creating new DedicatedPlayer with guid %s", guid.ToString());
 
     players[guid] = new DedicatedPlayer(guid);
 
-    LOG_APPEND(Log::LOG_INFO, "- There are now %i DedicatedPlayers", players.size());
+    LOG_APPEND(MWMPLog::LOG_INFO, "- There are now %i DedicatedPlayers", players.size());
 
     return players[guid];
 }

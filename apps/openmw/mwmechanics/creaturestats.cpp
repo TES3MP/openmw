@@ -7,7 +7,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "spellcasting.hpp"
 /*
     End of tes3mp addition
@@ -18,6 +18,7 @@
 #include <components/esm/esmwriter.hpp>
 
 #include "../mwworld/esmstore.hpp"
+#include "../mwworld/player.hpp"
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
@@ -397,8 +398,11 @@ namespace MWMechanics
         mFallHeight += height;
     }
 
-    float CreatureStats::land()
+    float CreatureStats::land(bool isPlayer)
     {
+        if (isPlayer)
+            MWBase::Environment::get().getWorld()->getPlayer().setJumping(false);
+
         float height = mFallHeight;
         mFallHeight = 0;
         return height;

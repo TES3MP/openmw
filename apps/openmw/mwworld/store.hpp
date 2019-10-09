@@ -41,12 +41,12 @@ namespace MWWorld
         virtual int getDynamicSize() const { return 0; }
         virtual RecordId load(ESM::ESMReader &esm) = 0;
 
-        virtual bool eraseStatic(const std::string &id) {return false;}
+        virtual bool eraseStatic(const std::string &id) { return false; }
         virtual void clearDynamic() {}
 
-        virtual void write (ESM::ESMWriter& writer, Loading::Listener& progress) const {}
+        virtual void write(ESM::ESMWriter& writer, Loading::Listener& progress) const {}
 
-        virtual RecordId read (ESM::ESMReader& reader) { return RecordId(); }
+        virtual RecordId read(ESM::ESMReader& reader) { return RecordId(); }
         ///< Read into dynamic storage
     };
 
@@ -85,11 +85,11 @@ namespace MWWorld
         SharedIterator() {}
 
         SharedIterator(const SharedIterator &orig)
-          : mIter(orig.mIter)
+            : mIter(orig.mIter)
         {}
 
         SharedIterator(const Iter &iter)
-          : mIter(iter)
+            : mIter(iter)
         {}
 
         SharedIterator &operator++() {
@@ -166,7 +166,7 @@ namespace MWWorld
          */
         bool isDynamic(const std::string &id) const;
 
-        /** Returns a random record that starts with the named ID, or NULL if not found. */
+        /** Returns a random record that starts with the named ID, or nullptr if not found. */
         const T *searchRandom(const std::string &id) const;
 
         const T *find(const std::string &id) const;
@@ -247,6 +247,8 @@ namespace MWWorld
 
         RecordId load(ESM::ESMReader &esm);
         void setUp();
+    private:
+        bool mBuilt = false;
     };
 
     template <>
@@ -378,6 +380,30 @@ namespace MWWorld
 
         const ESM::Attribute *search(size_t index) const;
         const ESM::Attribute *find(size_t index) const;
+
+        void setUp();
+
+        size_t getSize() const;
+        iterator begin() const;
+        iterator end() const;
+    };
+
+    template <>
+    class Store<ESM::WeaponType> : public StoreBase
+    {
+        std::map<int, ESM::WeaponType> mStatic;
+
+    public:
+        typedef std::map<int, ESM::WeaponType>::const_iterator iterator;
+
+        Store();
+
+        const ESM::WeaponType *search(const int id) const;
+        const ESM::WeaponType *find(const int id) const;
+
+        RecordId load(ESM::ESMReader &esm) { return RecordId(0, false); }
+
+        ESM::WeaponType* insert(const ESM::WeaponType &weaponType);
 
         void setUp();
 

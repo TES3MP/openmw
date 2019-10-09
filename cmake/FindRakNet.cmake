@@ -16,6 +16,8 @@ FIND_LIBRARY (RakNet_LIBRARY_RELEASE NAMES RakNetLibStatic
     /usr/local/lib
     /opt/local/lib
     $ENV{RAKNET_ROOT}/lib
+	PATHS
+	${CMAKE_SOURCE_DIR}/MSVC2017_64/deps/CrabNet/lib
     )
 	
 FIND_LIBRARY (RakNet_LIBRARY_DEBUG NAMES RakNetLibStatic
@@ -28,6 +30,8 @@ FIND_LIBRARY (RakNet_LIBRARY_DEBUG NAMES RakNetLibStatic
     /usr/local/lib
     /opt/local/lib
     $ENV{RAKNET_ROOT}/lib
+	PATHS
+	${CMAKE_SOURCE_DIR}/MSVC2017_64/deps/CrabNet/lib
     )	
 	
 	
@@ -39,7 +43,7 @@ FIND_PATH (RakNet_INCLUDES raknet/RakPeer.h
     /opt/local/include
 	$ENV{RAKNET_ROOT}/include
 	PATHS
-	${CMAKE_SOURCE_DIR}/MSVC2017_64/deps/Crabnet
+	${CMAKE_SOURCE_DIR}/MSVC2017_64/deps/CrabNet/include
     )
  
 MESSAGE(STATUS ${RakNet_INCLUDES})

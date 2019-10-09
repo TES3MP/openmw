@@ -1,6 +1,5 @@
 #include "scenemanager.hpp"
 
-#include <iostream>
 #include <cstdlib>
 
 #include <osg/Node>
@@ -12,6 +11,8 @@
 
 #include <osgDB/SharedStateManager>
 #include <osgDB/Registry>
+
+#include <components/debug/debuglog.hpp>
 
 #include <components/nifosg/nifloader.hpp>
 #include <components/nif/niffile.hpp>
@@ -217,7 +218,6 @@ namespace Resource
         , mShaderManager(new Shader::ShaderManager)
         , mForceShaders(false)
         , mClampLighting(true)
-        , mForcePerPixelLighting(false)
         , mAutoUseNormalMaps(false)
         , mAutoUseSpecularMaps(false)
         , mInstanceCache(new MultiObjectCache)
@@ -257,16 +257,6 @@ namespace Resource
     bool SceneManager::getClampLighting() const
     {
         return mClampLighting;
-    }
-
-    void SceneManager::setForcePerPixelLighting(bool force)
-    {
-        mForcePerPixelLighting = force;
-    }
-
-    bool SceneManager::getForcePerPixelLighting() const
-    {
-        return mForcePerPixelLighting;
     }
 
     void SceneManager::setAutoUseNormalMaps(bool use)
@@ -395,7 +385,8 @@ namespace Resource
             {
                 const char* reserved[] = {"Head", "Neck", "Chest", "Groin", "Right Hand", "Left Hand", "Right Wrist", "Left Wrist", "Shield Bone", "Right Forearm", "Left Forearm", "Right Upper Arm",
                                           "Left Upper Arm", "Right Foot", "Left Foot", "Right Ankle", "Left Ankle", "Right Knee", "Left Knee", "Right Upper Leg", "Left Upper Leg", "Right Clavicle",
-                                          "Left Clavicle", "Weapon Bone", "Tail", "Bip01", "Root Bone", "BoneOffset", "AttachLight", "ArrowBone", "Camera"};
+                                          "Left Clavicle", "Weapon Bone", "Tail", "Bip01", "Root Bone", "BoneOffset", "AttachLight", "Arrow", "Camera"};
+
                 reservedNames = std::vector<std::string>(reserved, reserved + sizeof(reserved)/sizeof(reserved[0]));
 
                 for (unsigned int i=0; i<sizeof(reserved)/sizeof(reserved[0]); ++i)
@@ -501,7 +492,7 @@ namespace Resource
                     normalized = "meshes/marker_error." + std::string(sMeshTypes[i]);
                     if (mVFS->exists(normalized))
                     {
-                        std::cerr << "Failed to load '" << name << "': " << e.what() << ", using marker_error." << sMeshTypes[i] << " instead" << std::endl;
+                        Log(Debug::Error) << "Failed to load '" << name << "': " << e.what() << ", using marker_error." << sMeshTypes[i] << " instead";
                         Files::IStreamPtr file = mVFS->get(normalized);
                         loaded = load(file, normalized, mImageManager, mNifFileManager);
                         break;
@@ -540,6 +531,8 @@ namespace Resource
 
             if (mIncrementalCompileOperation)
                 mIncrementalCompileOperation->add(loaded);
+            else
+                loaded->getBound();
 
             mCache->addEntryToObjectCache(normalized, loaded);
             return loaded;
@@ -552,6 +545,12 @@ namespace Resource
         mVFS->normalizeFilename(normalized);
 
         osg::ref_ptr<osg::Node> node = createInstance(normalized);
+
+        // Note: osg::clone() does not calculate bound volumes.
+        // Do it immediately, otherwise we will need to update them for all objects
+        // during first update traversal, what may lead to stuttering during cell transitions
+        node->getBound();
+
         mInstanceCache->addEntryToObjectCache(normalized, node.get());
         return node;
     }
@@ -658,12 +657,12 @@ namespace Resource
         if(magfilter == "nearest")
             mag = osg::Texture::NEAREST;
         else if(magfilter != "linear")
-            std::cerr<< "Warning: Invalid texture mag filter: "<<magfilter <<std::endl;
+            Log(Debug::Warning) << "Warning: Invalid texture mag filter: "<< magfilter;
 
         if(minfilter == "nearest")
             min = osg::Texture::NEAREST;
         else if(minfilter != "linear")
-            std::cerr<< "Warning: Invalid texture min filter: "<<minfilter <<std::endl;
+            Log(Debug::Warning) << "Warning: Invalid texture min filter: "<< minfilter;
 
         if(mipmap == "nearest")
         {
@@ -675,7 +674,7 @@ namespace Resource
         else if(mipmap != "none")
         {
             if(mipmap != "linear")
-                std::cerr<< "Warning: Invalid texture mipmap: "<<mipmap <<std::endl;
+                Log(Debug::Warning) << "Warning: Invalid texture mipmap: " << mipmap;
             if(min == osg::Texture::NEAREST)
                 min = osg::Texture::NEAREST_MIPMAP_LINEAR;
             else if(min == osg::Texture::LINEAR)
@@ -727,6 +726,7 @@ namespace Resource
 
     void SceneManager::reportStats(unsigned int frameNumber, osg::Stats *stats) const
     {
+        if (mIncrementalCompileOperation)
         {
             OpenThreads::ScopedLock<OpenThreads::Mutex> lock(*mIncrementalCompileOperation->getToCompiledMutex());
             stats->setAttribute(frameNumber, "Compiling", mIncrementalCompileOperation->getToCompile().size());
@@ -746,8 +746,6 @@ namespace Resource
     {
         Shader::ShaderVisitor* shaderVisitor = new Shader::ShaderVisitor(*mShaderManager.get(), *mImageManager, "objects_vertex.glsl", "objects_fragment.glsl");
         shaderVisitor->setForceShaders(mForceShaders);
-        shaderVisitor->setClampLighting(mClampLighting);
-        shaderVisitor->setForcePerPixelLighting(mForcePerPixelLighting);
         shaderVisitor->setAutoUseNormalMaps(mAutoUseNormalMaps);
         shaderVisitor->setNormalMapPattern(mNormalMapPattern);
         shaderVisitor->setNormalHeightMapPattern(mNormalHeightMapPattern);

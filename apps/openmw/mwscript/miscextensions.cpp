@@ -247,7 +247,7 @@ namespace MWScript
                     // This is done when using Lock in scripts, but not when using Lock spells.
                     if (ptr.getTypeName() == typeid(ESM::Door).name() && !ptr.getCellRef().getTeleport())
                     {
-                        MWBase::Environment::get().getWorld()->activateDoor(ptr, 0);
+                        MWBase::Environment::get().getWorld()->activateDoor(ptr, MWWorld::DoorState::Idle);
 
                         float xr = ptr.getCellRef().getPosition().rot[0];
                         float yr = ptr.getCellRef().getPosition().rot[1];

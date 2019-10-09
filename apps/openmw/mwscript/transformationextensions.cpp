@@ -5,7 +5,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwbase/windowmanager.hpp"
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
@@ -943,7 +943,6 @@ namespace MWScript
             interpreter.installSegment5(Compiler::Transformation::opcodeGetStartingAngleExplicit, new OpGetStartingAngle<ExplicitRef>);
             interpreter.installSegment5(Compiler::Transformation::opcodeResetActors, new OpResetActors);
             interpreter.installSegment5(Compiler::Transformation::opcodeFixme, new OpFixme<ImplicitRef>);
-            interpreter.installSegment5(Compiler::Transformation::opcodeFixmeExplicit, new OpFixme<ExplicitRef>);
         }
     }
 }

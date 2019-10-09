@@ -140,6 +140,8 @@ namespace SceneUtil
         typedef std::map<size_t, osg::ref_ptr<osg::StateSet> > LightStateSetMap;
         LightStateSetMap mStateSetCache[2];
 
+        std::vector<osg::ref_ptr<osg::StateAttribute>> mDummies;
+
         int mStartLight;
 
         unsigned int mLightingMask;
@@ -158,7 +160,7 @@ namespace SceneUtil
     {
     public:
         LightListCallback()
-            : mLightManager(NULL)
+            : mLightManager(nullptr)
             , mLastFrameNumber(0)
         {}
         LightListCallback(const LightListCallback& copy, const osg::CopyOp& copyop)

@@ -17,14 +17,14 @@ namespace mwmp
         {
             BaseObjectProcessor::Do(packet, objectList);
 
-            LOG_APPEND(Log::LOG_VERBOSE, "- action: %i, containerSubAction: %i", objectList.action, objectList.containerSubAction);
+            LOG_APPEND(MWMPLog::LOG_VERBOSE, "- action: %i, containerSubAction: %i", objectList.action, objectList.containerSubAction);
 
             // If we've received a request for information, comply with it
             if (objectList.action == mwmp::BaseObjectList::REQUEST)
             {
                 if (objectList.baseObjectCount == 0)
                 {
-                    LOG_APPEND(Log::LOG_VERBOSE, "- Request had no objects attached, so we are sending all containers in the cell %s",
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Request had no objects attached, so we are sending all containers in the cell %s",
                         objectList.cell.getDescription().c_str());
                     objectList.reset();
                     objectList.cell = *ptrCellStore->getCell();
@@ -35,7 +35,7 @@ namespace mwmp
                 }
                 else
                 {
-                    LOG_APPEND(Log::LOG_VERBOSE, "- Request was for %i %s", objectList.baseObjectCount, objectList.baseObjectCount == 1 ? "object" : "objects");
+                    LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Request was for %i %s", objectList.baseObjectCount, objectList.baseObjectCount == 1 ? "object" : "objects");
                     std::vector<BaseObject> requestObjects = objectList.baseObjects;
                     objectList.reset();
                     objectList.cell = *ptrCellStore->getCell();
@@ -50,7 +50,7 @@ namespace mwmp
             // Otherwise, edit containers based on the information received
             else
             {
-                LOG_APPEND(Log::LOG_VERBOSE, "- Editing container contents to match those of packet", objectList.baseObjectCount);
+                LOG_APPEND(MWMPLog::LOG_VERBOSE, "- Editing container contents to match those of packet", objectList.baseObjectCount);
                 objectList.editContainers(ptrCellStore);
             }
         }

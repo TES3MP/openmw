@@ -23,6 +23,8 @@ class RecordPtrT
 public:
     RecordPtrT() : index(-2) {}
 
+    RecordPtrT(X* ptr) : ptr(ptr) {}
+
     /// Read the index from the nif
     void read(NIFStream *nif)
     {
@@ -38,25 +40,25 @@ public:
     void post(NIFFile *nif)
     {
         if(index < 0)
-            ptr = NULL;
+            ptr = nullptr;
         else
         {
             Record *r = nif->getRecord(index);
             // And cast it
             ptr = dynamic_cast<X*>(r);
-            assert(ptr != NULL);
+            assert(ptr != nullptr);
         }
     }
 
     /// Look up the actual object from the index
     const X* getPtr() const
     {
-        assert(ptr != NULL);
+        assert(ptr != nullptr);
         return ptr;
     }
     X* getPtr()
     {
-        assert(ptr != NULL);
+        assert(ptr != nullptr);
         return ptr;
     }
 
@@ -73,7 +75,7 @@ public:
 
     /// Pointers are allowed to be empty
     bool empty() const
-    { return ptr == NULL; }
+    { return ptr == nullptr; }
 };
 
 /** A list of references to other records. These are read as a list,
@@ -87,6 +89,12 @@ class RecordListT
     std::vector<Ptr> list;
 
 public:
+    RecordListT() = default;
+
+    RecordListT(std::vector<Ptr> list)
+        : list(std::move(list))
+    {}
+
     void read(NIFStream *nif)
     {
         int len = nif->getInt();
@@ -119,7 +127,7 @@ class NiUVData;
 class NiPosData;
 class NiVisData;
 class Controller;
-class Controlled;
+class Named;
 class NiSkinData;
 class NiFloatData;
 struct NiMorphData;
@@ -127,10 +135,13 @@ class NiPixelData;
 class NiColorData;
 struct NiKeyframeData;
 class NiTriShapeData;
+class NiTriStripsData;
 class NiSkinInstance;
 class NiSourceTexture;
 class NiRotatingParticlesData;
 class NiAutoNormalParticlesData;
+class NiPalette;
+struct NiParticleModifier;
 
 typedef RecordPtrT<Node> NodePtr;
 typedef RecordPtrT<Extra> ExtraPtr;
@@ -138,7 +149,7 @@ typedef RecordPtrT<NiUVData> NiUVDataPtr;
 typedef RecordPtrT<NiPosData> NiPosDataPtr;
 typedef RecordPtrT<NiVisData> NiVisDataPtr;
 typedef RecordPtrT<Controller> ControllerPtr;
-typedef RecordPtrT<Controlled> ControlledPtr;
+typedef RecordPtrT<Named> NamedPtr;
 typedef RecordPtrT<NiSkinData> NiSkinDataPtr;
 typedef RecordPtrT<NiMorphData> NiMorphDataPtr;
 typedef RecordPtrT<NiPixelData> NiPixelDataPtr;
@@ -146,10 +157,13 @@ typedef RecordPtrT<NiFloatData> NiFloatDataPtr;
 typedef RecordPtrT<NiColorData> NiColorDataPtr;
 typedef RecordPtrT<NiKeyframeData> NiKeyframeDataPtr;
 typedef RecordPtrT<NiTriShapeData> NiTriShapeDataPtr;
+typedef RecordPtrT<NiTriStripsData> NiTriStripsDataPtr;
 typedef RecordPtrT<NiSkinInstance> NiSkinInstancePtr;
 typedef RecordPtrT<NiSourceTexture> NiSourceTexturePtr;
 typedef RecordPtrT<NiRotatingParticlesData> NiRotatingParticlesDataPtr;
 typedef RecordPtrT<NiAutoNormalParticlesData> NiAutoNormalParticlesDataPtr;
+typedef RecordPtrT<NiPalette> NiPalettePtr;
+typedef RecordPtrT<NiParticleModifier> NiParticleModifierPtr;
 
 typedef RecordListT<Node> NodeList;
 typedef RecordListT<Property> PropertyList;

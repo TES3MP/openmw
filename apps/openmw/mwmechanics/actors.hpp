@@ -5,10 +5,23 @@
 #include <vector>
 #include <string>
 #include <list>
+#include <map>
 
-#include "../mwbase/world.hpp"
+namespace ESM
+{
+    class ESMReader;
+    class ESMWriter;
+}
 
-#include "movement.hpp"
+namespace osg
+{
+    class Vec3f;
+}
+
+namespace Loading
+{
+    class Listener;
+}
 
 namespace MWWorld
 {
@@ -19,6 +32,7 @@ namespace MWWorld
 namespace MWMechanics
 {
     class Actor;
+    class CharacterController;
     class CreatureStats;
 
     class Actors
@@ -27,8 +41,6 @@ namespace MWMechanics
 
             void addBoundItem (const std::string& itemId, const MWWorld::Ptr& actor);
             void removeBoundItem (const std::string& itemId, const MWWorld::Ptr& actor);
-
-            void updateNpc(const MWWorld::Ptr &ptr, float duration);
 
             void adjustMagicEffects (const MWWorld::Ptr& creature);
 
@@ -39,7 +51,7 @@ namespace MWMechanics
 
             void calculateRestoration (const MWWorld::Ptr& ptr, float duration);
 
-            void updateDrowning (const MWWorld::Ptr& ptr, float duration);
+            void updateDrowning(const MWWorld::Ptr& ptr, float duration, bool isKnockedOut, bool isPlayer);
 
             void updateEquippedLight (const MWWorld::Ptr& ptr, float duration, bool mayEquip);
 
@@ -106,6 +118,9 @@ namespace MWMechanics
 
             void rest(bool sleep);
             ///< Update actors while the player is waiting or sleeping. This should be called every hour.
+
+            void updateSneaking(CharacterController* ctrl, float duration);
+            ///< Update the sneaking indicator state according to the given player character controller.
 
             void restoreDynamicStats(const MWWorld::Ptr& actor, bool sleep);
 
@@ -178,8 +193,11 @@ namespace MWMechanics
             bool isAttackingOrSpell(const MWWorld::Ptr& ptr) const;
 
     private:
+        void updateVisibility(const MWWorld::Ptr& ptr, CharacterController* ctrl);
+
         PtrActorMap mActors;
         float mTimerDisposeSummonsCorpses;
+        float mActorsProcessingRange;
 
     };
 }

@@ -96,7 +96,7 @@ namespace MWMechanics
 
         /// Reset the fall height
         /// @return total fall height
-        float land();
+        float land(bool isPlayer);
 
         const AttributeValue & getAttribute(int index) const;
 

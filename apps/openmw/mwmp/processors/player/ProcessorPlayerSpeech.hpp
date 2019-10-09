@@ -17,7 +17,7 @@ namespace mwmp
         {
             if (isLocal())
             {
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Received ID_PLAYER_SPEECH about LocalPlayer from server");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Received ID_PLAYER_SPEECH about LocalPlayer from server");
                 static_cast<LocalPlayer*>(player)->playSpeech();
             }
             else if (player != 0)

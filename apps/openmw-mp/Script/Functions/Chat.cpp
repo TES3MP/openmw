@@ -1,7 +1,7 @@
 #include "Chat.hpp"
 
 #include <components/openmw-mp/NetworkMessages.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include <apps/openmw-mp/Script/ScriptFunctions.hpp>
 #include <apps/openmw-mp/Networking.hpp>
@@ -13,7 +13,7 @@ void ChatFunctions::SendMessage(unsigned short pid, const char *message, bool se
 
     player->chatMessage = message;
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "System: %s", message);
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "System: %s", message);
 
     mwmp::PlayerPacket *packet = mwmp::Networking::get().getPlayerPacketController()->GetPacket(ID_CHAT_MESSAGE);
     packet->setPlayer(player);

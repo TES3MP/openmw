@@ -39,7 +39,7 @@
     Include additional headers for multiplayer purposes
 */
 #include <components/openmw-mp/ErrorMessages.hpp>
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Utils.hpp>
 #include <components/openmw-mp/Version.hpp>
 /*
@@ -333,7 +333,7 @@ int main(int argc, char**argv)
         Instead of logging information in openmw.log, use a more descriptive filename
         that includes a timestamp
     */
-    return wrapApplication(&runApplication, argc, argv, "/tes3mp-client-" + Log::getFilenameTimestamp() + ".log");
+    return wrapApplication(&runApplication, argc, argv, "/tes3mp-client-" + MWMPLog::getFilenameTimestamp() + ".log");
     /*
         End of tes3mp change (major)
     */

@@ -8,7 +8,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
 #include "../mwmp/LocalPlayer.hpp"
@@ -128,7 +128,7 @@ namespace MWGui
         objectList->addObject(baseObject);
         objectList->sendContainer();
 
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending ID_CONTAINER about\n- Ptr cellRef: %s, %i\n- cell: %s\n- item: %s, %i",
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Sending ID_CONTAINER about\n- Ptr cellRef: %s, %i\n- cell: %s\n- item: %s, %i",
             baseObject.refId.c_str(), baseObject.refNum, objectList->cell.getDescription().c_str(),
             itemPtr.getCellRef().getRefId().c_str(), itemPtr.getRefData().getCount());
         /*
@@ -186,7 +186,7 @@ namespace MWGui
             objectList->addObject(baseObject);
             objectList->sendContainer();
 
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending ID_CONTAINER about\n- Ptr cellRef: %s %i-%i\n- cell: %s\n- item: %s %i, %i",
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Sending ID_CONTAINER about\n- Ptr cellRef: %s %i-%i\n- cell: %s\n- item: %s %i, %i",
                 baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum, objectList->cell.getDescription().c_str(),
                 containerItem.refId.c_str(), containerItem.count, containerItem.charge);
         }
@@ -312,7 +312,7 @@ namespace MWGui
         objectList->addEntireContainer(mPtr);
         objectList->sendContainer();
 
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending ID_CONTAINER about\n- Ptr cellRef: %s, %i-%i\n- cell: %s",
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Sending ID_CONTAINER about\n- Ptr cellRef: %s, %i-%i\n- cell: %s",
             mPtr.getCellRef().getRefId().c_str(), mPtr.getCellRef().getRefNum().mIndex, mPtr.getCellRef().getMpNum(),
             objectList->cell.getDescription().c_str());
         /*

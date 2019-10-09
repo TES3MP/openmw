@@ -30,9 +30,8 @@ void test(const MWWorld::Ptr& actor, int &compiled, int &total, const Compiler::
 
     MWScript::CompilerContext compilerContext(MWScript::CompilerContext::Type_Dialogue);
     compilerContext.setExtensions(extensions);
-    std::ostream errorStream(std::cout.rdbuf());
-    Compiler::StreamErrorHandler errorHandler(errorStream);
-    errorHandler.setWarningsMode (warningsMode);
+    Compiler::StreamErrorHandler errorHandler;
+    errorHandler.setWarningsMode(warningsMode);
 
     const MWWorld::Store<ESM::Dialogue>& dialogues = MWBase::Environment::get().getWorld()->getStore().get<ESM::Dialogue>();
     for (MWWorld::Store<ESM::Dialogue>::iterator it = dialogues.begin(); it != dialogues.end(); ++it)

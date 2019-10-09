@@ -4,7 +4,6 @@
 #include <string>
 #include <memory>
 #include <vector>
-#include <iostream>
 
 #include <osg/ref_ptr>
 #include <osg/Vec4f>
@@ -124,10 +123,10 @@ namespace MWRender
 
         void setEnabled(bool enabled);
 
-        void setHour (double hour);
+        void setHour(double hour);
         ///< will be called even when sky is disabled.
 
-        void setDate (int day, int month);
+        void setDate(int day, int month);
         ///< will be called even when sky is disabled.
 
         int getMasserPhase() const;
@@ -138,7 +137,7 @@ namespace MWRender
         ///< 0 new moon, 1 waxing or waning cresecent, 2 waxing or waning half,
         /// 3 waxing or waning gibbous, 4 full moon
 
-        void setMoonColour (bool red);
+        void setMoonColour(bool red);
         ///< change Secunda colour to red
 
         void setWeather(const WeatherResult& weather);
@@ -180,6 +179,7 @@ namespace MWRender
 
         void createRain();
         void destroyRain();
+        void switchUnderwaterRain();
         void updateRainParameters();
 
         Resource::SceneManager* mSceneManager;

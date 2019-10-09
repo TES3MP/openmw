@@ -81,6 +81,9 @@ namespace MWMechanics
     private:
         MWWorld::Ptr mCaster; // May be empty
         MWWorld::Ptr mTarget; // May be empty
+
+        void playSpellCastingEffects(const std::vector<ESM::ENAMstruct>& effects);
+
     public:
         bool mStack;
         std::string mId; // ID of spell, potion, item etc
@@ -107,7 +110,7 @@ namespace MWMechanics
         /// @note Auto detects if spell, ingredient or potion
         bool cast (const std::string& id);
 
-        void playSpellCastingEffects(const std::string &spellid);
+        void playSpellCastingEffects(const std::string &spellid, bool enchantment);
 
         bool spellIncreasesSkill();
 

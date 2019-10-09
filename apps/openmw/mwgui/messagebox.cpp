@@ -34,6 +34,11 @@ namespace MWGui
         }
     }
 
+    int MessageBoxManager::getMessagesCount()
+    {
+        return mMessageBoxes.size();
+    }
+
     void MessageBoxManager::clear()
     {
         if (mInterMessageBoxe)

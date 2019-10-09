@@ -6,7 +6,7 @@
 
 #include "../mwworld/class.hpp"
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 using namespace mwmp;
 using namespace std;
@@ -96,17 +96,17 @@ void ActorList::addAiActor(const MWWorld::Ptr& actorPtr, const MWWorld::Ptr& tar
     baseActor.aiAction = aiAction;
     baseActor.aiTarget = MechanicsHelper::getTarget(targetPtr);
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Preparing to send ID_ACTOR_AI about %s %i-%i\n- action: %i",
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Preparing to send ID_ACTOR_AI about %s %i-%i\n- action: %i",
         actorPtr.getCellRef().getRefId().c_str(), baseActor.refNum, baseActor.mpNum, aiAction);
 
     if (baseActor.aiTarget.isPlayer)
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "- Has player target %s",
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "- Has player target %s",
             targetPtr.getClass().getName(targetPtr).c_str());
     }
     else
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "- Has actor target %s %i-%i",
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "- Has actor target %s %i-%i",
             targetPtr.getCellRef().getRefId().c_str(), baseActor.aiTarget.refNum, baseActor.aiTarget.mpNum);
     }
 

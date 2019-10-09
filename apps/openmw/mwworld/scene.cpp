@@ -544,17 +544,18 @@ namespace MWWorld
         mLastPlayerPos = pos.asVec3();
     }
 
-    Scene::Scene (MWRender::RenderingManager& rendering, MWPhysics::PhysicsSystem *physics)
-    : mCurrentCell (0), mCellChanged (false), mPhysics(physics), mRendering(rendering)
-    , mPreloadTimer(0.f)
-    , mHalfGridSize(Settings::Manager::getInt("exterior cell load distance", "Cells"))
-    , mCellLoadingThreshold(1024.f)
-    , mPreloadDistance(Settings::Manager::getInt("preload distance", "Cells"))
-    , mPreloadEnabled(Settings::Manager::getBool("preload enabled", "Cells"))
-    , mPreloadExteriorGrid(Settings::Manager::getBool("preload exterior grid", "Cells"))
-    , mPreloadDoors(Settings::Manager::getBool("preload doors", "Cells"))
-    , mPreloadFastTravel(Settings::Manager::getBool("preload fast travel", "Cells"))
-    , mPredictionTime(Settings::Manager::getFloat("prediction time", "Cells"))
+    Scene::Scene(MWRender::RenderingManager& rendering, MWPhysics::PhysicsSystem *physics,
+        DetourNavigator::Navigator& navigator)
+        : mCurrentCell(0), mCellChanged(false), mPhysics(physics), mRendering(rendering), mNavigator(navigator)
+        , mPreloadTimer(0.f)
+        , mHalfGridSize(Settings::Manager::getInt("exterior cell load distance", "Cells"))
+        , mCellLoadingThreshold(1024.f)
+        , mPreloadDistance(Settings::Manager::getInt("preload distance", "Cells"))
+        , mPreloadEnabled(Settings::Manager::getBool("preload enabled", "Cells"))
+        , mPreloadExteriorGrid(Settings::Manager::getBool("preload exterior grid", "Cells"))
+        , mPreloadDoors(Settings::Manager::getBool("preload doors", "Cells"))
+        , mPreloadFastTravel(Settings::Manager::getBool("preload fast travel", "Cells"))
+        , mPredictionTime(Settings::Manager::getFloat("prediction time", "Cells"))
     {
         mPreloader.reset(new CellPreloader(rendering.getResourceSystem(), physics->getShapeManager(), rendering.getTerrain(), rendering.getLandManager()));
         mPreloader->setWorkQueue(mRendering.getWorkQueue());

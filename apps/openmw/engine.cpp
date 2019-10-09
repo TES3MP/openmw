@@ -35,7 +35,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "mwmp/Main.hpp"
 #include "mwmp/GUIController.hpp"
 /*
@@ -633,25 +633,25 @@ void OMW::Engine::prepareEngine (Settings::Manager & settings)
     guiRoot->setNodeMask(MWRender::Mask_GUI);
     rootNode->addChild(guiRoot);
     MWGui::WindowManager* window = new MWGui::WindowManager(mViewer, guiRoot, mResourceSystem.get(), mWorkQueue.get(),
-                mCfgMgr.getLogPath().string() + std::string("/"), myguiResources,
-                mScriptConsoleMode, mTranslationDataStorage, mEncoding, mExportFonts, mFallbackMap,
-                Version::getOpenmwVersionDescription(mResDir.string()));
+        mCfgMgr.getLogPath().string() + std::string("/"), myguiResources,
+        mScriptConsoleMode, mTranslationDataStorage, mEncoding, mExportFonts,
+        Version::getOpenmwVersionDescription(mResDir.string()), mCfgMgr.getUserConfigPath().string());
     mEnvironment.setWindowManager (window);
 
     // Create sound system
-    mEnvironment.setSoundManager (new MWSound::SoundManager(mVFS.get(), mFallbackMap, mUseSound));
+    mEnvironment.setSoundManager (new MWSound::SoundManager(mVFS.get(), mUseSound));
 
     if (!mSkipMenu)
     {
-        std::string logo = mFallbackMap["Movies_Company_Logo"];
+        const std::string& logo = Fallback::Map::getString("Movies_Company_Logo");
         if (!logo.empty())
             window->playVideo(logo, true);
     }
 
     // Create the world
-    mEnvironment.setWorld( new MWWorld::World (mViewer, rootNode, mResourceSystem.get(), mWorkQueue.get(),
-        mFileCollections, mContentFiles, mEncoder, mFallbackMap,
-        mActivationDistanceOverride, mCellName, mStartupScript, mResDir.string(), mCfgMgr.getUserDataPath().string()));
+    mEnvironment.setWorld(new MWWorld::World(mViewer, rootNode, mResourceSystem.get(), mWorkQueue.get(),
+        mFileCollections, mContentFiles, mEncoder, mActivationDistanceOverride, mCellName,
+        mStartupScript, mResDir.string(), mCfgMgr.getUserDataPath().string()));
     mEnvironment.getWorld()->setupPlayer();
     input->setPlayer(&mEnvironment.getWorld()->getPlayer());
 

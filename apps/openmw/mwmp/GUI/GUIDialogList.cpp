@@ -2,7 +2,7 @@
 // Created by koncord on 03.11.16.
 //
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include "apps/openmw/mwbase/environment.hpp"
 #include "apps/openmw/mwgui/windowmanagerimp.hpp"
@@ -45,12 +45,12 @@ void GUIDialogList::mousePressed(MyGUI::Widget * /*widget*/)
     Main::get().getNetworking()->getPlayerPacket(ID_GUI_MESSAGEBOX)->setPlayer(Main::get().getLocalPlayer());
     Main::get().getNetworking()->getPlayerPacket(ID_GUI_MESSAGEBOX)->Send();
 
-    LOG_MESSAGE_SIMPLE(Log::LOG_VERBOSE, "Selected id: %d", id);
+    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_VERBOSE, "Selected id: %d", id);
     if (id == MyGUI::ITEM_NONE)
         return;
 
     std::string itemName = mListBox->getItemNameAt(mListBox->getIndexSelected()).asUTF8();
-    LOG_APPEND(Log::LOG_VERBOSE, "name of item: '%s'", itemName.c_str());
+    LOG_APPEND(MWMPLog::LOG_VERBOSE, "name of item: '%s'", itemName.c_str());
 }
 
 void GUIDialogList::onFrame(float frameDuration)

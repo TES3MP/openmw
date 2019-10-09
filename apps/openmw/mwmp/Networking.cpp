@@ -2,7 +2,7 @@
 #include <iostream>
 #include <string>
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include <components/openmw-mp/Utils.hpp>
 #include <components/openmw-mp/Version.hpp>
 #include <components/openmw-mp/Packets/PacketPreInit.hpp>
@@ -228,19 +228,19 @@ void Networking::update()
         switch (packet->data[0])
         {
             case ID_REMOTE_DISCONNECTION_NOTIFICATION:
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Another client has disconnected.");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Another client has disconnected.");
                 break;
             case ID_REMOTE_CONNECTION_LOST:
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Another client has lost connection.");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Another client has lost connection.");
                 break;
             case ID_REMOTE_NEW_INCOMING_CONNECTION:
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Another client has connected.");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Another client has connected.");
                 break;
             case ID_CONNECTION_REQUEST_ACCEPTED:
-                LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Our connection request has been accepted.");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Our connection request has been accepted.");
                 break;
             case ID_NEW_INCOMING_CONNECTION:
-                LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "A connection is incoming.");
+                LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "A connection is incoming.");
                 break;
             case ID_NO_FREE_INCOMING_CONNECTIONS:
                 errmsg = "The server is full.";
@@ -253,14 +253,14 @@ void Networking::update()
                 break;
             default:
                 receiveMessage(packet);
-                //LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Message with identifier %i has arrived.", packet->data[0]);
+                //LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Message with identifier %i has arrived.", packet->data[0]);
                 break;
         }
     }
 
     if (!errmsg.empty())
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, errmsg.c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, errmsg.c_str());
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "tes3mp", errmsg.c_str(), 0);
         MWBase::Environment::get().getStateManager()->requestQuit();
     }
@@ -318,7 +318,7 @@ void Networking::connect(const std::string &ip, unsigned short port, std::vector
                     connected = true;
                     queue = false;
 
-                    LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Received ID_CONNECTION_REQUESTED_ACCEPTED from %s",
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Received ID_CONNECTION_REQUESTED_ACCEPTED from %s",
                                        serverAddr.ToString());
 
                     break;
@@ -330,7 +330,7 @@ void Networking::connect(const std::string &ip, unsigned short port, std::vector
                 case ID_CONNECTION_LOST:
                     throw runtime_error("ID_CONNECTION_LOST.\n");
                 default:
-                    LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Connection message with identifier %i has arrived in initialization.",
+                    LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Connection message with identifier %i has arrived in initialization.",
                                        packet->data[0]);
             }
         }
@@ -338,7 +338,7 @@ void Networking::connect(const std::string &ip, unsigned short port, std::vector
 
     if (!errmsg.empty())
     {
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, errmsg.c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, errmsg.c_str());
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "tes3mp", errmsg.c_str(), 0);
     }
     else
@@ -362,7 +362,7 @@ void Networking::preInit(std::vector<std::string> &content, Files::Collections &
             hashList.push_back(crc32);
             checksums.push_back(make_pair(*it, hashList));
 
-            LOG_APPEND(Log::LOG_WARN, "idx: %d\tchecksum: %X\tfile: %s\n", idx, crc32, col.getPath(*it).string().c_str());
+            LOG_APPEND(MWMPLog::LOG_WARN, "idx: %d\tchecksum: %X\tfile: %s\n", idx, crc32, col.getPath(*it).string().c_str());
         }
         else
             throw std::runtime_error("Plugin doesn't exist.");
@@ -411,8 +411,8 @@ void Networking::preInit(std::vector<std::string> &content, Files::Collections &
     {
         std::string errmsg = listDiscrepancies(checksums, checksumsResponse);
 
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, listDiscrepancies(checksums, checksumsResponse).c_str());
-        LOG_MESSAGE_SIMPLE(Log::LOG_ERROR, listComparison(checksums, checksumsResponse, true).c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, listDiscrepancies(checksums, checksumsResponse).c_str());
+        LOG_MESSAGE_SIMPLE(MWMPLog::LOG_ERROR, listComparison(checksums, checksumsResponse, true).c_str());
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "tes3mp", errmsg.c_str(), 0);
         connected = false;
     }
@@ -426,22 +426,22 @@ void Networking::receiveMessage(RakNet::Packet *packet)
     if (playerPacketController.ContainsPacket(packet->data[0]))
     {
         if (!PlayerProcessor::Process(*packet))
-            LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled PlayerPacket with identifier %i has arrived", packet->data[0]);
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled PlayerPacket with identifier %i has arrived", packet->data[0]);
     }
     else if (actorPacketController.ContainsPacket(packet->data[0]))
     {
         if (!ActorProcessor::Process(*packet, actorList))
-            LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled ActorPacket with identifier %i has arrived", packet->data[0]);
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled ActorPacket with identifier %i has arrived", packet->data[0]);
     }
     else if (objectPacketController.ContainsPacket(packet->data[0]))
     {
         if (!ObjectProcessor::Process(*packet, objectList))
-            LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled ObjectPacket with identifier %i has arrived", packet->data[0]);
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled ObjectPacket with identifier %i has arrived", packet->data[0]);
     }
     else if (worldstatePacketController.ContainsPacket(packet->data[0]))
     {
         if (!WorldstateProcessor::Process(*packet, worldstate))
-            LOG_MESSAGE_SIMPLE(Log::LOG_WARN, "Unhandled WorldstatePacket with identifier %i has arrived", packet->data[0]);
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_WARN, "Unhandled WorldstatePacket with identifier %i has arrived", packet->data[0]);
     }
 }
 

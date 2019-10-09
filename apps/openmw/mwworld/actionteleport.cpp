@@ -5,7 +5,7 @@
 
     Include additional headers for multiplayer purposes
 */
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 #include "../mwbase/windowmanager.hpp"
 #include "../mwmp/Main.hpp"
 #include "../mwmp/Networking.hpp"
@@ -52,7 +52,7 @@ namespace MWWorld
     void ActionTeleport::teleport(const Ptr &actor)
     {
         MWBase::World* world = MWBase::Environment::get().getWorld();
-        actor.getClass().getCreatureStats(actor).land();
+        actor.getClass().getCreatureStats(actor).land(actor == world->getPlayerPtr());
         if(actor == world->getPlayerPtr())
         {
             world->getPlayer().setTeleported(true);
@@ -129,10 +129,10 @@ namespace MWWorld
             actorList->reset();
             actorList->cell = originalCell;
 
-            LOG_MESSAGE_SIMPLE(Log::LOG_INFO, "Sending ID_ACTOR_CELL_CHANGE about %s %i-%i to server",
+            LOG_MESSAGE_SIMPLE(MWMPLog::LOG_INFO, "Sending ID_ACTOR_CELL_CHANGE about %s %i-%i to server",
                 actor.getCellRef().getRefId().c_str(), baseActor.refNum, baseActor.mpNum);
 
-            LOG_APPEND(Log::LOG_INFO, "- Moved from %s to %s", actorList->cell.getDescription().c_str(),
+            LOG_APPEND(MWMPLog::LOG_INFO, "- Moved from %s to %s", actorList->cell.getDescription().c_str(),
                 baseActor.cell.getDescription().c_str());
 
             actorList->addCellChangeActor(baseActor);

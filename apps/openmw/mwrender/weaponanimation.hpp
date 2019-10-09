@@ -17,9 +17,10 @@ namespace MWRender
         Animation* mAnimation;
         std::string mWeaponGroup;
         float mStartTime;
+        bool mRelativeTime;
     public:
-        WeaponAnimationTime(Animation* animation) : mAnimation(animation), mStartTime(0) {}
-        void setGroup(const std::string& group);
+        WeaponAnimationTime(Animation* animation) : mAnimation(animation), mStartTime(0), mRelativeTime(false) {}
+        void setGroup(const std::string& group, bool relativeTime);
         void updateStartTime();
 
         virtual float getValue(osg::NodeVisitor* nv);
@@ -40,7 +41,7 @@ namespace MWRender
 
         /// Add WeaponAnimation-related controllers to \a nodes and store the added controllers in \a map.
         void addControllers(const std::map<std::string, osg::ref_ptr<osg::MatrixTransform> >& nodes,
-                std::multimap<osg::ref_ptr<osg::Node>, osg::ref_ptr<osg::NodeCallback> >& map, osg::Node* objectRoot);
+            std::multimap<osg::ref_ptr<osg::Node>, osg::ref_ptr<osg::NodeCallback> >& map, osg::Node* objectRoot);
 
         void deleteControllers();
 

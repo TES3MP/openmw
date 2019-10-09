@@ -33,7 +33,7 @@ namespace Compiler
         {
             extensions.registerInstruction ("aiactivate", "c/l", opcodeAIActivate,
                 opcodeAIActivateExplicit);
-            extensions.registerInstruction ("aitravel", "fff/l", opcodeAiTravel,
+            extensions.registerInstruction ("aitravel", "fff/zx", opcodeAiTravel,
                 opcodeAiTravelExplicit);
             extensions.registerInstruction ("aiescort", "cffff/l", opcodeAiEscort,
                 opcodeAiEscortExplicit);
@@ -175,12 +175,12 @@ namespace Compiler
     {
         void registerExtensions (Extensions& extensions)
         {
-            extensions.registerInstruction ("journal", "cl", opcodeJournal);
+            extensions.registerInstruction ("journal", "cl", opcodeJournal, opcodeJournalExplicit);
             extensions.registerInstruction ("setjournalindex", "cl", opcodeSetJournalIndex);
             extensions.registerFunction ("getjournalindex", 'l', "c", opcodeGetJournalIndex);
             extensions.registerInstruction ("addtopic", "S" , opcodeAddTopic);
             extensions.registerInstruction ("choice", "j/SlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSlSl", opcodeChoice);
-            extensions.registerInstruction("forcegreeting","",opcodeForceGreeting,
+            extensions.registerInstruction("forcegreeting","X",opcodeForceGreeting,
                 opcodeForceGreetingExplicit);
             extensions.registerInstruction("goodbye", "", opcodeGoodbye);
             extensions.registerInstruction("setreputation", "l", opcodeSetReputation,
@@ -276,7 +276,7 @@ namespace Compiler
             extensions.registerInstruction ("gotojail", "", opcodeGoToJail);
             extensions.registerFunction ("getlocked", 'l', "", opcodeGetLocked, opcodeGetLockedExplicit);
             extensions.registerFunction ("geteffect", 'l', "S", opcodeGetEffect, opcodeGetEffectExplicit);
-            extensions.registerInstruction ("addsoulgem", "cc", opcodeAddSoulGem, opcodeAddSoulGemExplicit);
+            extensions.registerInstruction ("addsoulgem", "ccX", opcodeAddSoulGem, opcodeAddSoulGemExplicit);
             extensions.registerInstruction ("removesoulgem", "c/l", opcodeRemoveSoulGem, opcodeRemoveSoulGemExplicit);
             extensions.registerInstruction ("drop", "cl", opcodeDrop, opcodeDropExplicit);
             extensions.registerInstruction ("dropsoulgem", "c", opcodeDropSoulGem, opcodeDropSoulGemExplicit);
@@ -320,6 +320,11 @@ namespace Compiler
             extensions.registerInstruction ("removefromlevitem", "ccl", opcodeRemoveFromLevItem);
             extensions.registerInstruction ("tb", "", opcodeToggleBorders);
             extensions.registerInstruction ("toggleborders", "", opcodeToggleBorders);
+            extensions.registerInstruction ("togglenavmesh", "", opcodeToggleNavMesh);
+            extensions.registerInstruction ("tap", "", opcodeToggleActorsPaths);
+            extensions.registerInstruction ("toggleactorspaths", "", opcodeToggleActorsPaths);
+            extensions.registerInstruction ("setnavmeshnumber", "l", opcodeSetNavMeshNumberToRender);
+            extensions.registerFunction ("repairedonme", 'l', "S", opcodeRepairedOnMe, opcodeRepairedOnMeExplicit);
         }
     }
 
@@ -335,7 +340,7 @@ namespace Compiler
             extensions.registerFunction ("getmasserphase", 'l', "", opcodeGetMasserPhase);
             extensions.registerFunction ("getsecundaphase", 'l', "", opcodeGetSecundaPhase);
             extensions.registerFunction ("getcurrentweather", 'l', "", opcodeGetCurrentWeather);
-            extensions.registerInstruction ("modregion", "S/llllllllll", opcodeModRegion);
+            extensions.registerInstruction ("modregion", "S/llllllllllX", opcodeModRegion);
         }
     }
 
@@ -352,7 +357,7 @@ namespace Compiler
                 opcodePlaySound3DExplicit);
             extensions.registerInstruction ("playsound3dvp", "cff", opcodePlaySound3DVP,
                 opcodePlaySound3DVPExplicit);
-            extensions.registerInstruction ("playloopsound3d", "c", opcodePlayLoopSound3D,
+            extensions.registerInstruction ("playloopsound3d", "cXX", opcodePlayLoopSound3D,
                 opcodePlayLoopSound3DExplicit);
             extensions.registerInstruction ("playloopsound3dvp", "cff", opcodePlayLoopSound3DVP,
                 opcodePlayLoopSound3DVPExplicit);
@@ -418,7 +423,7 @@ namespace Compiler
 
             for (int i=0; i<numberOfDynamics; ++i)
             {
-                extensions.registerFunction (get + dynamics[i], 'f', "",
+                extensions.registerFunction (get + dynamics[i], 'f', "x",
                     opcodeGetDynamic+i, opcodeGetDynamicExplicit+i);
 
                 extensions.registerInstruction (set + dynamics[i], "f",
@@ -463,7 +468,7 @@ namespace Compiler
             extensions.registerInstruction ("modpccrimelevel", "f", opcodeModPCCrimeLevel);
 
             extensions.registerInstruction ("addspell", "cz", opcodeAddSpell, opcodeAddSpellExplicit);
-            extensions.registerInstruction ("removespell", "c", opcodeRemoveSpell,
+            extensions.registerInstruction ("removespell", "cz", opcodeRemoveSpell,
                 opcodeRemoveSpellExplicit);
             extensions.registerInstruction ("removespelleffects", "c", opcodeRemoveSpellEffects,
                 opcodeRemoveSpellEffectsExplicit);
@@ -506,8 +511,8 @@ namespace Compiler
             extensions.registerFunction ("pcexpelled", 'l', "/S", opcodePcExpelled, opcodePcExpelledExplicit);
             extensions.registerInstruction ("pcexpell", "/S", opcodePcExpell, opcodePcExpellExplicit);
             extensions.registerInstruction ("pcclearexpelled", "/S", opcodePcClearExpelled, opcodePcClearExpelledExplicit);
-            extensions.registerInstruction ("raiserank", "", opcodeRaiseRank, opcodeRaiseRankExplicit);
-            extensions.registerInstruction ("lowerrank", "", opcodeLowerRank, opcodeLowerRankExplicit);
+            extensions.registerInstruction ("raiserank", "x", opcodeRaiseRank, opcodeRaiseRankExplicit);
+            extensions.registerInstruction ("lowerrank", "x", opcodeLowerRank, opcodeLowerRankExplicit);
 
             extensions.registerFunction ("ondeath", 'l', "", opcodeOnDeath, opcodeOnDeathExplicit);
             extensions.registerFunction ("onmurder", 'l', "", opcodeOnMurder, opcodeOnMurderExplicit);
@@ -532,11 +537,11 @@ namespace Compiler
             extensions.registerInstruction("setpos","cf",opcodeSetPos,opcodeSetPosExplicit);
             extensions.registerFunction("getpos",'f',"c",opcodeGetPos,opcodeGetPosExplicit);
             extensions.registerFunction("getstartingpos",'f',"c",opcodeGetStartingPos,opcodeGetStartingPosExplicit);
-            extensions.registerInstruction("position","ffff",opcodePosition,opcodePositionExplicit);
-            extensions.registerInstruction("positioncell","ffffc",opcodePositionCell,opcodePositionCellExplicit);
-            extensions.registerInstruction("placeitemcell","ccffff",opcodePlaceItemCell);
-            extensions.registerInstruction("placeitem","cffff",opcodePlaceItem);
-            extensions.registerInstruction("placeatpc","clfl",opcodePlaceAtPc);
+            extensions.registerInstruction("position","ffffX",opcodePosition,opcodePositionExplicit);
+            extensions.registerInstruction("positioncell","ffffcX",opcodePositionCell,opcodePositionCellExplicit);
+            extensions.registerInstruction("placeitemcell","ccffffX",opcodePlaceItemCell);
+            extensions.registerInstruction("placeitem","cffffX",opcodePlaceItem);
+            extensions.registerInstruction("placeatpc","clflX",opcodePlaceAtPc);
             extensions.registerInstruction("placeatme","clflX",opcodePlaceAtMe,opcodePlaceAtMeExplicit);
             extensions.registerInstruction("modscale","f",opcodeModScale,opcodeModScaleExplicit);
             extensions.registerInstruction("rotate","cf",opcodeRotate,opcodeRotateExplicit);
@@ -546,7 +551,7 @@ namespace Compiler
             extensions.registerInstruction("moveworld","cf",opcodeMoveWorld,opcodeMoveWorldExplicit);
             extensions.registerFunction("getstartingangle",'f',"c",opcodeGetStartingAngle,opcodeGetStartingAngleExplicit);
             extensions.registerInstruction("resetactors","",opcodeResetActors);
-            extensions.registerInstruction("fixme","",opcodeFixme, opcodeFixmeExplicit);
+            extensions.registerInstruction("fixme","",opcodeFixme);
             extensions.registerInstruction("ra","",opcodeResetActors);
         }
     }

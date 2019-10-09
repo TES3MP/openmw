@@ -1,6 +1,6 @@
 #include "Miscellaneous.hpp"
 
-#include <components/openmw-mp/Log.hpp>
+#include <components/openmw-mp/MWMPLog.hpp>
 
 #include <apps/openmw-mp/Networking.hpp>
 
