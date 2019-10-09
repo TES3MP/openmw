@@ -750,14 +750,14 @@ void WeatherManager::update(float duration, bool paused, const TimeStamp& time, 
 {
     MWWorld::ConstPtr player = MWMechanics::getPlayer();
 
-    if(!paused || mFastForward)
+    if (!paused || mFastForward)
     {
         // Add new transitions when either the player's current external region changes.
         std::string playerRegion = Misc::StringUtils::lowerCase(player.getCell()->getCell()->mRegion);
-        if(updateWeatherTime() || updateWeatherRegion(playerRegion))
+        if (updateWeatherTime() || updateWeatherRegion(playerRegion))
         {
             std::map<std::string, RegionWeather>::iterator it = mRegions.find(mCurrentRegion);
-            if(it != mRegions.end())
+            if (it != mRegions.end())
             {
                 addWeatherTransition(it->second.getWeather());
             }
@@ -766,7 +766,15 @@ void WeatherManager::update(float duration, bool paused, const TimeStamp& time, 
         updateWeatherTransitions(duration);
     }
 
-    if(!isExterior)
+    bool isDay = time.getHour() >= mSunriseTime && time.getHour() <= mTimeSettings.mNightStart;
+    if (isExterior && !isDay)
+        mNightDayMode = ExteriorNight;
+    else if (!isExterior && isDay && mWeatherSettings[mCurrentWeather].mGlareView >= 0.5f)
+        mNightDayMode = InteriorDay;
+    else
+        mNightDayMode = Default;
+
+    if (!isExterior)
     {
         mRendering.setSkyEnabled(false);
         stopSounds();
@@ -780,15 +788,14 @@ void WeatherManager::update(float duration, bool paused, const TimeStamp& time, 
 
     // For some reason Ash Storm is not considered as a precipitation weather in game
     mPrecipitation = !(mResult.mParticleEffect.empty() && mResult.mRainEffect.empty())
-                                    && mResult.mParticleEffect != "meshes\\ashcloud.nif";
+        && mResult.mParticleEffect != "meshes\\ashcloud.nif";
 
     if (mIsStorm)
     {
-        osg::Vec3f playerPos (player.getRefData().getPosition().asVec3());
-        osg::Vec3f redMountainPos (19950, 72032, 27831);
-
+        osg::Vec3f playerPos(player.getRefData().getPosition().asVec3());
+        playerPos.z() = 0;
+        osg::Vec3f redMountainPos(25000, 70000, 0);
         mStormDirection = (playerPos - redMountainPos);
-        mStormDirection.z() = 0;
         mStormDirection.normalize();
         mRendering.getSkyManager()->setStormDirection(mStormDirection);
     }
@@ -806,9 +813,9 @@ void WeatherManager::update(float duration, bool paused, const TimeStamp& time, 
         // Shift times into a 24-hour window beginning at mSunriseTime...
         float adjustedHour = time.getHour();
         float adjustedNightStart = mTimeSettings.mNightStart;
-        if ( time.getHour() < mSunriseTime )
+        if (time.getHour() < mSunriseTime)
             adjustedHour += 24.f;
-        if ( mTimeSettings.mNightStart < mSunriseTime )
+        if (mTimeSettings.mNightStart < mSunriseTime)
             adjustedNightStart += 24.f;
 
         const bool is_night = adjustedHour >= adjustedNightStart;
@@ -816,39 +823,42 @@ void WeatherManager::update(float duration, bool paused, const TimeStamp& time, 
         const float nightDuration = 24.f - dayDuration;
 
         double theta;
-        if ( !is_night )
+        if (!is_night)
         {
             theta = static_cast<float>(osg::PI) * (adjustedHour - mSunriseTime) / dayDuration;
         }
         else
         {
-            theta = static_cast<float>(osg::PI) + static_cast<float>(osg::PI) * (adjustedHour - adjustedNightStart) / nightDuration;
+            theta = static_cast<float>(osg::PI) - static_cast<float>(osg::PI) * (adjustedHour - adjustedNightStart) / nightDuration;
         }
 
         osg::Vec3f final(
             static_cast<float>(cos(theta)),
             -0.268f, // approx tan( -15 degrees )
             static_cast<float>(sin(theta)));
-        mRendering.setSunDirection( final * -1 );
+        mRendering.setSunDirection(final * -1);
     }
 
     float underwaterFog = mUnderwaterFog.getValue(time.getHour(), mTimeSettings, "Fog");
 
-    float peakHour = mSunriseTime + (mSunsetTime - mSunriseTime) / 2;
-    if (time.getHour() < mSunriseTime || time.getHour() > mSunsetTime)
-        mRendering.getSkyManager()->setGlareTimeOfDayFade(0);
+    float peakHour = mSunriseTime + (mTimeSettings.mNightStart - mSunriseTime) / 2;
+    float glareFade = 1.f;
+    if (time.getHour() < mSunriseTime || time.getHour() > mTimeSettings.mNightStart)
+        glareFade = 0.f;
     else if (time.getHour() < peakHour)
-        mRendering.getSkyManager()->setGlareTimeOfDayFade(1 - (peakHour - time.getHour()) / (peakHour - mSunriseTime));
+        glareFade = 1.f - (peakHour - time.getHour()) / (peakHour - mSunriseTime);
     else
-        mRendering.getSkyManager()->setGlareTimeOfDayFade(1 - (time.getHour() - peakHour) / (mSunsetTime - peakHour));
+        glareFade = 1.f - (time.getHour() - peakHour) / (mTimeSettings.mNightStart - peakHour);
+
+    mRendering.getSkyManager()->setGlareTimeOfDayFade(glareFade);
 
     mRendering.getSkyManager()->setMasserState(mMasser.calculateState(time));
     mRendering.getSkyManager()->setSecundaState(mSecunda.calculateState(time));
 
     mRendering.configureFog(mResult.mFogDepth, underwaterFog, mResult.mDLFogFactor,
-                            mResult.mDLFogOffset/100.0f, mResult.mFogColor);
+        mResult.mDLFogOffset / 100.0f, mResult.mFogColor);
     mRendering.setAmbientColour(mResult.mAmbientColor);
-    mRendering.setSunColour(mResult.mSunColor, mResult.mSunColor * mResult.mGlareView);
+    mRendering.setSunColour(mResult.mSunColor, mResult.mSunColor * mResult.mGlareView * glareFade);
 
     mRendering.getSkyManager()->setWeather(mResult);
 
@@ -901,6 +911,11 @@ void WeatherManager::advanceTime(double hours, bool incremental)
 unsigned int WeatherManager::getWeatherID() const
 {
     return mCurrentWeather;
+}
+
+NightDayMode WeatherManager::getNightDayMode() const
+{
+    return mNightDayMode;
 }
 
 bool WeatherManager::useTorches(float hour) const

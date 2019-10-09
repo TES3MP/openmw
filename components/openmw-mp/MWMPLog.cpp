@@ -16,6 +16,11 @@ using namespace std;
 
 MWMPLog *MWMPLog::sLog = nullptr;
 
+MWMPLog::MWMPLog(int logLevel) : logLevel(logLevel)
+{
+
+}
+
 void MWMPLog::Create(int logLevel)
 {
     if (sLog != nullptr)

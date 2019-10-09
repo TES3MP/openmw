@@ -399,6 +399,27 @@ void CharacterController::refreshJumpAnims(const std::string& weapShortGroup, Ju
     }
 }
 
+std::string CharacterController::getWeaponAnimation(int weaponType) const
+{
+    std::string weaponGroup = getWeaponType(weaponType)->mLongGroup;
+    bool isRealWeapon = weaponType != ESM::Weapon::HandToHand && weaponType != ESM::Weapon::Spell && weaponType != ESM::Weapon::None;
+    if (isRealWeapon && !mAnimation->hasAnimation(weaponGroup))
+    {
+        static const std::string oneHandFallback = getWeaponType(ESM::Weapon::LongBladeOneHand)->mLongGroup;
+        static const std::string twoHandFallback = getWeaponType(ESM::Weapon::LongBladeTwoHand)->mLongGroup;
+
+        const ESM::WeaponType* weapInfo = getWeaponType(weaponType);
+
+        // For real two-handed melee weapons use 2h swords animations as fallback, otherwise use the 1h ones
+        if (weapInfo->mFlags & ESM::WeaponType::TwoHanded && weapInfo->mWeaponClass == ESM::WeaponType::Melee)
+            weaponGroup = twoHandFallback;
+        else if (isRealWeapon)
+            weaponGroup = oneHandFallback;
+    }
+
+    return weaponGroup;
+}
+
 std::string CharacterController::fallbackShortWeaponGroup(const std::string& baseGroupName, MWRender::Animation::BlendMask* blendMask)
 {
     bool isRealWeapon = mWeaponType != ESM::Weapon::HandToHand && mWeaponType != ESM::Weapon::Spell && mWeaponType != ESM::Weapon::None;
