@@ -4,7 +4,7 @@
 #include <string>
 
 #if (defined(__APPLE__) || (defined(__linux)  &&  !defined(ANDROID)) || (defined(__unix) &&  !defined(ANDROID)) || defined(__posix))
-    #define USE_CRASH_CATCHER 0
+    #define USE_CRASH_CATCHER 1
 #else
     #define USE_CRASH_CATCHER 0
 #endif

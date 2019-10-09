@@ -11,6 +11,8 @@
 #include <boost/locale.hpp>
 namespace bconv = boost::locale::conv;
 
+#include <components/debug/debuglog.hpp>
+
 /**
  * FIXME: Someone with Windows system should check this and correct if necessary
  * FIXME: MAX_PATH is irrelevant for extended-length paths, i.e. \\?\...
@@ -33,6 +35,10 @@ WindowsPath::WindowsPath(const std::string& application_name)
         See boost::filesystem and boost::locale reference for details.
     */
     boost::filesystem::path::imbue(boost::locale::generator().generate(""));
+
+    boost::filesystem::path localPath = getLocalPath();
+    if (!SetCurrentDirectoryA(localPath.string().c_str()))
+        Log(Debug::Warning) << "Error " << GetLastError() << " when changing current directory";
 }
 
 boost::filesystem::path WindowsPath::getUserConfigPath() const
@@ -42,7 +48,7 @@ boost::filesystem::path WindowsPath::getUserConfigPath() const
     WCHAR path[MAX_PATH + 1];
     memset(path, 0, sizeof(path));
 
-    if(SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, NULL, 0, path)))
+    if(SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_PERSONAL | CSIDL_FLAG_CREATE, nullptr, 0, path)))
     {
         userPath = boost::filesystem::path(bconv::utf_to_utf<char>(path));
     }
@@ -63,7 +69,7 @@ boost::filesystem::path WindowsPath::getGlobalConfigPath() const
     WCHAR path[MAX_PATH + 1];
     memset(path, 0, sizeof(path));
 
-    if(SUCCEEDED(SHGetFolderPathW(NULL, CSIDL_PROGRAM_FILES | CSIDL_FLAG_CREATE, NULL, 0, path)))
+    if(SUCCEEDED(SHGetFolderPathW(nullptr, CSIDL_PROGRAM_FILES | CSIDL_FLAG_CREATE, nullptr, 0, path)))
     {
         globalPath = boost::filesystem::path(bconv::utf_to_utf<char>(path));
     }
@@ -73,7 +79,17 @@ boost::filesystem::path WindowsPath::getGlobalConfigPath() const
 
 boost::filesystem::path WindowsPath::getLocalPath() const
 {
-    return boost::filesystem::path("./");
+    boost::filesystem::path localPath("./");
+    WCHAR path[MAX_PATH + 1];
+    memset(path, 0, sizeof(path));
+
+    if (GetModuleFileNameW(nullptr, path, MAX_PATH + 1) > 0)
+    {
+        localPath = boost::filesystem::path(bconv::utf_to_utf<char>(path)).parent_path() / "/";
+    }
+
+    // lookup exe path
+    return localPath;
 }
 
 boost::filesystem::path WindowsPath::getGlobalDataPath() const
@@ -99,7 +115,7 @@ boost::filesystem::path WindowsPath::getInstallPath() const
         std::vector<char> buf(512);
         int len = 512;
 
-        if (RegQueryValueEx(hKey, TEXT("Installed Path"), NULL, NULL, (LPBYTE)&buf[0], (LPDWORD)&len) == ERROR_SUCCESS)
+        if (RegQueryValueEx(hKey, TEXT("Installed Path"), nullptr, nullptr, (LPBYTE)&buf[0], (LPDWORD)&len) == ERROR_SUCCESS)
         {
             installPath = &buf[0];
         }

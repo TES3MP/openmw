@@ -1,11 +1,8 @@
 #include "configurationmanager.hpp"
 
-#include <iostream>
-
+#include <components/debug/debuglog.hpp>
 #include <components/files/escape.hpp>
 
-#include <boost/algorithm/string/erase.hpp>
-#include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem/fstream.hpp>
 /**
  * \namespace Files
@@ -54,9 +51,6 @@ void ConfigurationManager::readConfiguration(boost::program_options::variables_m
     bool silent = mSilent;
     mSilent = quiet;
 
-    loadConfig(mFixedPath.getUserConfigPath(), variables, description);
-    boost::program_options::notify(variables);
-
     // read either local or global config depending on type of installation
     bool loaded = loadConfig(mFixedPath.getLocalPath(), variables, description);
     boost::program_options::notify(variables);
@@ -65,6 +59,10 @@ void ConfigurationManager::readConfiguration(boost::program_options::variables_m
         loadConfig(mFixedPath.getGlobalConfigPath(), variables, description);
         boost::program_options::notify(variables);
     }
+
+    // User config has the highest priority.
+    loadConfig(mFixedPath.getUserConfigPath(), variables, description);
+    boost::program_options::notify(variables);
 
     mSilent = silent;
 }
@@ -134,7 +132,7 @@ bool ConfigurationManager::loadConfig(const boost::filesystem::path& path,
     if (boost::filesystem::is_regular_file(cfgFile))
     {
         if (!mSilent)
-            std::cout << "Loading config file: " << cfgFile.string() << "... ";
+            Log(Debug::Info) << "Loading config file: " << cfgFile.string();
 
         boost::filesystem::ifstream configFileStreamUnfiltered(cfgFile);
         boost::iostreams::filtering_istream configFileStream;
@@ -145,14 +143,13 @@ bool ConfigurationManager::loadConfig(const boost::filesystem::path& path,
             boost::program_options::store(boost::program_options::parse_config_file(
                 configFileStream, description, true), variables);
 
-            if (!mSilent)
-                std::cout << "done." << std::endl;
             return true;
         }
         else
         {
             if (!mSilent)
-                std::cout << "failed." << std::endl;
+                Log(Debug::Error) << "Loading failed.";
+
             return false;
         }
     }
