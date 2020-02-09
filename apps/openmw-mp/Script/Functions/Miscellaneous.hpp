@@ -28,6 +28,7 @@ public:
 
     /**
     * \brief Get the SHA256 hash corresponding to an input string.
+    * \details function is not reentrant due to a static variable
     *
     * \param inputString The input string.
     * \return The SHA256 hash.
@@ -36,6 +37,7 @@ public:
 
     /**
     * \brief Get the last player ID currently connected to the server.
+    * \details function is not reentrant due to a static variable
     *
     * Every player receives a unique numerical index known as their player ID upon joining the
     * server.

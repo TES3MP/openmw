@@ -17,9 +17,10 @@ const char *MiscellaneousFunctions::GenerateRandomString(unsigned int length) no
 
     std::random_device randomDevice;
     std::mt19937 generator(randomDevice());
-    std::uniform_int_distribution<> distribution(0, characters.size() - 1);
+    std::uniform_int_distribution<std::mt19937::result_type> distribution(0, characters.size() - 1);
 
-    std::string randomString;
+    /* WARNING: this function is no longer reentrant with a static variable */
+    static std::string randomString;
 
     for (std::size_t i = 0; i < length; ++i)
     {
@@ -31,7 +32,8 @@ const char *MiscellaneousFunctions::GenerateRandomString(unsigned int length) no
 
 const char *MiscellaneousFunctions::GetSHA256Hash(const char* inputString) noexcept
 {
-    std::string hashString = picosha2::hash256_hex_string(std::string{inputString});
+    /* WARNING: this function is no longer reentrant with a static variable */
+    static std::string hashString = picosha2::hash256_hex_string(std::string{inputString});
 
     return hashString.c_str();
 }
