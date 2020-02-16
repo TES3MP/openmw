@@ -1276,10 +1276,11 @@ void LocalPlayer::setFactions()
     MWWorld::Ptr ptrPlayer = getPlayerPtr();
     MWMechanics::NpcStats &ptrNpcStats = ptrPlayer.getClass().getNpcStats(ptrPlayer);
 
-    LOG_MESSAGE_SIMPLE(TimedLog::LOG_INFO, "Received ID_PLAYER_FACTION from server\n- action: %i", factionChanges.action);
+    LOG_MESSAGE_SIMPLE(TimedLog::LOG_INFO, "Received ID_PLAYER_FACTION from server - action: %i", factionChanges.action);
 
     for (const auto &faction : factionChanges.factions)
     {
+        LOG_APPEND(TimedLog::LOG_INFO, " - processing faction: %s", faction.factionId.c_str());
         const ESM::Faction *esmFaction = MWBase::Environment::get().getWorld()->getStore().get<ESM::Faction>().search(faction.factionId);
 
         if (!esmFaction)
@@ -1288,15 +1289,40 @@ void LocalPlayer::setFactions()
             continue;
         }
 
-        // If the player isn't in this faction, make them join it
-        if (!ptrNpcStats.isInFaction(faction.factionId))
-            ptrNpcStats.joinFaction(faction.factionId);
-
         if (factionChanges.action == mwmp::FactionChanges::RANK)
         {
+
+            LOG_APPEND(TimedLog::LOG_INFO, "\t>FactionChanges::RANK for faction %s with rank: %d was received.",
+                       faction.factionId.c_str(), faction.rank);
+
+            if (!ptrNpcStats.isInFaction(faction.factionId))
+            {
+                LOG_APPEND(TimedLog::LOG_INFO, "\t>FactionChanges::RANK for faction %s with rank: %d was received, but not yet a member of this faction. ",
+                    faction.factionId.c_str(), faction.rank);
+
+                // If the player isn't in this faction, join it and inform about it
+                ptrNpcStats.joinFaction(faction.factionId);
+
+                LOG_APPEND(TimedLog::LOG_INFO, "\t>JOINED FACTION: %s, because FactionChanges::RANK "
+                    "with rank: %d was received, while not yet a member of this faction.",
+                    faction.factionId.c_str(), faction.rank);
+            }
+
+            // For further operations we need the faction rank vector containing the currently processed faction
+            // If the previous call to joinFaction() did not ensure it, that's an error
+            auto faction_ranks = ptrNpcStats.getFactionRanks();
+            if (faction_ranks.cend() == faction_ranks.find(faction.factionId))
+            {
+                LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "ERROR WHILE SETTING FACTION %s RANK to %d: Cannot adjust the faction's rank as received "
+                    "from the server, because not yet a member of this faction. This happened even though ptrNpcStats.joinFaction() was called. "
+                    "Therefore this faction should already be contained in ptrNpcStats.getFactionRanks(). But it isn't.",
+                    faction.factionId.c_str(), faction.rank);
+                continue;
+            }
+
             // While the faction rank is different in the packet than in the NpcStats,
             // adjust the NpcStats accordingly
-            while (faction.rank != ptrNpcStats.getFactionRanks().at(faction.factionId))
+            while (faction.rank != faction_ranks.at(faction.factionId))
             {
                 if (faction.rank > ptrNpcStats.getFactionRanks().at(faction.factionId))
                     ptrNpcStats.raiseRank(faction.factionId);
