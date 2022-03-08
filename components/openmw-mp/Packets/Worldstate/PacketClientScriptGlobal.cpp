@@ -22,6 +22,16 @@ void PacketClientScriptGlobal::Packet(RakNet::BitStream *newBitstream, bool send
 
     if (!send)
     {
+        // Sanity check
+        const static int minEntrySize = 1 + sizeof(ClientVariable::variableType) + sizeof(ClientVariable::intValue); /* 1st value: there is no fixed length,
+            but the compressed header (1b+4b) is 100% bigger than 1 byte. i'm just lazy to do maths.*/
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (clientGlobalsCount > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketClientScriptGlobal] Too big globals count: %d (est. max: %d)", clientGlobalsCount, estimatedMax);
+            packetValid = false;
+            return;
+        }
         worldstate->clientGlobals.clear();
         worldstate->clientGlobals.resize(clientGlobalsCount);
     }
