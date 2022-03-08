@@ -31,6 +31,15 @@ void PacketPlayerAttribute::Packet(RakNet::BitStream *newBitstream, bool send)
 
         if (!send)
         {
+            // Sanity check
+            const static int minEntrySize = sizeof(uint8_t) + sizeof(ESM::CreatureStats::mAttributes[0]) + sizeof(ESM::NpcStats::mSkillIncrease[0]);
+            int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+            if (count > estimatedMax)
+            {
+                LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerAttribute] Too big attribute count: %d (est. max: %d)", count, estimatedMax);
+                packetValid = false;
+                return;
+            }
             player->attributeIndexChanges.clear();
             player->attributeIndexChanges.resize(count);
         }
