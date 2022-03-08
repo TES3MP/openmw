@@ -24,7 +24,7 @@ void mwmp::PacketPlayerAlly::Packet(RakNet::BitStream *newBitstream, bool send)
         int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
         if (count > estimatedMax)
         {
-            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketClientScriptLocal] Too big allied players count: %d (est. max: %d)", count, estimatedMax);
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerAlly] Too big allied players count: %d (est. max: %d)", count, estimatedMax);
             packetValid = false;
             return;
         }
