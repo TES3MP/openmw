@@ -23,6 +23,17 @@ void PacketPlayerSpellsActive::Packet(RakNet::BitStream *newBitstream, bool send
 
     if (!send)
     {
+        // Sanity check
+        /* 1st and 4th values: there is no fixed length, but the compressed header (1b+4b) is 100% bigger than 1 byte. i'm just lazy to do maths.*/
+        const static int minEntrySize = 1 + sizeof(ActiveSpell::timestampDay) + sizeof(ActiveSpell::timestampHour) + 1 + sizeof(uint64_t) + sizeof(uint32_t);
+        // 5th - size of g (RakNet::GUID)
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 10); // 2 additional bits: isStackingSpell, isPlayer
+        if (count > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerSpellsActive] Too big active spells changes count: %d (est. max: %d)", count, estimatedMax);
+            packetValid = false;
+            return;
+        }
         player->spellsActiveChanges.activeSpells.clear();
         player->spellsActiveChanges.activeSpells.resize(count);
     }

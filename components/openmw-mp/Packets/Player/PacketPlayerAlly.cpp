@@ -19,6 +19,15 @@ void mwmp::PacketPlayerAlly::Packet(RakNet::BitStream *newBitstream, bool send)
 
     if (!send)
     {
+        // Sanity check
+        const static int minEntrySize = sizeof(uint64_t); // size of g of RakNetGUID
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (count > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerAlly] Too big allied players count: %d (est. max: %d)", count, estimatedMax);
+            packetValid = false;
+            return;
+        }
         player->alliedPlayers.clear();
         player->alliedPlayers.resize(count);
     }

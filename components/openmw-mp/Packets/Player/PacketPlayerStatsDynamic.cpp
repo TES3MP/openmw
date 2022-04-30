@@ -30,6 +30,13 @@ void PacketPlayerStatsDynamic::Packet(RakNet::BitStream *newBitstream, bool send
 
         if (!send)
         {
+            // Sanity check
+            if (count >= 4) // there are only 3 dynamic stats
+            {
+                LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerStatsDynamic] Dynamic stats changes >= 4");
+                packetValid = false;
+                return;
+            }
             player->statsDynamicIndexChanges.clear();
             player->statsDynamicIndexChanges.resize(count);
         }

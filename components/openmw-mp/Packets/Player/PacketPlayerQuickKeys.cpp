@@ -21,6 +21,15 @@ void PacketPlayerQuickKeys::Packet(RakNet::BitStream *newBitstream, bool send)
 
     if (!send)
     {
+        // Sanity check
+        const static int minEntrySize = sizeof(QuickKey::type) + sizeof(QuickKey::slot);
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (count > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerQuickKeys] Too big quick key changes count: %d (est. max: %d)", count, estimatedMax);
+            packetValid = false;
+            return;
+        }
         player->quickKeyChanges.clear();
         player->quickKeyChanges.resize(count);
     }

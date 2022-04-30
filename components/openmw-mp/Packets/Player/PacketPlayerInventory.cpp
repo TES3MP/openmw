@@ -23,6 +23,16 @@ void PacketPlayerInventory::Packet(RakNet::BitStream *newBitstream, bool send)
 
     if (!send)
     {
+        // Sanity check
+        /* 1st and 5th values: there is no fixed length, but the compressed header (1b+4b) is 100% bigger than 1 byte. I'm just lazy to do maths.*/
+        const static int minEntrySize = 1 + sizeof(Item::count) + sizeof(Item::charge) + sizeof(Item:: enchantmentCharge) + 1;
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (count > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerInventory] Too big inventory changes count: %d (est. max: %d)", count, estimatedMax);
+            packetValid = false;
+            return;
+        }
         player->inventoryChanges.items.clear();
         player->inventoryChanges.items.resize(count);
     }

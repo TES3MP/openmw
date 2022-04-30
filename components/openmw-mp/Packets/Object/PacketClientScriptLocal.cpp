@@ -22,6 +22,15 @@ void PacketClientScriptLocal::Object(BaseObject &baseObject, bool send)
 
     if (!send)
     {
+        // Sanity check
+        const static int minEntrySize = sizeof(ClientVariable::internalIndex) + sizeof(ClientVariable::variableType) + sizeof(ClientVariable::intValue);
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (clientLocalsCount > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketClientScriptLocal] Too big locals count: %d (est. max: %d)", clientLocalsCount, estimatedMax);
+            packetValid = false;
+            return;
+        }
         baseObject.clientLocals.clear();
         baseObject.clientLocals.resize(clientLocalsCount);
     }

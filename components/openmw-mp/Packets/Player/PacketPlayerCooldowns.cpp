@@ -21,6 +21,16 @@ void PacketPlayerCooldowns::Packet(RakNet::BitStream *newBitstream, bool send)
 
     if (!send)
     {
+        // Sanity check
+        const static int minEntrySize = 1 + sizeof(SpellCooldown::startTimestampDay) + sizeof(SpellCooldown::startTimestampHour); /* First value: there is no fixed length,
+            but the compressed header (1b+4b) is 100% bigger than 1 byte. I'm just lazy to do maths.*/
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (count > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketPlayerCooldowns] Too big cooldown changes count: %d (est. max: %d)", count, estimatedMax);
+            packetValid = false;
+            return;
+        }
         player->cooldownChanges.clear();
         player->cooldownChanges.resize(count);
     }

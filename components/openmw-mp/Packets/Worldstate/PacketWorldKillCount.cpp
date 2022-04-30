@@ -22,6 +22,16 @@ void PacketWorldKillCount::Packet(RakNet::BitStream *newBitstream, bool send)
 
     if (!send)
     {
+        // Sanity check
+        const static int minEntrySize = 1 + sizeof(Kill::number); /* 1st value: there is no fixed length,
+            but the compressed header (1b+4b) is 100% bigger than 1 byte. i'm just lazy to do maths.*/
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (killChangesCount > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketWorldKillCount] Too big kill changes count: %d (est. max: %d)", killChangesCount, estimatedMax);
+            packetValid = false;
+            return;
+        }
         worldstate->killChanges.clear();
         worldstate->killChanges.resize(killChangesCount);
     }

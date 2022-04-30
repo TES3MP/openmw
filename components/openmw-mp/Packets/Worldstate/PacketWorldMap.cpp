@@ -22,6 +22,15 @@ void PacketWorldMap::Packet(RakNet::BitStream *newBitstream, bool send)
 
     if (!send)
     {
+        // Sanity check
+        const static int minEntrySize = sizeof(MapTile::x) + sizeof(MapTile::y) + sizeof(uint32_t); // latest - image data size
+        int estimatedMax = bs.GetNumberOfUnreadBits() / (minEntrySize * 8);
+        if (changesCount > estimatedMax)
+        {
+            LOG_MESSAGE(TimedLog::LOG_ERROR, "[PacketWorldMap] Too big map changes count: %d (est. max: %d)", changesCount, estimatedMax);
+            packetValid = false;
+            return;
+        }
         worldstate->mapTiles.clear();
         worldstate->mapTiles.resize(changesCount);
     }
