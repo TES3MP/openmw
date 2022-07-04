@@ -69,7 +69,7 @@ namespace MWWorld
         else
             pos = actor.getRefData().getPosition();
 
-        objectList->addObjectTrap(mTrapSource, pos, false);
+        objectList->addObjectTrap(mTrapSource, mSpellId, mwmp::BaseObjectList::TRAP_ACTION::TRIGGER, pos);
         objectList->sendObjectTrap();
         /*
             End of tes3mp addition

@@ -67,7 +67,10 @@ namespace mwmp
         std::string animGroup;
         int animMode;
 
-        bool isDisarmed;
+        std::string trapSpellId;
+        unsigned int trapAction;
+        ESM::Position trapTriggerPosition;
+
         bool droppedByPlayer;
 
         Target activatingActor;
@@ -110,6 +113,13 @@ namespace mwmp
             ADD = 1,
             REMOVE = 2,
             REQUEST = 3
+        };
+
+        enum TRAP_ACTION
+        {
+            SET_TRAP = 0,
+            DISARM = 1,
+            TRIGGER = 2
         };
 
         enum CONTAINER_SUBACTION

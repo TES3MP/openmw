@@ -154,6 +154,16 @@ int ObjectFunctions::GetObjectLockLevel(unsigned int index) noexcept
     return readObjectList->baseObjects.at(index).lockLevel;
 }
 
+const char* ObjectFunctions::GetObjectTrapSpellId(unsigned int index) noexcept
+{
+    return readObjectList->baseObjects.at(index).trapSpellId.c_str();
+}
+
+unsigned int ObjectFunctions::GetObjectTrapAction(unsigned int index) noexcept
+{
+    return readObjectList->baseObjects.at(index).trapAction;
+}
+
 unsigned int ObjectFunctions::GetObjectDialogueChoiceType(unsigned int index) noexcept
 {
     return readObjectList->baseObjects.at(index).dialogueChoiceType;
@@ -505,6 +515,16 @@ void ObjectFunctions::SetObjectLockLevel(int lockLevel) noexcept
     tempObject.lockLevel = lockLevel;
 }
 
+void ObjectFunctions::SetObjectTrapSpellId(const char* trapSpellId) noexcept
+{
+    tempObject.trapSpellId = trapSpellId;
+}
+
+void ObjectFunctions::SetObjectTrapAction(unsigned int trapAction) noexcept
+{
+    tempObject.trapAction = trapAction;
+}
+
 void ObjectFunctions::SetObjectDialogueChoiceType(unsigned int dialogueChoiceType) noexcept
 {
     tempObject.dialogueChoiceType = dialogueChoiceType;
@@ -528,11 +548,6 @@ void ObjectFunctions::SetObjectLastGoldRestockHour(double lastGoldRestockHour) n
 void ObjectFunctions::SetObjectLastGoldRestockDay(int lastGoldRestockDay) noexcept
 {
     tempObject.lastGoldRestockDay = lastGoldRestockDay;
-}
-
-void ObjectFunctions::SetObjectDisarmState(bool disarmState) noexcept
-{
-    tempObject.isDisarmed = disarmState;
 }
 
 void ObjectFunctions::SetObjectDroppedByPlayerState(bool droppedByPlayer) noexcept
@@ -1004,6 +1019,14 @@ void ObjectFunctions::SetEventConsoleCommand(const char* consoleCommand) noexcep
 void ObjectFunctions::SetObjectRefNumIndex(int refNum) noexcept
 {
     SetObjectRefNum(refNum);
+}
+
+void ObjectFunctions::SetObjectDisarmState(bool disarmState) noexcept
+{
+    if (disarmState)
+        tempObject.trapAction = mwmp::BaseObjectList::TRAP_ACTION::DISARM;
+    else
+        tempObject.trapAction = mwmp::BaseObjectList::TRAP_ACTION::TRIGGER;
 }
 
 void ObjectFunctions::AddWorldObject() noexcept

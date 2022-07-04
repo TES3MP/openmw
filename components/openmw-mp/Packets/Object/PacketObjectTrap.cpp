@@ -12,8 +12,9 @@ PacketObjectTrap::PacketObjectTrap(RakNet::RakPeerInterface *peer) : ObjectPacke
 void PacketObjectTrap::Object(BaseObject &baseObject, bool send)
 {
     ObjectPacket::Object(baseObject, send);
-    RW(baseObject.isDisarmed, send);
+    RW(baseObject.trapSpellId, send, true);
+    RW(baseObject.trapAction, send);
 
-    if (!baseObject.isDisarmed)
-        RW(baseObject.position, send);
+    if (baseObject.trapAction == mwmp::BaseObjectList::TRAP_ACTION::TRIGGER)
+        RW(baseObject.trapTriggerPosition, send);
 }

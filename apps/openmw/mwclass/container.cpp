@@ -219,7 +219,7 @@ namespace MWClass
                 mwmp::ObjectList *objectList = mwmp::Main::get().getNetworking()->getObjectList();
                 objectList->reset();
                 objectList->packetOrigin = mwmp::CLIENT_GAMEPLAY;
-                objectList->addObjectTrap(ptr, ptr.getRefData().getPosition(), true);
+                objectList->addObjectTrap(ptr, ptr.getCellRef().getTrap(), mwmp::BaseObjectList::TRAP_ACTION::DISARM, ptr.getRefData().getPosition());
                 objectList->sendObjectTrap();
                 /*
                     End of tes3mp addition

@@ -652,7 +652,8 @@ void ObjectList::triggerTrapObjects(MWWorld::CellStore* cellStore)
 {
     for (const auto &baseObject : baseObjects)
     {
-        LOG_APPEND(TimedLog::LOG_VERBOSE, "- cellRef: %s %i-%i", baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum);
+        LOG_APPEND(TimedLog::LOG_VERBOSE, "- cellRef: %s %i-%i, trapSpellId: %s, trapAction: %i",
+            baseObject.refId.c_str(), baseObject.refNum, baseObject.mpNum, baseObject.trapSpellId.c_str(), baseObject.trapAction);
 
         MWWorld::Ptr ptrFound = cellStore->searchExact(baseObject.refNum, baseObject.mpNum, baseObject.refId);
 
@@ -661,15 +662,33 @@ void ObjectList::triggerTrapObjects(MWWorld::CellStore* cellStore)
             LOG_APPEND(TimedLog::LOG_VERBOSE, "-- Found %s %i-%i", ptrFound.getCellRef().getRefId().c_str(),
                 ptrFound.getCellRef().getRefNum(), ptrFound.getCellRef().getMpNum());
 
-            if (!baseObject.isDisarmed)
+            if (baseObject.trapAction == mwmp::BaseObjectList::TRAP_ACTION::SET_TRAP)
             {
-                MWMechanics::CastSpell cast(ptrFound, ptrFound);
-                cast.mHitPosition = baseObject.position.asVec3();
-                cast.cast(ptrFound.getCellRef().getTrap());
+                if (!baseObject.trapSpellId.empty() && !RecordHelper::doesRecordIdExist<ESM::Spell>(baseObject.trapSpellId))
+                {
+                    LOG_MESSAGE_SIMPLE(TimedLog::LOG_ERROR, "-- Ignored attempt to set invalid spell %s as trap", baseObject.refId.c_str());
+                    ptrFound.getCellRef().setTrap("");
+                }
+                else
+                {
+                    ptrFound.getCellRef().setTrap(baseObject.trapSpellId);
+                }
             }
+            else
+            {
+                if (baseObject.trapAction == mwmp::BaseObjectList::TRAP_ACTION::DISARM)
+                {
+                    MWBase::Environment::get().getSoundManager()->playSound3D(ptrFound, "Disarm Trap", 1.0f, 1.0f);
+                }
+                else if (baseObject.trapAction == mwmp::BaseObjectList::TRAP_ACTION::TRIGGER)
+                {
+                    MWMechanics::CastSpell cast(ptrFound, ptrFound);
+                    cast.mHitPosition = baseObject.trapTriggerPosition.asVec3();
+                    cast.cast(baseObject.trapSpellId);
+                }
 
-            ptrFound.getCellRef().setTrap("");
-            MWBase::Environment::get().getSoundManager()->playSound3D(ptrFound, "Disarm Trap", 1.0f, 1.0f);
+                ptrFound.getCellRef().setTrap("");
+            }
         }
     }
 }
@@ -1376,13 +1395,14 @@ void ObjectList::addObjectMiscellaneous(const MWWorld::Ptr& ptr, unsigned int go
     addBaseObject(baseObject);
 }
 
-void ObjectList::addObjectTrap(const MWWorld::Ptr& ptr, const ESM::Position& pos, bool isDisarmed)
+void ObjectList::addObjectTrap(const MWWorld::Ptr& ptr, std::string trapSpellId, unsigned int trapAction, const ESM::Position&  trapTriggerPosition)
 {
     cell = *ptr.getCell()->getCell();
 
     mwmp::BaseObject baseObject = getBaseObjectFromPtr(ptr);
-    baseObject.isDisarmed = isDisarmed;
-    baseObject.position = pos;
+    baseObject.trapAction = trapAction;
+    baseObject.trapSpellId = trapSpellId;
+    baseObject.trapTriggerPosition = trapTriggerPosition;
     addBaseObject(baseObject);
 }
 

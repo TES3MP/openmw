@@ -31,6 +31,8 @@
     {"GetObjectState",                        ObjectFunctions::GetObjectState},\
     {"GetObjectDoorState",                    ObjectFunctions::GetObjectDoorState},\
     {"GetObjectLockLevel",                    ObjectFunctions::GetObjectLockLevel},\
+    {"GetObjectTrapSpellId",                  ObjectFunctions::GetObjectTrapSpellId},\
+    {"GetObjectTrapAction",                   ObjectFunctions::GetObjectTrapAction},\
     {"GetObjectDialogueChoiceType",           ObjectFunctions::GetObjectDialogueChoiceType},\
     {"GetObjectDialogueChoiceTopic",          ObjectFunctions::GetObjectDialogueChoiceTopic},\
     {"GetObjectGoldPool",                     ObjectFunctions::GetObjectGoldPool},\
@@ -107,12 +109,13 @@
     {"SetObjectScale",                        ObjectFunctions::SetObjectScale},\
     {"SetObjectState",                        ObjectFunctions::SetObjectState},\
     {"SetObjectLockLevel",                    ObjectFunctions::SetObjectLockLevel},\
+    {"SetObjectTrapSpellId",                  ObjectFunctions::SetObjectTrapSpellId},\
+    {"SetObjectTrapAction",                   ObjectFunctions::SetObjectTrapAction},\
     {"SetObjectDialogueChoiceType",           ObjectFunctions::SetObjectDialogueChoiceType},\
     {"SetObjectDialogueChoiceTopic",          ObjectFunctions::SetObjectDialogueChoiceTopic},\
     {"SetObjectGoldPool",                     ObjectFunctions::SetObjectGoldPool},\
     {"SetObjectLastGoldRestockHour",          ObjectFunctions::SetObjectLastGoldRestockHour},\
     {"SetObjectLastGoldRestockDay",           ObjectFunctions::SetObjectLastGoldRestockDay},\
-    {"SetObjectDisarmState",                  ObjectFunctions::SetObjectDisarmState},\
     {"SetObjectDroppedByPlayerState",         ObjectFunctions::SetObjectDroppedByPlayerState},\
     {"SetObjectPosition",                     ObjectFunctions::SetObjectPosition},\
     {"SetObjectRotation",                     ObjectFunctions::SetObjectRotation},\
@@ -184,6 +187,7 @@
     {"SetEventAction",                        ObjectFunctions::SetEventAction},\
     {"SetEventConsoleCommand",                ObjectFunctions::SetEventConsoleCommand},\
     {"SetObjectRefNumIndex",                  ObjectFunctions::SetObjectRefNumIndex},\
+    {"SetObjectDisarmState",                  ObjectFunctions::SetObjectDisarmState},\
     {"AddWorldObject",                        ObjectFunctions::AddWorldObject}
 
 class ObjectFunctions
@@ -395,6 +399,22 @@ public:
     * \return The lock level.
     */
     static int GetObjectLockLevel(unsigned int index) noexcept;
+
+    /**
+    * \brief Get the object trap spell ID of the object at a certain index in the read object list.
+    *
+    * \param index The index of the object.
+    * \return The trap spell ID.
+    */
+    static const char* GetObjectTrapSpellId(unsigned int index) noexcept;
+
+    /**
+    * \brief Get the trap action for the object at a certain index in the read object list.
+    *
+    * \param index The index of the object.
+    * \return The trap action.
+    */
+    static unsigned int GetObjectTrapAction(unsigned int index) noexcept;
 
     /**
     * \brief Get the dialogue choice type for the object at a certain index in the read object list.
@@ -1012,6 +1032,22 @@ public:
     static void SetObjectLockLevel(int lockLevel) noexcept;
 
     /**
+    * \brief Set the trap spell ID of the temporary object stored on the server.
+    *
+    * \param trapSpellId The trap spell ID.
+    * \return void
+    */
+    static void SetObjectTrapSpellId(const char* trapSpellId) noexcept;
+
+    /**
+    * \brief Set the trap disarm state of the temporary object stored on the server.
+    *
+    * \param disarmState The disarmState.
+    * \return void
+    */
+    static void SetObjectTrapAction(unsigned int trapAction) noexcept;
+
+    /**
     * \brief Set the dialogue choice type of the temporary object stored on the server.
     *
     * \param dialogueChoiceType The dialogue choice type.
@@ -1050,14 +1086,6 @@ public:
     * \return void
     */
     static void SetObjectLastGoldRestockDay(int day) noexcept;
-
-    /**
-    * \brief Set the disarm state of the temporary object stored on the server.
-    *
-    * \param disarmState The disarmState.
-    * \return void
-    */
-    static void SetObjectDisarmState(bool disarmState) noexcept;
 
     /**
     * \brief Set the droppedByPlayer state of the temporary object stored on the server.
@@ -1555,6 +1583,7 @@ public:
     static void SetEventAction(unsigned char action) noexcept;
     static void SetEventConsoleCommand(const char* consoleCommand) noexcept;
     static void SetObjectRefNumIndex(int refNum) noexcept;
+    static void SetObjectDisarmState(bool disarmState) noexcept;
     static void AddWorldObject() noexcept;
 
 };
