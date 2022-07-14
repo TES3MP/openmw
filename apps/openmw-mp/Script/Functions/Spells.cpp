@@ -8,6 +8,7 @@
 
 using namespace mwmp;
 
+Player* storedPlayerCaster;
 std::vector<ESM::ActiveEffect> storedActiveEffects;
 
 void SpellFunctions::ClearSpellbookChanges(unsigned short pid) noexcept
@@ -112,8 +113,15 @@ void SpellFunctions::AddSpellActive(unsigned short pid, const char* spellId, con
     spell.params.mDisplayName = displayName;
     spell.params.mEffects = storedActiveEffects;
 
+    if (storedPlayerCaster != nullptr)
+    {
+        spell.caster.isPlayer = true;
+        spell.caster.guid = storedPlayerCaster->guid;
+    }
+
     player->spellsActiveChanges.activeSpells.push_back(spell);
 
+    storedPlayerCaster = nullptr;
     storedActiveEffects.clear();
 }
 
@@ -346,6 +354,11 @@ double SpellFunctions::GetCooldownStartHour(unsigned short pid, unsigned int ind
         return 0.0;
 
     return player->cooldownChanges.at(index).startTimestampHour;
+}
+
+void SpellFunctions::SetSpellsActiveCasterPid(unsigned short casterPid) noexcept
+{
+    storedPlayerCaster = Players::getPlayer(casterPid);
 }
 
 void SpellFunctions::SendSpellbookChanges(unsigned short pid, bool sendToOtherPlayers, bool skipAttachedPlayer) noexcept

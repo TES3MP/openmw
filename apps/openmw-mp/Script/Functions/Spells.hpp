@@ -41,6 +41,8 @@
     {"GetCooldownStartDay",              SpellFunctions::GetCooldownStartDay},\
     {"GetCooldownStartHour",             SpellFunctions::GetCooldownStartHour},\
     \
+    {"SetSpellsActiveCasterPid",         SpellFunctions::SetSpellsActiveCasterPid},\
+    \
     {"SendSpellbookChanges",             SpellFunctions::SendSpellbookChanges},\
     {"SendSpellsActiveChanges",          SpellFunctions::SendSpellsActiveChanges},\
     {"SendCooldownChanges",              SpellFunctions::SendCooldownChanges},\
@@ -352,6 +354,13 @@ public:
     * \return The starting hour of the cooldown.
     */
     static double GetCooldownStartHour(unsigned short pid, unsigned int index) noexcept;
+
+    /**
+    * \brief Set a player ID as the caster of the next active spell that will be added to a player.
+    *
+    * \param casterPid The player ID of the caster.
+    */
+    static void SetSpellsActiveCasterPid(unsigned short casterPid) noexcept;
 
     /**
     * \brief Send a PlayerSpellbook packet with a player's recorded spellbook changes.
