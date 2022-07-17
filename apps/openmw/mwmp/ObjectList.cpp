@@ -226,23 +226,30 @@ void ObjectList::editContainers(MWWorld::CellStore* cellStore)
 
                 if (action == BaseObjectList::SET || action == BaseObjectList::ADD)
                 {
-                    // Create a ManualRef to be able to set item charge
-                    MWWorld::ManualRef ref(MWBase::Environment::get().getWorld()->getStore(), containerItem.refId, 1);
-                    MWWorld::Ptr newPtr = ref.getPtr();
+                    try
+                    {
+                        // Create a ManualRef to be able to set item charge
+                        MWWorld::ManualRef ref(MWBase::Environment::get().getWorld()->getStore(), containerItem.refId, 1);
+                        MWWorld::Ptr newPtr = ref.getPtr();
 
-                    if (containerItem.count > 1)
-                        newPtr.getRefData().setCount(containerItem.count);
+                        if (containerItem.count > 1)
+                            newPtr.getRefData().setCount(containerItem.count);
 
-                    if (containerItem.charge > -1)
-                        newPtr.getCellRef().setCharge(containerItem.charge);
+                        if (containerItem.charge > -1)
+                            newPtr.getCellRef().setCharge(containerItem.charge);
 
-                    if (containerItem.enchantmentCharge > -1)
-                        newPtr.getCellRef().setEnchantmentCharge(containerItem.enchantmentCharge);
+                        if (containerItem.enchantmentCharge > -1)
+                            newPtr.getCellRef().setEnchantmentCharge(containerItem.enchantmentCharge);
 
-                    if (!containerItem.soul.empty())
-                        newPtr.getCellRef().setSoul(containerItem.soul);
+                        if (!containerItem.soul.empty())
+                            newPtr.getCellRef().setSoul(containerItem.soul);
 
-                    containerStore.add(newPtr, containerItem.count, ownerPtr);
+                        containerStore.add(newPtr, containerItem.count, ownerPtr);
+                    }
+                    catch (std::exception&)
+                    {
+                        LOG_APPEND(TimedLog::LOG_ERROR, "-- Ignored invalid container item %s", containerItem.refId.c_str());
+                    }
                 }
 
                 else if (action == BaseObjectList::REMOVE && containerItem.actionCount > 0)
