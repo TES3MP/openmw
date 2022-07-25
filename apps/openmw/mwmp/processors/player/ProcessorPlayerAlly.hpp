@@ -4,6 +4,7 @@
 #include "../PlayerProcessor.hpp"
 #include "apps/openmw/mwmp/Main.hpp"
 #include "apps/openmw/mwmp/LocalPlayer.hpp"
+#include "apps/openmw/mwmp/MechanicsHelper.hpp"
 
 namespace mwmp
 {
@@ -30,6 +31,7 @@ namespace mwmp
                     if (dedicatedPlayer)
                     {
                         LOG_APPEND(TimedLog::LOG_INFO, "- Adding DedicatedPlayer %s to our allied players", dedicatedPlayer->npc.mName.c_str());
+                        MechanicsHelper::makePeace(localPlayer->getPlayerPtr(), dedicatedPlayer->getPtr());
                     }
 
                     ++iter;
@@ -52,6 +54,7 @@ namespace mwmp
                         if (otherDedicatedPlayer)
                         {
                             LOG_APPEND(TimedLog::LOG_INFO, "- Adding DedicatedPlayer %s to their allied players", otherDedicatedPlayer->npc.mName.c_str());
+                            MechanicsHelper::makePeace(static_cast<DedicatedPlayer*>(player)->getPtr(), otherDedicatedPlayer->getPtr());
                         }
                     }
 
