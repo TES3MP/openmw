@@ -343,6 +343,115 @@ bool MechanicsHelper::isTeamMember(const MWWorld::Ptr& playerChecked, const MWWo
     return isTeamMember;
 }
 
+void MechanicsHelper::makePeace(const MWWorld::Ptr& actor1, const MWWorld::Ptr& actor2)
+{
+    MWMechanics::CreatureStats& creatureStats1 = actor1.getClass().getCreatureStats(actor1);
+    MWMechanics::CreatureStats& creatureStats2 = actor2.getClass().getCreatureStats(actor2);
+
+    if (creatureStats2.matchesActorId(creatureStats1.getHitAttemptActorId()))
+    {
+        creatureStats1.setHitAttemptActorId(-1);
+    }
+
+    if (creatureStats1.matchesActorId(creatureStats2.getHitAttemptActorId()))
+    {
+        creatureStats2.setHitAttemptActorId(-1);
+    }
+
+    if (creatureStats1.getAiSequence().isInCombat(actor2))
+    {
+        creatureStats1.getAiSequence().stopCombat();
+    }
+
+    if (creatureStats2.getAiSequence().isInCombat(actor1))
+    {
+        creatureStats2.getAiSequence().stopCombat();
+    }
+
+    std::list<MWWorld::Ptr> allies1 = MWBase::Environment::get().getMechanicsManager()->getActorsSidingWith(actor1);
+    std::list<MWWorld::Ptr> allies2 = MWBase::Environment::get().getMechanicsManager()->getActorsSidingWith(actor2);
+
+    for (const auto& ally1 : allies1)
+    {
+        MWMechanics::CreatureStats& allyCreatureStats1 = ally1.getClass().getCreatureStats(ally1);
+
+        if (creatureStats2.matchesActorId(allyCreatureStats1.getHitAttemptActorId()))
+        {
+            allyCreatureStats1.setHitAttemptActorId(-1);
+        }
+
+        if (allyCreatureStats1.matchesActorId(creatureStats2.getHitAttemptActorId()))
+        {
+            creatureStats2.setHitAttemptActorId(-1);
+        }
+
+        if (allyCreatureStats1.getAiSequence().isInCombat(actor2))
+        {
+            allyCreatureStats1.getAiSequence().stopCombat();
+        }
+
+        if (creatureStats2.getAiSequence().isInCombat(ally1))
+        {
+            creatureStats2.getAiSequence().stopCombat();
+        }
+    }
+
+    for (const auto& ally2 : allies2)
+    {
+        MWMechanics::CreatureStats& allyCreatureStats2 = ally2.getClass().getCreatureStats(ally2);
+
+        if (creatureStats1.matchesActorId(allyCreatureStats2.getHitAttemptActorId()))
+        {
+            allyCreatureStats2.setHitAttemptActorId(-1);
+        }
+
+        if (allyCreatureStats2.matchesActorId(creatureStats1.getHitAttemptActorId()))
+        {
+            creatureStats1.setHitAttemptActorId(-1);
+        }
+
+        if (allyCreatureStats2.getAiSequence().isInCombat(actor1))
+        {
+            allyCreatureStats2.getAiSequence().stopCombat();
+        }
+
+        if (creatureStats1.getAiSequence().isInCombat(ally2))
+        {
+            creatureStats1.getAiSequence().stopCombat();
+        }
+    }
+
+     for (const auto& ally1 : allies1)
+     {
+        MWMechanics::CreatureStats& allyCreatureStats1 = ally1.getClass().getCreatureStats(ally1);
+
+        for (const auto& ally2 : allies2)
+        {
+            MWMechanics::CreatureStats& allyCreatureStats2 = ally2.getClass().getCreatureStats(ally2);
+
+            if (allyCreatureStats2.matchesActorId(allyCreatureStats1.getHitAttemptActorId()))
+            {
+                allyCreatureStats1.setHitAttemptActorId(-1);
+            }
+
+            if (allyCreatureStats1.matchesActorId(allyCreatureStats2.getHitAttemptActorId()))
+            {
+                allyCreatureStats2.setHitAttemptActorId(-1);
+            }
+
+            if (allyCreatureStats1.getAiSequence().isInCombat(ally2))
+            {
+                allyCreatureStats1.getAiSequence().stopCombat();
+            }
+
+            if (allyCreatureStats2.getAiSequence().isInCombat(ally1))
+            {
+                allyCreatureStats2.getAiSequence().stopCombat();
+            }
+        }
+    }
+}
+
 void MechanicsHelper::processAttack(Attack attack, const MWWorld::Ptr& attacker)
 {
     LOG_MESSAGE_SIMPLE(TimedLog::LOG_VERBOSE, "Processing attack from %s of type %i",

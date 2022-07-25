@@ -41,6 +41,8 @@ namespace MechanicsHelper
     //       who isn't mutually allied to you
     bool isTeamMember(const MWWorld::Ptr& playerChecked, const MWWorld::Ptr& playerWithTeam);
 
+    void makePeace(const MWWorld::Ptr& actor1, const MWWorld::Ptr& actor2);
+
     bool getSpellSuccess(std::string spellId, const MWWorld::Ptr& caster);
 
     void processAttack(mwmp::Attack attack, const MWWorld::Ptr& attacker);
