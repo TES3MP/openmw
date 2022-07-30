@@ -881,21 +881,9 @@ void ObjectList::playObjectSounds(MWWorld::CellStore* cellStore)
         if (ptrFound)
         {
             LOG_APPEND(TimedLog::LOG_VERBOSE, "- Playing sound %s on %s", baseObject.soundId.c_str(), objectDescription.c_str());
-            bool playAtPosition = false;
-            if (ptrFound.isInCell()) {
-                ESM::CellId localCell = Main::get().getLocalPlayer()->cell.getCellId();
-                ESM::CellId soundCell = ptrFound.getCell()->getCell()->getCellId();
-                playAtPosition = localCell == soundCell;
-            }
-
-            if (playAtPosition) {
-                MWBase::Environment::get().getSoundManager()->playSound3D(ptrFound.getRefData().getPosition().asVec3(),
-                    baseObject.soundId, baseObject.volume, baseObject.pitch, MWSound::Type::Sfx, MWSound::PlayMode::Normal, 0);
-            }
-            else {
-                MWBase::Environment::get().getSoundManager()->playSound3D(ptrFound,
-                    baseObject.soundId, baseObject.volume, baseObject.pitch, MWSound::Type::Sfx, MWSound::PlayMode::Normal, 0);
-            }
+            
+            MWBase::Environment::get().getSoundManager()->playSound3D(ptrFound.getRefData().getPosition().asVec3(),
+                baseObject.soundId, baseObject.volume, baseObject.pitch, MWSound::Type::Sfx, MWSound::PlayMode::Normal, 0);
         }
     }
 }
