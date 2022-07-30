@@ -413,6 +413,11 @@ void ObjectList::activateObjects(MWWorld::CellStore* cellStore)
 void ObjectList::placeObjects(MWWorld::CellStore* cellStore)
 {
     MWBase::World *world = MWBase::Environment::get().getWorld();
+    
+    static mwmp::ObjectList soundObjectList;
+    soundObjectList.reset();
+    soundObjectList.packetOrigin = mwmp::CLIENT_GAMEPLAY;
+    soundObjectList.cell = cell;
 
     for (const auto &baseObject : baseObjects)
     {
@@ -455,10 +460,13 @@ void ObjectList::placeObjects(MWWorld::CellStore* cellStore)
 
                 if (baseObject.droppedByPlayer)
                 {
-                    MWBase::Environment::get().getSoundManager()->playSound3D(newPtr, newPtr.getClass().getDownSoundId(newPtr), 1.f, 1.f);
-
                     if (guid == Main::get().getLocalPlayer()->guid)
+                    {
                         world->PCDropped(newPtr);
+
+                        // If this item was dropped locally, queue item drop sound
+                        soundObjectList.addObjectSound(newPtr, newPtr.getClass().getDownSoundId(newPtr), 1.0, 1.0);
+                    }
                 }
             }
             catch (std::exception&)
@@ -468,6 +476,11 @@ void ObjectList::placeObjects(MWWorld::CellStore* cellStore)
         }
         else
             LOG_APPEND(TimedLog::LOG_VERBOSE, "-- Object already existed!");
+    }
+
+    if (soundObjectList.baseObjects.size() > 0)
+    {
+        soundObjectList.sendObjectSound();
     }
 }
 
