@@ -698,7 +698,10 @@ void ObjectList::triggerTrapObjects(MWWorld::CellStore* cellStore)
             {
                 if (baseObject.trapAction == mwmp::BaseObjectList::TRAP_ACTION::DISARM)
                 {
-                    MWBase::Environment::get().getSoundManager()->playSound3D(ptrFound, "Disarm Trap", 1.0f, 1.0f);
+                    if (mwmp::Main::get().getCellController()->isActiveWorldCell(cell))
+                    {
+                        MWBase::Environment::get().getSoundManager()->playSound3D(ptrFound, "Disarm Trap", 1.0f, 1.0f);
+                    }
                 }
                 else if (baseObject.trapAction == mwmp::BaseObjectList::TRAP_ACTION::TRIGGER)
                 {
