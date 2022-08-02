@@ -808,6 +808,20 @@ namespace MWMechanics
             // A power can be used once per 24h
             if (spell->mData.mType == ESM::Spell::ST_Power)
                 stats.getSpells().usePower(spell);
+
+            /*
+                Start of tes3mp addition
+
+                Send an ID_PLAYER_COOLDOWNS packet every time a power is used here by the local player
+            */
+            if (spell->mData.mType == ESM::Spell::ST_Power && mCaster == getPlayer())
+            {
+                mwmp::Main::get().getLocalPlayer()->sendCooldownChange(spell->mId, MWBase::Environment::get().getWorld()->getTimeStamp().getDay(),
+                    MWBase::Environment::get().getWorld()->getTimeStamp().getHour());
+            }
+            /*
+                End of tes3mp addition
+            */
         }
 
         if (!mManualSpell && mCaster == getPlayer() && spellIncreasesSkill(spell))
