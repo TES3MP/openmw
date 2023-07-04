@@ -1,9 +1,10 @@
 #ifndef GAME_RENDER_LOCALMAP_H
 #define GAME_RENDER_LOCALMAP_H
 
+#include <cstdint>
+#include <map>
 #include <set>
 #include <vector>
-#include <map>
 
 #include <osg/BoundingBox>
 #include <osg/Quat>
@@ -30,6 +31,8 @@ namespace osg
 
 namespace MWRender
 {
+    class LocalMapRenderToTexture;
+
     ///
     /// \brief Local map rendering
     ///
@@ -45,24 +48,19 @@ namespace MWRender
         void clear();
 
         /**
-         * Request a map render for the given cell. Render textures will be immediately created and can be retrieved with the getMapTexture function.
+         * Request a map render for the given cell. Render textures will be immediately created and can be retrieved
+         * with the getMapTexture function.
          */
-        void requestMap (const MWWorld::CellStore* cell);
+        void requestMap(const MWWorld::CellStore* cell);
 
         void addCell(MWWorld::CellStore* cell);
+        void removeExteriorCell(int x, int y);
 
-        void removeCell (MWWorld::CellStore* cell);
+        void removeCell(MWWorld::CellStore* cell);
 
-        osg::ref_ptr<osg::Texture2D> getMapTexture (int x, int y);
+        osg::ref_ptr<osg::Texture2D> getMapTexture(int x, int y);
 
-        osg::ref_ptr<osg::Texture2D> getFogOfWarTexture (int x, int y);
-
-        void removeCamera(osg::Camera* cam);
-
-        /**
-         * Indicates a camera has been queued for rendering and can be cleaned up in the next frame. For internal use only.
-         */
-        void markForRemoval(osg::Camera* cam);
+        osg::ref_ptr<osg::Texture2D> getFogOfWarTexture(int x, int y);
 
         /**
          * Removes cameras that have already been rendered. Should be called every frame to ensure that
@@ -72,12 +70,13 @@ namespace MWRender
         void cleanupCameras();
 
         /**
-         * Set the position & direction of the player, and returns the position in map space through the reference parameters.
+         * Set the position & direction of the player, and returns the position in map space through the reference
+         * parameters.
          * @remarks This is used to draw a "fog of war" effect
          * to hide areas on the map the player has not discovered yet.
          */
-        void updatePlayer (const osg::Vec3f& position, const osg::Quat& orientation,
-                           float& u, float& v, int& x, int& y, osg::Vec3f& direction);
+        void updatePlayer(const osg::Vec3f& position, const osg::Quat& orientation, float& u, float& v, int& x, int& y,
+            osg::Vec3f& direction);
 
         /**
          * Save the fog of war for this cell to its CellStore.
@@ -88,14 +87,14 @@ namespace MWRender
         /**
          * Get the interior map texture index and normalized position on this texture, given a world position
          */
-        void worldToInteriorMapPosition (osg::Vec2f pos, float& nX, float& nY, int& x, int& y);
+        void worldToInteriorMapPosition(osg::Vec2f pos, float& nX, float& nY, int& x, int& y);
 
-        osg::Vec2f interiorMapToWorldPosition (float nX, float nY, int x, int y);
+        osg::Vec2f interiorMapToWorldPosition(float nX, float nY, int x, int y);
 
         /**
          * Check if a given position is explored by the player (i.e. not obscured by fog of war)
          */
-        bool isPositionExplored (float nX, float nY, int x, int y);
+        bool isPositionExplored(float nX, float nY, int x, int y);
 
         osg::Group* getRoot();
 
@@ -103,36 +102,41 @@ namespace MWRender
         osg::ref_ptr<osg::Group> mRoot;
         osg::ref_ptr<osg::Node> mSceneRoot;
 
-        typedef std::vector< osg::ref_ptr<osg::Camera> > CameraVector;
+        typedef std::vector<osg::ref_ptr<LocalMapRenderToTexture>> RTTVector;
+        RTTVector mLocalMapRTTs;
 
-        CameraVector mActiveCameras;
-
-        CameraVector mCamerasPendingRemoval;
-
-        typedef std::set<std::pair<int, int> > Grid;
+        typedef std::set<std::pair<int, int>> Grid;
         Grid mCurrentGrid;
+
+        enum NeighbourCellFlag : std::uint8_t
+        {
+            NeighbourCellTopLeft = 1,
+            NeighbourCellTopCenter = 1 << 1,
+            NeighbourCellTopRight = 1 << 2,
+            NeighbourCellMiddleLeft = 1 << 3,
+            NeighbourCellMiddleRight = 1 << 4,
+            NeighbourCellBottomLeft = 1 << 5,
+            NeighbourCellBottomCenter = 1 << 6,
+            NeighbourCellBottomRight = 1 << 7,
+        };
 
         struct MapSegment
         {
-            MapSegment();
-            ~MapSegment();
-
             void initFogOfWar();
             void loadFogOfWar(const ESM::FogTexture& fog);
             void saveFogOfWar(ESM::FogTexture& fog) const;
             void createFogOfWarTexture();
 
+            std::uint8_t mLastRenderNeighbourFlags = 0;
+            bool mHasFogState = false;
             osg::ref_ptr<osg::Texture2D> mMapTexture;
             osg::ref_ptr<osg::Texture2D> mFogOfWarTexture;
             osg::ref_ptr<osg::Image> mFogOfWarImage;
-
-            Grid mGrid; // the grid that was active at the time of rendering this segment
-
-            bool mHasFogState;
         };
 
         typedef std::map<std::pair<int, int>, MapSegment> SegmentMap;
-        SegmentMap mSegments;
+        SegmentMap mExteriorSegments;
+        SegmentMap mInteriorSegments;
 
         int mMapResolution;
 
@@ -147,14 +151,16 @@ namespace MWRender
         float mAngle;
         const osg::Vec2f rotatePoint(const osg::Vec2f& point, const osg::Vec2f& center, const float angle);
 
-        void requestExteriorMap(const MWWorld::CellStore* cell);
+        void requestExteriorMap(const MWWorld::CellStore* cell, MapSegment& segment);
         void requestInteriorMap(const MWWorld::CellStore* cell);
 
-        osg::ref_ptr<osg::Camera> createOrthographicCamera(float left, float top, float width, float height, const osg::Vec3d& upVector, float zmin, float zmax);
-        void setupRenderToTexture(osg::ref_ptr<osg::Camera> camera, int x, int y);
+        void setupRenderToTexture(
+            int segment_x, int segment_y, float left, float top, const osg::Vec3d& upVector, float zmin, float zmax);
 
         bool mInterior;
         osg::BoundingBox mBounds;
+
+        std::uint8_t getExteriorNeighbourFlags(int cellX, int cellY) const;
     };
 
 }

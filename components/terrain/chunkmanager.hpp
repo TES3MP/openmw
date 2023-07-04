@@ -26,6 +26,7 @@ namespace Terrain
     class CompositeMapRenderer;
     class Storage;
     class CompositeMap;
+    class TerrainDrawable;
 
     typedef std::tuple<osg::Vec2f, unsigned char, unsigned int> ChunkId; // Center, Lod, Lod Flags
 
@@ -33,9 +34,11 @@ namespace Terrain
     class ChunkManager : public Resource::GenericResourceManager<ChunkId>, public QuadTreeWorld::ChunkManager
     {
     public:
-        ChunkManager(Storage* storage, Resource::SceneManager* sceneMgr, TextureManager* textureManager, CompositeMapRenderer* renderer);
+        ChunkManager(Storage* storage, Resource::SceneManager* sceneMgr, TextureManager* textureManager,
+            CompositeMapRenderer* renderer, ESM::RefId worldspace);
 
-        osg::ref_ptr<osg::Node> getChunk(float size, const osg::Vec2f& center, unsigned char lod, unsigned int lodFlags, bool activeGrid, const osg::Vec3f& viewPoint, bool compile) override;
+        osg::ref_ptr<osg::Node> getChunk(float size, const osg::Vec2f& center, unsigned char lod, unsigned int lodFlags,
+            bool activeGrid, const osg::Vec3f& viewPoint, bool compile) override;
 
         void setCompositeMapSize(unsigned int size) { mCompositeMapSize = size; }
         void setCompositeMapLevel(float level) { mCompositeMapLevel = level; }
@@ -51,13 +54,16 @@ namespace Terrain
         void releaseGLObjects(osg::State* state) override;
 
     private:
-        osg::ref_ptr<osg::Node> createChunk(float size, const osg::Vec2f& center, unsigned char lod, unsigned int lodFlags, bool compile);
+        osg::ref_ptr<osg::Node> createChunk(float size, const osg::Vec2f& center, unsigned char lod,
+            unsigned int lodFlags, bool compile, TerrainDrawable* templateGeometry);
 
         osg::ref_ptr<osg::Texture2D> createCompositeMapRTT();
 
-        void createCompositeMapGeometry(float chunkSize, const osg::Vec2f& chunkCenter, const osg::Vec4f& texCoords, CompositeMap& map);
+        void createCompositeMapGeometry(
+            float chunkSize, const osg::Vec2f& chunkCenter, const osg::Vec4f& texCoords, CompositeMap& map);
 
-        std::vector<osg::ref_ptr<osg::StateSet> > createPasses(float chunkSize, const osg::Vec2f& chunkCenter, bool forCompositeMap);
+        std::vector<osg::ref_ptr<osg::StateSet>> createPasses(
+            float chunkSize, const osg::Vec2f& chunkCenter, bool forCompositeMap);
 
         Terrain::Storage* mStorage;
         Resource::SceneManager* mSceneManager;

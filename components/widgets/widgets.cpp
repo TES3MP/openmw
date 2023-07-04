@@ -2,10 +2,10 @@
 
 #include <MyGUI_FactoryManager.h>
 
-#include "list.hpp"
-#include "numericeditbox.hpp"
 #include "box.hpp"
 #include "imagebutton.hpp"
+#include "list.hpp"
+#include "numericeditbox.hpp"
 #include "sharedstatebutton.hpp"
 #include "windowcaption.hpp"
 
@@ -28,6 +28,7 @@ namespace Gui
         MyGUI::FactoryManager::getInstance().registerFactory<Gui::NumericEditBox>("Widget");
         MyGUI::FactoryManager::getInstance().registerFactory<Gui::SharedStateButton>("Widget");
         MyGUI::FactoryManager::getInstance().registerFactory<Gui::WindowCaption>("Widget");
+        MyGUI::FactoryManager::getInstance().registerFactory<Gui::ComboBox>("Widget");
     }
 
 }

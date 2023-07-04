@@ -14,49 +14,45 @@ namespace ContentSelectorView
     {
         Q_OBJECT
 
-        QMenu *mContextMenu;
+        QMenu* mContextMenu;
 
     protected:
-
-        ContentSelectorModel::ContentModel *mContentModel;
-        QSortFilterProxyModel *mAddonProxyModel;
+        ContentSelectorModel::ContentModel* mContentModel;
+        QSortFilterProxyModel* mAddonProxyModel;
 
     public:
-
-        explicit ContentSelector(QWidget *parent = nullptr);
+        explicit ContentSelector(QWidget* parent = nullptr, bool showOMWScripts = false);
 
         QString currentFile() const;
 
-        void addFiles(const QString &path);
+        void addFiles(const QString& path, bool newfiles = false);
+        void sortFiles();
+        bool containsDataFiles(const QString& path);
         void clearFiles();
-        void setProfileContent (const QStringList &fileList);
+        void setProfileContent(const QStringList& fileList);
 
         void clearCheckStates();
-        void setEncoding (const QString &encoding);
-        void setContentList(const QStringList &list);
+        void setEncoding(const QString& encoding);
+        void setContentList(const QStringList& list);
 
         ContentSelectorModel::ContentFileList selectedFiles() const;
 
-        void setGameFile (const QString &filename = QString(""));
+        void setGameFile(const QString& filename = QString(""));
 
-        bool isGamefileSelected() const
-            { return ui.gameFileView->currentIndex() != -1; }
+        bool isGamefileSelected() const { return ui.gameFileView->currentIndex() > 0; }
 
-        QWidget *uiWidget() const
-            { return ui.contentGroupBox; }
-            
-        QToolButton *refreshButton() const  
-            { return ui.refreshButton; }        
+        QWidget* uiWidget() const { return ui.contentGroupBox; }
 
-        QLineEdit *searchFilter() const
-            { return ui.searchFilter; }
+        QComboBox* languageBox() const { return ui.languageComboBox; }
 
+        QToolButton* refreshButton() const { return ui.refreshButton; }
 
-   private:
+        QLineEdit* searchFilter() const { return ui.searchFilter; }
 
+    private:
         Ui::ContentSelector ui;
 
-        void buildContentModel();
+        void buildContentModel(bool showOMWScripts);
         void buildGameFileView();
         void buildAddonView();
         void buildContextMenu();
@@ -64,9 +60,9 @@ namespace ContentSelectorView
         void setCheckStateForMultiSelectedItems(bool checked);
 
     signals:
-        void signalCurrentGamefileIndexChanged (int);
+        void signalCurrentGamefileIndexChanged(int);
 
-        void signalAddonDataChanged (const QModelIndex& topleft, const QModelIndex& bottomright);
+        void signalAddonDataChanged(const QModelIndex& topleft, const QModelIndex& bottomright);
         void signalSelectedFilesChanged(QStringList selectedFiles);
 
     private slots:

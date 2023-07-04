@@ -1,8 +1,8 @@
 #include "graphicspage.hpp"
 
-#include <QDesktopWidget>
+#include "sdlinit.hpp"
+
 #include <QMessageBox>
-#include <QDir>
 #include <QScreen>
 
 #ifdef MAC_OS_X_VERSION_MIN_REQUIRED
@@ -13,13 +13,12 @@
 
 #include <SDL_video.h>
 
+#include <array>
 #include <numeric>
-
-#include <components/files/configurationmanager.hpp>
 
 QString getAspect(int x, int y)
 {
-    int gcd = std::gcd (x, y);
+    int gcd = std::gcd(x, y);
     if (gcd == 0)
         return QString();
 
@@ -32,10 +31,10 @@ QString getAspect(int x, int y)
     return QString(QString::number(xaspect) + ":" + QString::number(yaspect));
 }
 
-Launcher::GraphicsPage::GraphicsPage(QWidget *parent)
+Launcher::GraphicsPage::GraphicsPage(QWidget* parent)
     : QWidget(parent)
 {
-    setObjectName ("GraphicsPage");
+    setObjectName("GraphicsPage");
     setupUi(this);
 
     // Set the maximum res we can set in windowed mode
@@ -43,12 +42,12 @@ Launcher::GraphicsPage::GraphicsPage(QWidget *parent)
     customWidthSpinBox->setMaximum(res.width());
     customHeightSpinBox->setMaximum(res.height());
 
-    connect(fullScreenCheckBox, SIGNAL(stateChanged(int)), this, SLOT(slotFullScreenChanged(int)));
-    connect(standardRadioButton, SIGNAL(toggled(bool)), this, SLOT(slotStandardToggled(bool)));
-    connect(screenComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(screenChanged(int)));
-    connect(framerateLimitCheckBox, SIGNAL(toggled(bool)), this, SLOT(slotFramerateLimitToggled(bool)));
-    connect(shadowDistanceCheckBox, SIGNAL(toggled(bool)), this, SLOT(slotShadowDistLimitToggled(bool)));
-
+    connect(windowModeComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this,
+        &GraphicsPage::slotFullScreenChanged);
+    connect(standardRadioButton, &QRadioButton::toggled, this, &GraphicsPage::slotStandardToggled);
+    connect(screenComboBox, qOverload<int>(&QComboBox::currentIndexChanged), this, &GraphicsPage::screenChanged);
+    connect(framerateLimitCheckBox, &QCheckBox::toggled, this, &GraphicsPage::slotFramerateLimitToggled);
+    connect(shadowDistanceCheckBox, &QCheckBox::toggled, this, &GraphicsPage::slotShadowDistLimitToggled);
 }
 
 bool Launcher::GraphicsPage::setupSDL()
@@ -67,7 +66,8 @@ bool Launcher::GraphicsPage::setupSDL()
         msgBox.setWindowTitle(tr("Error receiving number of screens"));
         msgBox.setIcon(QMessageBox::Critical);
         msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.setText(tr("<br><b>SDL_GetNumVideoDisplays failed:</b><br><br>") + QString::fromUtf8(SDL_GetError()) + "<br>");
+        msgBox.setText(
+            tr("<br><b>SDL_GetNumVideoDisplays failed:</b><br><br>") + QString::fromUtf8(SDL_GetError()) + "<br>");
         msgBox.exec();
         return false;
     }
@@ -93,11 +93,18 @@ bool Launcher::GraphicsPage::loadSettings()
         return false;
 
     // Visuals
-    if (Settings::Manager::getBool("vsync", "Video"))
-        vSyncCheckBox->setCheckState(Qt::Checked);
 
-    if (Settings::Manager::getBool("fullscreen", "Video"))
-        fullScreenCheckBox->setCheckState(Qt::Checked);
+    int vsync = Settings::Manager::getInt("vsync mode", "Video");
+    if (vsync < 0 || vsync > 2)
+        vsync = 0;
+
+    vSyncComboBox->setCurrentIndex(vsync);
+
+    size_t windowMode = static_cast<size_t>(Settings::Manager::getInt("window mode", "Video"));
+    if (windowMode > static_cast<size_t>(Settings::WindowMode::Windowed))
+        windowMode = 0;
+    windowModeComboBox->setCurrentIndex(windowMode);
+    slotFullScreenChanged(windowMode);
 
     if (Settings::Manager::getBool("window border", "Video"))
         windowBorderCheckBox->setCheckState(Qt::Checked);
@@ -116,10 +123,13 @@ bool Launcher::GraphicsPage::loadSettings()
 
     int resIndex = resolutionComboBox->findText(resolution, Qt::MatchStartsWith);
 
-    if (resIndex != -1) {
+    if (resIndex != -1)
+    {
         standardRadioButton->toggle();
         resolutionComboBox->setCurrentIndex(resIndex);
-    } else {
+    }
+    else
+    {
         customRadioButton->toggle();
         customWidthSpinBox->setValue(width);
         customHeightSpinBox->setValue(height);
@@ -152,9 +162,8 @@ bool Launcher::GraphicsPage::loadSettings()
     if (Settings::Manager::getBool("enable indoor shadows", "Shadows"))
         indoorShadowsCheckBox->setCheckState(Qt::Checked);
 
-    shadowComputeSceneBoundsComboBox->setCurrentIndex(
-        shadowComputeSceneBoundsComboBox->findText(
-            QString(tr(Settings::Manager::getString("compute scene bounds", "Shadows").c_str()))));
+    shadowComputeSceneBoundsComboBox->setCurrentIndex(shadowComputeSceneBoundsComboBox->findText(
+        QString(tr(Settings::Manager::getString("compute scene bounds", "Shadows").c_str()))));
 
     int shadowDistLimit = Settings::Manager::getInt("maximum shadow map distance", "Shadows");
     if (shadowDistLimit > 0)
@@ -181,13 +190,13 @@ void Launcher::GraphicsPage::saveSettings()
 
     // Ensure we only set the new settings if they changed. This is to avoid cluttering the
     // user settings file (which by definition should only contain settings the user has touched)
-    bool cVSync = vSyncCheckBox->checkState();
-    if (cVSync != Settings::Manager::getBool("vsync", "Video"))
-        Settings::Manager::setBool("vsync", "Video", cVSync);
+    int cVSync = vSyncComboBox->currentIndex();
+    if (cVSync != Settings::Manager::getInt("vsync mode", "Video"))
+        Settings::Manager::setInt("vsync mode", "Video", cVSync);
 
-    bool cFullScreen = fullScreenCheckBox->checkState();
-    if (cFullScreen != Settings::Manager::getBool("fullscreen", "Video"))
-        Settings::Manager::setBool("fullscreen", "Video", cFullScreen);
+    int cWindowMode = windowModeComboBox->currentIndex();
+    if (cWindowMode != Settings::Manager::getInt("window mode", "Video"))
+        Settings::Manager::setInt("window mode", "Video", cWindowMode);
 
     bool cWindowBorder = windowBorderCheckBox->checkState();
     if (cWindowBorder != Settings::Manager::getBool("window border", "Video"))
@@ -199,13 +208,18 @@ void Launcher::GraphicsPage::saveSettings()
 
     int cWidth = 0;
     int cHeight = 0;
-    if (standardRadioButton->isChecked()) {
-        QRegExp resolutionRe(QString("(\\d+) x (\\d+).*"));
-        if (resolutionRe.exactMatch(resolutionComboBox->currentText().simplified())) {
-            cWidth = resolutionRe.cap(1).toInt();
-            cHeight = resolutionRe.cap(2).toInt();
+    if (standardRadioButton->isChecked())
+    {
+        QRegularExpression resolutionRe("^(\\d+) x (\\d+)");
+        QRegularExpressionMatch match = resolutionRe.match(resolutionComboBox->currentText().simplified());
+        if (match.hasMatch())
+        {
+            cWidth = match.captured(1).toInt();
+            cHeight = match.captured(2).toInt();
         }
-    } else {
+    }
+    else
+    {
         cWidth = customWidthSpinBox->value();
         cHeight = customHeightSpinBox->value();
     }
@@ -232,8 +246,10 @@ void Launcher::GraphicsPage::saveSettings()
     }
 
     // Lighting
-    static std::array<std::string, 3> lightingMethodMap = {"legacy", "shaders compatibility", "shaders"};
-    Settings::Manager::setString("lighting method", "Shaders", lightingMethodMap[lightingMethodComboBox->currentIndex()]);
+    static std::array<std::string, 3> lightingMethodMap = { "legacy", "shaders compatibility", "shaders" };
+    const std::string& cLightingMethod = lightingMethodMap[lightingMethodComboBox->currentIndex()];
+    if (cLightingMethod != Settings::Manager::getString("lighting method", "Shaders"))
+        Settings::Manager::setString("lighting method", "Shaders", cLightingMethod);
 
     // Shadows
     int cShadowDist = shadowDistanceCheckBox->checkState() != Qt::Unchecked ? shadowDistanceSpinBox->value() : 0;
@@ -299,7 +315,8 @@ QStringList Launcher::GraphicsPage::getAvailableResolutions(int screen)
         msgBox.setWindowTitle(tr("Error receiving resolutions"));
         msgBox.setIcon(QMessageBox::Critical);
         msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.setText(tr("<br><b>SDL_GetNumDisplayModes failed:</b><br><br>") + QString::fromUtf8(SDL_GetError()) + "<br>");
+        msgBox.setText(
+            tr("<br><b>SDL_GetNumDisplayModes failed:</b><br><br>") + QString::fromUtf8(SDL_GetError()) + "<br>");
         msgBox.exec();
         return result;
     }
@@ -312,7 +329,8 @@ QStringList Launcher::GraphicsPage::getAvailableResolutions(int screen)
             msgBox.setWindowTitle(tr("Error receiving resolutions"));
             msgBox.setIcon(QMessageBox::Critical);
             msgBox.setStandardButtons(QMessageBox::Ok);
-            msgBox.setText(tr("<br><b>SDL_GetDisplayMode failed:</b><br><br>") + QString::fromUtf8(SDL_GetError()) + "<br>");
+            msgBox.setText(
+                tr("<br><b>SDL_GetDisplayMode failed:</b><br><br>") + QString::fromUtf8(SDL_GetError()) + "<br>");
             msgBox.exec();
             return result;
         }
@@ -320,10 +338,12 @@ QStringList Launcher::GraphicsPage::getAvailableResolutions(int screen)
         QString resolution = QString::number(mode.w) + QString(" x ") + QString::number(mode.h);
 
         QString aspect = getAspect(mode.w, mode.h);
-        if (aspect == QLatin1String("16:9") || aspect == QLatin1String("16:10")) {
+        if (aspect == QLatin1String("16:9") || aspect == QLatin1String("16:10"))
+        {
             resolution.append(tr("\t(Wide ") + aspect + ")");
-
-        } else if (aspect == QLatin1String("4:3")) {
+        }
+        else if (aspect == QLatin1String("4:3"))
+        {
             resolution.append(tr("\t(Standard 4:3)"));
         }
 
@@ -351,21 +371,26 @@ QRect Launcher::GraphicsPage::getMaximumResolution()
 
 void Launcher::GraphicsPage::screenChanged(int screen)
 {
-    if (screen >= 0) {
+    if (screen >= 0)
+    {
         resolutionComboBox->clear();
         resolutionComboBox->addItems(mResolutionsPerScreen[screen]);
     }
 }
 
-void Launcher::GraphicsPage::slotFullScreenChanged(int state)
+void Launcher::GraphicsPage::slotFullScreenChanged(int mode)
 {
-    if (state == Qt::Checked) {
+    if (mode == static_cast<int>(Settings::WindowMode::Fullscreen)
+        || mode == static_cast<int>(Settings::WindowMode::WindowedFullscreen))
+    {
         standardRadioButton->toggle();
         customRadioButton->setEnabled(false);
         customWidthSpinBox->setEnabled(false);
         customHeightSpinBox->setEnabled(false);
         windowBorderCheckBox->setEnabled(false);
-    } else {
+    }
+    else
+    {
         customRadioButton->setEnabled(true);
         customWidthSpinBox->setEnabled(true);
         customHeightSpinBox->setEnabled(true);
@@ -375,11 +400,14 @@ void Launcher::GraphicsPage::slotFullScreenChanged(int state)
 
 void Launcher::GraphicsPage::slotStandardToggled(bool checked)
 {
-    if (checked) {
+    if (checked)
+    {
         resolutionComboBox->setEnabled(true);
         customWidthSpinBox->setEnabled(false);
         customHeightSpinBox->setEnabled(false);
-    } else {
+    }
+    else
+    {
         resolutionComboBox->setEnabled(false);
         customWidthSpinBox->setEnabled(true);
         customHeightSpinBox->setEnabled(true);

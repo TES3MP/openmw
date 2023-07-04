@@ -1,3 +1,4 @@
+// clang-format off
 /* -*-c++-*- OpenSceneGraph - Copyright (C) 1998-2006 Robert Osfield
  *
  * This library is open source and may be redistributed and/or modified under
@@ -13,16 +14,13 @@
 
 /* Modified for OpenMW */
 
-#include <stdlib.h>
-#include <string.h>
-
 #include "optimizer.hpp"
 
-#include <osg/Version>
 #include <osg/Transform>
 #include <osg/MatrixTransform>
 #include <osg/PositionAttitudeTransform>
 #include <osg/LOD>
+#include <osg/Sequence>
 #include <osg/Billboard>
 #include <osg/Geometry>
 #include <osg/Notify>
@@ -30,15 +28,18 @@
 #include <osg/io_utils>
 #include <osg/Depth>
 
+#include <osgDB/SharedStateManager>
+
 #include <osgUtil/TransformAttributeFunctor>
 #include <osgUtil/Statistics>
 #include <osgUtil/MeshOptimizers>
 
-#include <typeinfo>
 #include <algorithm>
 #include <numeric>
 
 #include <iterator>
+
+#include <components/sceneutil/depth.hpp>
 
 using namespace osgUtil;
 
@@ -80,6 +81,13 @@ void Optimizer::optimize(osg::Node* node, unsigned int options)
         CombineStaticTransformsVisitor cstv(this);
         node->accept(cstv);
         cstv.removeTransforms(node);
+    }
+
+    if (options & SHARE_DUPLICATE_STATE && _sharedStateManager)
+    {
+        if (_sharedStateMutex) _sharedStateMutex->lock();
+        _sharedStateManager->share(node);
+        if (_sharedStateMutex) _sharedStateMutex->unlock();
     }
 
     if (options & REMOVE_REDUNDANT_NODES)
@@ -160,7 +168,7 @@ class CollectLowestTransformsVisitor : public BaseOptimizerVisitor
             setTraversalMode(osg::NodeVisitor::TRAVERSE_PARENTS);
         }
 
-        void apply(osg::Node& node) override
+        void apply(osg::Group& node) override
         {
             if (node.getNumParents())
             {
@@ -169,7 +177,7 @@ class CollectLowestTransformsVisitor : public BaseOptimizerVisitor
             else
             {
                 // for all current objects mark a nullptr transform for them.
-                registerWithCurrentObjects(0);
+                registerWithCurrentObjects(static_cast<osg::Transform*>(nullptr));
             }
         }
 
@@ -187,15 +195,19 @@ class CollectLowestTransformsVisitor : public BaseOptimizerVisitor
             // for all current objects associated this transform with them.
             registerWithCurrentObjects(&transform);
         }
-
-        void apply(osg::Geode& geode) override
+        void apply(osg::MatrixTransform& transform) override
         {
-            traverse(geode);
+            // for all current objects associated this transform with them.
+            registerWithCurrentObjects(&transform);
         }
 
-        void apply(osg::Billboard& geode) override
+        void apply(osg::Node& node) override
         {
-            traverse(geode);
+            traverse(node);
+        }
+
+        void apply(osg::Geometry& geometry) override
+        {
         }
 
         void collectDataFor(osg::Node* node)
@@ -282,7 +294,19 @@ class CollectLowestTransformsVisitor : public BaseOptimizerVisitor
 
             ObjectStruct():_canBeApplied(true),_moreThanOneMatrixRequired(false) {}
 
-            void add(osg::Transform* transform, bool canOptimize)
+            inline const osg::Matrix& getMatrix(osg::MatrixTransform* transform)
+            {
+                return transform->getMatrix();
+            }
+            osg::Matrix getMatrix(osg::Transform* transform)
+            {
+                osg::Matrix matrix;
+                transform->computeLocalToWorldMatrix(matrix, 0);
+                return matrix;
+            }
+            
+            template<typename T>
+            void add(T* transform, bool canOptimize)
             {
                 if (transform)
                 {
@@ -290,12 +314,10 @@ class CollectLowestTransformsVisitor : public BaseOptimizerVisitor
                     else if (transform->getReferenceFrame()!=osg::Transform::RELATIVE_RF) _moreThanOneMatrixRequired=true;
                     else
                     {
-                        if (_transformSet.empty()) transform->computeLocalToWorldMatrix(_firstMatrix,0);
+                        if (_transformSet.empty()) _firstMatrix = getMatrix(transform);
                         else
                         {
-                            osg::Matrix matrix;
-                            transform->computeLocalToWorldMatrix(matrix,0);
-                            if (_firstMatrix!=matrix) _moreThanOneMatrixRequired=true;
+                            if (_firstMatrix!=getMatrix(transform)) _moreThanOneMatrixRequired=true;
                         }
                     }
                 }
@@ -316,8 +338,8 @@ class CollectLowestTransformsVisitor : public BaseOptimizerVisitor
             TransformSet    _transformSet;
         };
 
-
-        void registerWithCurrentObjects(osg::Transform* transform)
+        template <typename T>
+        void registerWithCurrentObjects(T* transform)
         {
             for(ObjectList::iterator itr=_currentObjectList.begin();
                 itr!=_currentObjectList.end();
@@ -603,38 +625,31 @@ void Optimizer::FlattenStaticTransformsVisitor::apply(osg::Node& node)
     traverse(node);
 }
 
-bool needvbo(const osg::Geometry* geom)
-{
-#if OSG_MIN_VERSION_REQUIRED(3,5,6)
-    return true;
-#else
-    return geom->getUseVertexBufferObjects();
-#endif
-}
-
 osg::Array* cloneArray(osg::Array* array, osg::VertexBufferObject*& vbo, const osg::Geometry* geom)
 {
     array = static_cast<osg::Array*>(array->clone(osg::CopyOp::DEEP_COPY_ALL));
-    if (!vbo && needvbo(geom))
-        vbo = new osg::VertexBufferObject;
-    if (vbo)
-        array->setVertexBufferObject(vbo);
+    if (!vbo) vbo = new osg::VertexBufferObject;
+    array->setVertexBufferObject(vbo);
     return array;
+}
+
+void Optimizer::FlattenStaticTransformsVisitor::apply(osg::Geometry& geometry)
+{
+    if(isOperationPermissibleForObject(&geometry))
+    {
+        osg::VertexBufferObject* vbo = nullptr;
+        if(geometry.getVertexArray() && geometry.getVertexArray()->referenceCount() > 1)
+            geometry.setVertexArray(cloneArray(geometry.getVertexArray(), vbo, &geometry));
+        if(geometry.getNormalArray() && geometry.getNormalArray()->referenceCount() > 1)
+            geometry.setNormalArray(cloneArray(geometry.getNormalArray(), vbo, &geometry));
+        if(geometry.getTexCoordArray(7) && geometry.getTexCoordArray(7)->referenceCount() > 1) // tangents
+            geometry.setTexCoordArray(7, cloneArray(geometry.getTexCoordArray(7), vbo, &geometry));
+    }
+    _drawableSet.insert(&geometry);
 }
 
 void Optimizer::FlattenStaticTransformsVisitor::apply(osg::Drawable& drawable)
 {
-    osg::Geometry *geometry = drawable.asGeometry();
-    if((geometry) && (isOperationPermissibleForObject(&drawable)))
-    {
-        osg::VertexBufferObject* vbo = nullptr;
-        if(geometry->getVertexArray() && geometry->getVertexArray()->referenceCount() > 1)
-            geometry->setVertexArray(cloneArray(geometry->getVertexArray(), vbo, geometry));
-        if(geometry->getNormalArray() && geometry->getNormalArray()->referenceCount() > 1)
-            geometry->setNormalArray(cloneArray(geometry->getNormalArray(), vbo, geometry));
-        if(geometry->getTexCoordArray(7) && geometry->getTexCoordArray(7)->referenceCount() > 1) // tangents
-            geometry->setTexCoordArray(7, cloneArray(geometry->getTexCoordArray(7), vbo, geometry));
-    }
     _drawableSet.insert(&drawable);
 }
 
@@ -660,6 +675,11 @@ void Optimizer::FlattenStaticTransformsVisitor::apply(osg::Transform& transform)
     traverse(transform);
 
     _transformStack.pop_back();
+}
+
+void Optimizer::FlattenStaticTransformsVisitor::apply(osg::MatrixTransform& transform)
+{
+    apply(static_cast<osg::Transform&>(transform));
 }
 
 bool Optimizer::FlattenStaticTransformsVisitor::removeTransforms(osg::Node* nodeWeCannotRemove)
@@ -739,7 +759,8 @@ bool Optimizer::CombineStaticTransformsVisitor::removeTransforms(osg::Node* node
         if (transform->getNumChildren()==1 &&
             transform->getChild(0)->asTransform()!=0 &&
             transform->getChild(0)->asTransform()->asMatrixTransform()!=0 &&
-            transform->getChild(0)->asTransform()->getDataVariance()==osg::Object::STATIC)
+            (!transform->getChild(0)->getStateSet() || transform->getChild(0)->getStateSet()->referenceCount()==1) &&
+            transform->getChild(0)->getDataVariance()==osg::Object::STATIC)
         {
             // now combine with its child.
             osg::MatrixTransform* child = transform->getChild(0)->asTransform()->asMatrixTransform();
@@ -810,7 +831,7 @@ void Optimizer::RemoveEmptyNodesVisitor::removeEmptyNodes()
                 ++pitr)
             {
                 osg::Group* parent = *pitr;
-                if (!parent->asSwitch() && !dynamic_cast<osg::LOD*>(parent))
+                if (!parent->asSwitch() && !dynamic_cast<osg::LOD*>(parent) && !dynamic_cast<osg::Sequence*>(parent))
                 {
                     parent->removeChild(nodeToRemove.get());
                     if (parent->getNumChildren()==0 && isOperationPermissibleForObject(parent)) newEmptyGroups.insert(parent);
@@ -850,6 +871,13 @@ void Optimizer::RemoveRedundantNodesVisitor::apply(osg::Switch& switchNode)
     // We should keep all switch child nodes since they reflect different switch states.
     for (unsigned int i=0; i<switchNode.getNumChildren(); ++i)
         traverse(*switchNode.getChild(i));
+}
+
+void Optimizer::RemoveRedundantNodesVisitor::apply(osg::Sequence& sequenceNode)
+{
+    // We should keep all sequence child nodes since they reflect different sequence states.
+    for (unsigned int i=0; i<sequenceNode.getNumChildren(); ++i)
+        traverse(*sequenceNode.getChild(i));
 }
 
 void Optimizer::RemoveRedundantNodesVisitor::apply(osg::Group& group)
@@ -901,11 +929,11 @@ void Optimizer::RemoveRedundantNodesVisitor::removeRedundantNodes()
                 unsigned int childIndex = (*pitr)->getChildIndex(group);
                 for (unsigned int i=0; i<group->getNumChildren(); ++i)
                 {
-                    osg::Node* child = group->getChild(i);
-                    (*pitr)->insertChild(childIndex++, child);
+                    if (i==0)
+                        (*pitr)->setChild(childIndex, group->getChild(i));
+                    else
+                        (*pitr)->insertChild(childIndex+i, group->getChild(i));
                 }
-
-                (*pitr)->removeChild(group);
             }
 
             group->removeChildren(0, group->getNumChildren());
@@ -1100,10 +1128,13 @@ bool isAbleToMerge(const osg::Geometry& g1, const osg::Geometry& g2)
 }
 
 
-void Optimizer::MergeGeometryVisitor::pushStateSet(osg::StateSet *stateSet)
+bool Optimizer::MergeGeometryVisitor::pushStateSet(osg::StateSet *stateSet)
 {
+    if (!stateSet || stateSet->getRenderBinMode() & osg::StateSet::INHERIT_RENDERBIN_DETAILS)
+        return false;
     _stateSetStack.push_back(stateSet);
     checkAlphaBlendingActive();
+    return true;
 }
 
 void Optimizer::MergeGeometryVisitor::popStateSet()
@@ -1133,15 +1164,14 @@ void Optimizer::MergeGeometryVisitor::checkAlphaBlendingActive()
 
 void Optimizer::MergeGeometryVisitor::apply(osg::Group &group)
 {
-    if (group.getStateSet())
-        pushStateSet(group.getStateSet());
+    bool pushed = pushStateSet(group.getStateSet());
 
     if (!_alphaBlendingActive || _mergeAlphaBlending)
         mergeGroup(group);
 
     traverse(group);
 
-    if (group.getStateSet())
+    if (pushed)
         popStateSet();
 }
 
@@ -1154,10 +1184,8 @@ osg::PrimitiveSet* clonePrimitive(osg::PrimitiveSet* ps, osg::ElementBufferObjec
     osg::DrawElements* drawElements = ps->getDrawElements();
     if (!drawElements) return ps;
 
-    if (!ebo && needvbo(geom))
-        ebo = new osg::ElementBufferObject;
-    if (ebo)
-        drawElements->setElementBufferObject(ebo);
+    if (!ebo) ebo = new osg::ElementBufferObject;
+    drawElements->setElementBufferObject(ebo);
 
     return ps;
 }
@@ -1560,8 +1588,8 @@ bool Optimizer::MergeGeometryVisitor::mergeGroup(osg::Group& group)
                 }
                 if (_alphaBlendingActive && _mergeAlphaBlending && !geom->getStateSet())
                 {
-                    osg::Depth* d = new osg::Depth;
-                    d->setWriteMask(0);
+                    osg::ref_ptr<osg::Depth> d = new SceneUtil::AutoDepth;
+                    d->setWriteMask(false);
                     geom->getOrCreateStateSet()->setAttribute(d);
                 }
             }
@@ -1569,9 +1597,6 @@ bool Optimizer::MergeGeometryVisitor::mergeGroup(osg::Group& group)
 
 
     }
-
-//    geode.dirtyBound();
-
 
     return false;
 }
@@ -1766,11 +1791,8 @@ bool Optimizer::MergeGeometryVisitor::mergeGeometry(osg::Geometry& lhs,osg::Geom
                 {
                     // must promote to a DrawElementsUInt
                     osg::DrawElementsUInt* new_primitive = new osg::DrawElementsUInt(primitive->getMode());
-                    if (needvbo(&lhs))
-                    {
-                        if (!ebo) ebo = new osg::ElementBufferObject;
-                         new_primitive->setElementBufferObject(ebo);
-                    }
+                    if (!ebo) ebo = new osg::ElementBufferObject;
+                    new_primitive->setElementBufferObject(ebo);
                     std::copy(primitiveUByte->begin(),primitiveUByte->end(),std::back_inserter(*new_primitive));
                     new_primitive->offsetIndices(base);
                     (*primItr) = new_primitive;
@@ -1778,11 +1800,8 @@ bool Optimizer::MergeGeometryVisitor::mergeGeometry(osg::Geometry& lhs,osg::Geom
                 {
                     // must promote to a DrawElementsUShort
                     osg::DrawElementsUShort* new_primitive = new osg::DrawElementsUShort(primitive->getMode());
-                    if (needvbo(&lhs))
-                    {
-                        if (!ebo) ebo = new osg::ElementBufferObject;
-                         new_primitive->setElementBufferObject(ebo);
-                    }
+                    if (!ebo) ebo = new osg::ElementBufferObject;
+                    new_primitive->setElementBufferObject(ebo);
                     std::copy(primitiveUByte->begin(),primitiveUByte->end(),std::back_inserter(*new_primitive));
                     new_primitive->offsetIndices(base);
                     (*primItr) = new_primitive;
@@ -1809,11 +1828,8 @@ bool Optimizer::MergeGeometryVisitor::mergeGeometry(osg::Geometry& lhs,osg::Geom
                 {
                     // must promote to a DrawElementsUInt
                     osg::DrawElementsUInt* new_primitive = new osg::DrawElementsUInt(primitive->getMode());
-                    if (needvbo(&lhs))
-                    {
-                        if (!ebo) ebo = new osg::ElementBufferObject;
-                         new_primitive->setElementBufferObject(ebo);
-                    }
+                    if (!ebo) ebo = new osg::ElementBufferObject;
+                    new_primitive->setElementBufferObject(ebo);
                     std::copy(primitiveUShort->begin(),primitiveUShort->end(),std::back_inserter(*new_primitive));
                     new_primitive->offsetIndices(base);
                     (*primItr) = new_primitive;
@@ -1898,8 +1914,8 @@ bool Optimizer::MergeGroupsVisitor::isOperationPermissible(osg::Group& node)
     return !node.getCullCallback() &&
            !node.getEventCallback() &&
            !node.getUpdateCallback() &&
-            isOperationPermissibleForObject(&node) &&
-           typeid(node)==typeid(osg::Group);
+           typeid(node)==typeid(osg::Group) &&
+            isOperationPermissibleForObject(&node);
 }
 
 void Optimizer::MergeGroupsVisitor::apply(osg::LOD &lod)
@@ -1912,6 +1928,12 @@ void Optimizer::MergeGroupsVisitor::apply(osg::Switch &switchNode)
 {
     // We should keep all switch child nodes since they reflect different switch states.
     traverse(switchNode);
+}
+
+void Optimizer::MergeGroupsVisitor::apply(osg::Sequence &sequenceNode)
+{
+    // We should keep all sequence child nodes since they reflect different sequence states.
+    traverse(sequenceNode);
 }
 
 void Optimizer::MergeGroupsVisitor::apply(osg::Group &group)
@@ -1955,3 +1977,4 @@ void Optimizer::MergeGroupsVisitor::apply(osg::Group &group)
 }
 
 }
+// clang-format on

@@ -1,12 +1,14 @@
 #ifndef CSM_DOC_SAVING_H
 #define CSM_DOC_SAVING_H
 
-#include <boost/filesystem/path.hpp>
+#include <QObject>
 
 #include <components/to_utf8/to_utf8.hpp>
 
 #include "operation.hpp"
 #include "savingstate.hpp"
+
+#include <filesystem>
 
 namespace CSMDoc
 {
@@ -14,16 +16,13 @@ namespace CSMDoc
 
     class Saving : public Operation
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            Document& mDocument;
-            SavingState mState;
+        Document& mDocument;
+        SavingState mState;
 
-        public:
-
-            Saving (Document& document, const boost::filesystem::path& projectPath,
-                ToUTF8::FromType encoding);
-
+    public:
+        Saving(Document& document, const std::filesystem::path& projectPath, ToUTF8::FromType encoding);
     };
 }
 

@@ -1,17 +1,26 @@
 #ifndef CSV_WORLD_TABLE_H
 #define CSV_WORLD_TABLE_H
 
-#include <vector>
+#include <map>
+#include <memory>
 #include <string>
+#include <vector>
 
-#include <QEvent>
-
-#include "../../model/filter/node.hpp"
 #include "../../model/world/columnbase.hpp"
 #include "../../model/world/universalid.hpp"
 #include "dragrecordtable.hpp"
 
 class QAction;
+class QContextMenuEvent;
+class QDropEvent;
+class QModelIndex;
+class QMouseEvent;
+class QObject;
+
+namespace CSMFilter
+{
+    class Node;
+}
 
 namespace CSMDoc
 {
@@ -38,132 +47,137 @@ namespace CSVWorld
     ///< Table widget
     class Table : public DragRecordTable
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            enum DoubleClickAction
-            {
-                Action_None,
-                Action_InPlaceEdit,
-                Action_EditRecord,
-                Action_View,
-                Action_Revert,
-                Action_Delete,
-                Action_EditRecordAndClose,
-                Action_ViewAndClose
-            };
+        enum DoubleClickAction
+        {
+            Action_None,
+            Action_InPlaceEdit,
+            Action_EditRecord,
+            Action_View,
+            Action_Revert,
+            Action_Delete,
+            Action_EditRecordAndClose,
+            Action_ViewAndClose
+        };
 
-            std::vector<CommandDelegate *> mDelegates;
-            QAction *mEditAction;
-            QAction *mCreateAction;
-            QAction *mCloneAction;
-            QAction *mTouchAction;
-            QAction *mRevertAction;
-            QAction *mDeleteAction;
-            QAction *mMoveUpAction;
-            QAction *mMoveDownAction;
-            QAction *mViewAction;
-            QAction *mPreviewAction;
-            QAction *mExtendedDeleteAction;
-            QAction *mExtendedRevertAction;
-            QAction *mHelpAction;
-            TableEditIdAction *mEditIdAction;
-            CSMWorld::IdTableProxyModel *mProxyModel;
-            CSMWorld::IdTableBase *mModel;
-            int mRecordStatusDisplay;
-            CSMWorld::CommandDispatcher *mDispatcher;
-            std::map<Qt::KeyboardModifiers, DoubleClickAction> mDoubleClickActions;
-            bool mJumpToAddedRecord;
-            bool mUnselectAfterJump;
+        std::vector<CommandDelegate*> mDelegates;
+        QAction* mEditAction;
+        QAction* mCreateAction;
+        QAction* mCloneAction;
+        QAction* mTouchAction;
+        QAction* mRevertAction;
+        QAction* mDeleteAction;
+        QAction* mMoveUpAction;
+        QAction* mMoveDownAction;
+        QAction* mViewAction;
+        QAction* mPreviewAction;
+        QAction* mExtendedDeleteAction;
+        QAction* mExtendedRevertAction;
+        QAction* mHelpAction;
+        TableEditIdAction* mEditIdAction;
+        CSMWorld::IdTableProxyModel* mProxyModel;
+        CSMWorld::IdTableBase* mModel;
+        int mRecordStatusDisplay;
+        CSMWorld::CommandDispatcher* mDispatcher;
+        std::map<Qt::KeyboardModifiers, DoubleClickAction> mDoubleClickActions;
+        bool mJumpToAddedRecord;
+        bool mUnselectAfterJump;
+        bool mAutoJump;
 
-        private:
+    private:
+        void contextMenuEvent(QContextMenuEvent* event) override;
 
-            void contextMenuEvent (QContextMenuEvent *event) override;
+        void mouseMoveEvent(QMouseEvent* event) override;
 
-            void mouseMoveEvent(QMouseEvent *event) override;
+    protected:
+        void mouseDoubleClickEvent(QMouseEvent* event) override;
 
-        protected:
+    public:
+        Table(const CSMWorld::UniversalId& id, bool createAndDelete, bool sorting, CSMDoc::Document& document);
+        ///< \param createAndDelete Allow creation and deletion of records.
+        /// \param sorting Allow changing order of rows in the view via column headers.
 
-            void mouseDoubleClickEvent (QMouseEvent *event) override;
+        virtual void setEditLock(bool locked);
 
-        public:
+        CSMWorld::UniversalId getUniversalId(int row) const;
 
-            Table (const CSMWorld::UniversalId& id, bool createAndDelete,
-                bool sorting, CSMDoc::Document& document);
-            ///< \param createAndDelete Allow creation and deletion of records.
-            /// \param sorting Allow changing order of rows in the view via column headers.
+        std::vector<std::string> getColumnsWithDisplay(CSMWorld::ColumnBase::Display display) const;
 
-            virtual void setEditLock (bool locked);
+        std::vector<std::string> getSelectedIds() const;
 
-            CSMWorld::UniversalId getUniversalId (int row) const;
+        std::vector<CSMWorld::UniversalId> getDraggedRecords() const override;
 
-            std::vector<std::string> getColumnsWithDisplay(CSMWorld::ColumnBase::Display display) const;
+    signals:
 
-            std::vector<std::string> getSelectedIds() const;
+        void editRequest(const CSMWorld::UniversalId& id, const std::string& hint);
 
-            std::vector<CSMWorld::UniversalId> getDraggedRecords() const override;
+        void selectionSizeChanged(int size);
 
-        signals:
+        void tableSizeChanged(int size, int deleted, int modified);
+        ///< \param size Number of not deleted records
+        /// \param deleted Number of deleted records
+        /// \param modified Number of added and modified records
 
-            void editRequest (const CSMWorld::UniversalId& id, const std::string& hint);
+        void createRequest();
 
-            void selectionSizeChanged (int size);
+        void createRecordsDirectlyRequest(const std::string& id);
 
-            void tableSizeChanged (int size, int deleted, int modified);
-            ///< \param size Number of not deleted records
-            /// \param deleted Number of deleted records
-            /// \param modified Number of added and modified records
+        void cloneRequest(const CSMWorld::UniversalId&);
 
-            void createRequest();
+        void touchRequest(const std::vector<CSMWorld::UniversalId>& ids);
 
-            void cloneRequest(const CSMWorld::UniversalId&);
+        void closeRequest();
 
-            void touchRequest(const std::vector<CSMWorld::UniversalId>& ids);
+        void extendedDeleteConfigRequest(const std::vector<std::string>& selectedIds);
 
-            void closeRequest();
+        void extendedRevertConfigRequest(const std::vector<std::string>& selectedIds);
 
-            void extendedDeleteConfigRequest(const std::vector<std::string> &selectedIds);
+    private slots:
 
-            void extendedRevertConfigRequest(const std::vector<std::string> &selectedIds);
+        void editCell();
 
-        private slots:
+        static void openHelp();
 
-            void editCell();
+        void editRecord();
 
-            static void openHelp();
+        void cloneRecord();
 
-            void editRecord();
+        void touchRecord();
 
-            void cloneRecord();
+        void moveUpRecord();
 
-            void touchRecord();
+        void moveDownRecord();
 
-            void moveUpRecord();
+        void moveRecords(QDropEvent* event);
 
-            void moveDownRecord();
+        void viewRecord();
 
-            void moveRecords(QDropEvent *event);
+        void previewRecord();
 
-            void viewRecord();
+        void executeExtendedDelete();
 
-            void previewRecord();
+        void executeExtendedRevert();
 
-            void executeExtendedDelete();
+    public slots:
 
-            void executeExtendedRevert();
+        void settingChanged(const CSMPrefs::Setting* setting);
 
-        public slots:
+        void tableSizeUpdate();
 
-            void settingChanged (const CSMPrefs::Setting *setting);
+        void selectionSizeUpdate();
 
-            void tableSizeUpdate();
+        void requestFocus(const std::string& id);
 
-            void selectionSizeUpdate();
+        void recordFilterChanged(std::shared_ptr<CSMFilter::Node> filter);
 
-            void requestFocus (const std::string& id);
+        void rowAdded(const std::string& id);
 
-            void recordFilterChanged (std::shared_ptr<CSMFilter::Node> filter);
+        void dataChangedEvent(const QModelIndex& topLeft, const QModelIndex& bottomRight);
 
-            void rowAdded(const std::string &id);
+        void jumpAfterModChanged(int state);
+
+        void queuedScrollTo(int state);
     };
 }
 

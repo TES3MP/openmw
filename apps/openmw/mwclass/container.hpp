@@ -1,9 +1,9 @@
 #ifndef GAME_MWCLASS_CONTAINER_H
 #define GAME_MWCLASS_CONTAINER_H
 
-#include "../mwworld/class.hpp"
 #include "../mwworld/containerstore.hpp"
 #include "../mwworld/customdata.hpp"
+#include "../mwworld/registeredclass.hpp"
 
 namespace ESM
 {
@@ -16,6 +16,7 @@ namespace MWClass
     class ContainerCustomData : public MWWorld::TypedCustomData<ContainerCustomData>
     {
         MWWorld::ContainerStore mStore;
+
     public:
         ContainerCustomData(const ESM::Container& container, MWWorld::CellStore* cell);
         ContainerCustomData(const ESM::InventoryState& inventory);
@@ -26,79 +27,79 @@ namespace MWClass
         friend class Container;
     };
 
-    class Container : public MWWorld::Class
+    class Container : public MWWorld::RegisteredClass<Container>
     {
-            bool mHarvestEnabled;
+        friend MWWorld::RegisteredClass<Container>;
 
-            void ensureCustomData (const MWWorld::Ptr& ptr) const;
+        Container();
 
-            MWWorld::Ptr copyToCellImpl(const MWWorld::ConstPtr &ptr, MWWorld::CellStore &cell) const override;
+        void ensureCustomData(const MWWorld::Ptr& ptr) const;
 
-            bool canBeHarvested(const MWWorld::ConstPtr& ptr) const;
+        MWWorld::Ptr copyToCellImpl(const MWWorld::ConstPtr& ptr, MWWorld::CellStore& cell) const override;
 
-        public:
-            Container();
+        bool canBeHarvested(const MWWorld::ConstPtr& ptr) const;
 
-            void insertObjectRendering (const MWWorld::Ptr& ptr, const std::string& model, MWRender::RenderingInterface& renderingInterface) const override;
-            ///< Add reference into a cell for rendering
+    public:
+        void insertObjectRendering(const MWWorld::Ptr& ptr, const std::string& model,
+            MWRender::RenderingInterface& renderingInterface) const override;
+        ///< Add reference into a cell for rendering
 
-            void insertObject(const MWWorld::Ptr& ptr, const std::string& model, MWPhysics::PhysicsSystem& physics) const override;
+        void insertObject(const MWWorld::Ptr& ptr, const std::string& model, const osg::Quat& rotation,
+            MWPhysics::PhysicsSystem& physics) const override;
+        void insertObjectPhysics(const MWWorld::Ptr& ptr, const std::string& model, const osg::Quat& rotation,
+            MWPhysics::PhysicsSystem& physics) const override;
 
-            std::string getName (const MWWorld::ConstPtr& ptr) const override;
-            ///< \return name or ID; can return an empty string.
+        std::string_view getName(const MWWorld::ConstPtr& ptr) const override;
+        ///< \return name or ID; can return an empty string.
 
-            std::shared_ptr<MWWorld::Action> activate (const MWWorld::Ptr& ptr,
-                const MWWorld::Ptr& actor) const override;
-            ///< Generate action for activation
+        std::unique_ptr<MWWorld::Action> activate(const MWWorld::Ptr& ptr, const MWWorld::Ptr& actor) const override;
+        ///< Generate action for activation
 
-            bool hasToolTip (const MWWorld::ConstPtr& ptr) const override;
-            ///< @return true if this object has a tooltip when focused (default implementation: true)
+        bool hasToolTip(const MWWorld::ConstPtr& ptr) const override;
+        ///< @return true if this object has a tooltip when focused (default implementation: true)
 
-            MWGui::ToolTipInfo getToolTipInfo (const MWWorld::ConstPtr& ptr, int count) const override;
-            ///< @return the content of the tool tip to be displayed. raises exception if the object has no tooltip.
+        MWGui::ToolTipInfo getToolTipInfo(const MWWorld::ConstPtr& ptr, int count) const override;
+        ///< @return the content of the tool tip to be displayed. raises exception if the object has no tooltip.
 
-            MWWorld::ContainerStore& getContainerStore (const MWWorld::Ptr& ptr) const override;
-            ///< Return container store
+        MWWorld::ContainerStore& getContainerStore(const MWWorld::Ptr& ptr) const override;
+        ///< Return container store
 
-            /*
-                Start of tes3mp addition
+        /*
+            Start of tes3mp addition
 
-                Make it possible to check whether a class has a container store
-            */
-            virtual bool hasContainerStore(const MWWorld::Ptr &ptr) const { return true; }
-            /*
-                End of tes3mp addition
-            */
+            Make it possible to check whether a class has a container store
+        */
+        virtual bool hasContainerStore(const MWWorld::Ptr &ptr) const { return true; }
+        /*
+            End of tes3mp addition
+        */
 
-            std::string getScript (const MWWorld::ConstPtr& ptr) const override;
-            ///< Return name of the script attached to ptr
+        ESM::RefId getScript(const MWWorld::ConstPtr& ptr) const override;
+        ///< Return name of the script attached to ptr
 
-            float getCapacity (const MWWorld::Ptr& ptr) const override;
-            ///< Return total weight that fits into the object. Throws an exception, if the object can't
-            /// hold other objects.
+        float getCapacity(const MWWorld::Ptr& ptr) const override;
+        ///< Return total weight that fits into the object. Throws an exception, if the object can't
+        /// hold other objects.
 
-            float getEncumbrance (const MWWorld::Ptr& ptr) const override;
-            ///< Returns total weight of objects inside this object (including modifications from magic
-            /// effects). Throws an exception, if the object can't hold other objects.
+        float getEncumbrance(const MWWorld::Ptr& ptr) const override;
+        ///< Returns total weight of objects inside this object (including modifications from magic
+        /// effects). Throws an exception, if the object can't hold other objects.
 
-            bool canLock(const MWWorld::ConstPtr &ptr) const override;
+        bool canLock(const MWWorld::ConstPtr& ptr) const override;
 
-            void readAdditionalState (const MWWorld::Ptr& ptr, const ESM::ObjectState& state)
-                const override;
-            ///< Read additional state from \a state into \a ptr.
+        void readAdditionalState(const MWWorld::Ptr& ptr, const ESM::ObjectState& state) const override;
+        ///< Read additional state from \a state into \a ptr.
 
-            void writeAdditionalState (const MWWorld::ConstPtr& ptr, ESM::ObjectState& state) const override;
-            ///< Write additional state from \a ptr into \a state.
+        void writeAdditionalState(const MWWorld::ConstPtr& ptr, ESM::ObjectState& state) const override;
+        ///< Write additional state from \a ptr into \a state.
 
-            static void registerSelf();
+        void respawn(const MWWorld::Ptr& ptr) const override;
 
-            void respawn (const MWWorld::Ptr& ptr) const override;
+        std::string getModel(const MWWorld::ConstPtr& ptr) const override;
 
-            std::string getModel(const MWWorld::ConstPtr &ptr) const override;
+        bool useAnim() const override;
 
-            bool useAnim() const override;
-
-            void modifyBaseInventory(const std::string& containerId, const std::string& itemId, int amount) const override;
+        void modifyBaseInventory(const ESM::RefId& containerId, const ESM::RefId& itemId, int amount) const override;
     };
 }
 

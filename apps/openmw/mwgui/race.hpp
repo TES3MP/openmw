@@ -1,11 +1,9 @@
 #ifndef MWGUI_RACE_H
 #define MWGUI_RACE_H
 
-#include <memory>
-
 #include "windowbase.hpp"
-#include <MyGUI_RenderManager.h>
-
+#include <components/esm/refid.hpp>
+#include <memory>
 
 namespace MWRender
 {
@@ -40,11 +38,11 @@ namespace MWGui
             GM_Female
         };
 
-        const ESM::NPC &getResult() const;
-        const std::string &getRaceId() const { return mCurrentRaceId; }
+        const ESM::NPC& getResult() const;
+        const ESM::RefId& getRaceId() const { return mCurrentRaceId; }
         Gender getGender() const { return mGenderIndex == 0 ? GM_Male : GM_Female; }
 
-        void setRaceId(const std::string &raceId);
+        void setRaceId(const ESM::RefId& raceId);
         void setGender(Gender gender) { mGenderIndex = gender == GM_Male ? 0 : 1; }
 
         void setNextButtonShow(bool shown);
@@ -67,6 +65,7 @@ namespace MWGui
         EventHandle_WindowBase eventDone;
 
     protected:
+        void onPreviewScroll(MyGUI::Widget* _sender, int _delta);
         void onHeadRotate(MyGUI::ScrollBar* _sender, size_t _position);
 
         void onSelectPreviousGender(MyGUI::Widget* _sender);
@@ -91,16 +90,16 @@ namespace MWGui
         void updatePreview();
         void recountParts();
 
-        void getBodyParts (int part, std::vector<std::string>& out);
+        void getBodyParts(int part, std::vector<ESM::RefId>& out);
 
         osg::Group* mParent;
         Resource::ResourceSystem* mResourceSystem;
 
-        std::vector<std::string> mAvailableHeads;
-        std::vector<std::string> mAvailableHairs;
+        std::vector<ESM::RefId> mAvailableHeads;
+        std::vector<ESM::RefId> mAvailableHairs;
 
-        MyGUI::ImageBox*  mPreviewImage;
-        MyGUI::ListBox*   mRaceList;
+        MyGUI::ImageBox* mPreviewImage;
+        MyGUI::ListBox* mRaceList;
         MyGUI::ScrollBar* mHeadRotate;
 
         MyGUI::Widget* mSkillList;
@@ -111,7 +110,7 @@ namespace MWGui
 
         int mGenderIndex, mFaceIndex, mHairIndex;
 
-        std::string mCurrentRaceId;
+        ESM::RefId mCurrentRaceId;
 
         float mCurrentAngle;
 

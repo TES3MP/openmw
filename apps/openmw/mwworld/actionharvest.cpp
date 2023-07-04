@@ -4,6 +4,7 @@
 
 #include <MyGUI_LanguageManager.h>
 
+<<<<<<< HEAD
 /*
     Start of tes3mp addition
 
@@ -18,6 +19,9 @@
 */
 
 #include <components/misc/stringops.hpp>
+=======
+#include <components/misc/strings/format.hpp>
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/mechanicsmanager.hpp"
@@ -29,18 +33,19 @@
 
 namespace MWWorld
 {
-    ActionHarvest::ActionHarvest (const MWWorld::Ptr& container)
-        : Action (true, container)
+    ActionHarvest::ActionHarvest(const MWWorld::Ptr& container)
+        : Action(true, container)
     {
-        setSound("Item Ingredient Up");
+        setSound(ESM::RefId::stringRefId("Item Ingredient Up"));
     }
 
-    void ActionHarvest::executeImp (const MWWorld::Ptr& actor)
+    void ActionHarvest::executeImp(const MWWorld::Ptr& actor)
     {
         if (!MWBase::Environment::get().getWindowManager()->isAllowed(MWGui::GW_Inventory))
             return;
 
         MWWorld::Ptr target = getTarget();
+<<<<<<< HEAD
 
         /*
             Start of tes3mp addition
@@ -61,6 +66,9 @@ namespace MWWorld
         */
 
         MWWorld::ContainerStore& store = target.getClass().getContainerStore (target);
+=======
+        MWWorld::ContainerStore& store = target.getClass().getContainerStore(target);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         store.resolve();
         MWWorld::ContainerStore& actorStore = actor.getClass().getContainerStore(actor);
         std::map<std::string, int> takenMap;
@@ -70,9 +78,11 @@ namespace MWWorld
                 continue;
 
             int itemCount = it->getRefData().getCount();
-            // Note: it is important to check for crime before move an item from container. Otherwise owner check will not work
-            // for a last item in the container - empty harvested containers are considered as "allowed to use".
+            // Note: it is important to check for crime before move an item from container. Otherwise owner check will
+            // not work for a last item in the container - empty harvested containers are considered as "allowed to
+            // use".
             MWBase::Environment::get().getMechanicsManager()->itemTaken(actor, *it, target, itemCount);
+<<<<<<< HEAD
             actorStore.add(*it, itemCount, actor);
 
             /*
@@ -87,6 +97,12 @@ namespace MWWorld
 
             store.remove(*it, itemCount, getTarget());
             takenMap[it->getClass().getName(*it)]+=itemCount;
+=======
+            actorStore.add(*it, itemCount);
+            store.remove(*it, itemCount);
+            std::string name{ it->getClass().getName(*it) };
+            takenMap[name] += itemCount;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         }
 
         /*
@@ -109,9 +125,9 @@ namespace MWWorld
             std::ostringstream stream;
             int lineCount = 0;
             const static int maxLines = 10;
-            for (auto & pair : takenMap)
+            for (const auto& pair : takenMap)
             {
-                std::string itemName = pair.first;
+                const std::string& itemName = pair.first;
                 int itemCount = pair.second;
                 lineCount++;
                 if (lineCount == maxLines)
@@ -119,7 +135,8 @@ namespace MWWorld
                 else if (lineCount > maxLines)
                     break;
 
-                // The two GMST entries below expand to strings informing the player of what, and how many of it has been added to their inventory
+                // The two GMST entries below expand to strings informing the player of what, and how many of it has
+                // been added to their inventory
                 std::string msgBox;
                 if (itemCount == 1)
                 {

@@ -1,5 +1,7 @@
 #include "niffilemanager.hpp"
 
+#include <iostream>
+
 #include <osg/Object>
 #include <osg/Stats>
 
@@ -22,41 +24,37 @@ namespace Resource
         {
         }
 
-        NifFileHolder()
-        {
-        }
+        NifFileHolder() {}
 
         META_Object(Resource, NifFileHolder)
 
         Nif::NIFFilePtr mNifFile;
     };
 
-    NifFileManager::NifFileManager(const VFS::Manager *vfs)
+    NifFileManager::NifFileManager(const VFS::Manager* vfs)
         : ResourceManager(vfs)
     {
     }
 
-    NifFileManager::~NifFileManager()
-    {
+    NifFileManager::~NifFileManager() {}
 
-    }
-
-
-    Nif::NIFFilePtr NifFileManager::get(const std::string &name)
+    Nif::NIFFilePtr NifFileManager::get(const std::string& name)
     {
         osg::ref_ptr<osg::Object> obj = mCache->getRefFromObjectCache(name);
         if (obj)
             return static_cast<NifFileHolder*>(obj.get())->mNifFile;
         else
         {
-            Nif::NIFFilePtr file (new Nif::NIFFile(mVFS->get(name), name));
+            auto file = std::make_shared<Nif::NIFFile>(name);
+            Nif::Reader reader(*file);
+            reader.parse(mVFS->get(name));
             obj = new NifFileHolder(file);
             mCache->addEntryToObjectCache(name, obj);
             return file;
         }
     }
 
-    void NifFileManager::reportStats(unsigned int frameNumber, osg::Stats *stats) const
+    void NifFileManager::reportStats(unsigned int frameNumber, osg::Stats* stats) const
     {
         stats->setAttribute(frameNumber, "Nif", mCache->getCacheSize());
     }

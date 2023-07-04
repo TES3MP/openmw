@@ -2,7 +2,7 @@
 #define OPENMW_GUI_SPELLMODEL_H
 
 #include "../mwworld/ptr.hpp"
-#include <components/esm/effectlist.hpp>
+#include <components/esm3/effectlist.hpp>
 
 namespace MWGui
 {
@@ -19,7 +19,7 @@ namespace MWGui
         Type mType;
         std::string mName;
         std::string mCostColumn; // Cost/chance or Cost/charge
-        std::string mId; // Item ID or spell ID
+        ESM::RefId mId; // Item ID or spell ID
         MWWorld::Ptr mItem; // Only for Type_EnchantedItem
         int mCount; // Only for Type_EnchantedItem
         bool mSelected; // Is this the currently selected spell/item (only one can be selected at a time)
@@ -45,7 +45,7 @@ namespace MWGui
 
         void update();
 
-        Spell getItem (ModelIndex index) const;
+        Spell getItem(ModelIndex index) const;
         ///< throws for invalid index
 
         size_t getItemCount() const;
@@ -59,7 +59,7 @@ namespace MWGui
 
         std::string mFilter;
 
-        bool matchingEffectExists(std::string filter, const ESM::EffectList &effects);
+        bool matchingEffectExists(std::string filter, const ESM::EffectList& effects);
     };
 
 }

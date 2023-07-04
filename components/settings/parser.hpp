@@ -3,6 +3,7 @@
 
 #include "categories.hpp"
 
+#include <filesystem>
 #include <string>
 
 namespace Settings
@@ -10,9 +11,10 @@ namespace Settings
     class SettingsFileParser
     {
     public:
-        void loadSettingsFile(const std::string& file, CategorySettingValueMap& settings, bool base64encoded = false);
+        void loadSettingsFile(const std::filesystem::path& file, CategorySettingValueMap& settings,
+            bool base64Encoded = false, bool overrideExisting = false);
 
-        void saveSettingsFile(const std::string& file, const CategorySettingValueMap& settings);
+        void saveSettingsFile(const std::filesystem::path& file, const CategorySettingValueMap& settings);
 
     private:
         /// Increment i until it longer points to a whitespace character
@@ -20,9 +22,9 @@ namespace Settings
         /// @return false if we have reached the end of the string
         bool skipWhiteSpace(size_t& i, std::string& str);
 
-        void fail(const std::string& message);
+        [[noreturn]] void fail(const std::string& message);
 
-        std::string mFile;
+        std::filesystem::path mFile;
         int mLine = 0;
     };
 }

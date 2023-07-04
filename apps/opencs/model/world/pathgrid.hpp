@@ -1,15 +1,20 @@
 #ifndef CSM_WOLRD_PATHGRID_H
 #define CSM_WOLRD_PATHGRID_H
 
-#include <vector>
 #include <string>
 
-#include <components/esm/loadpgrd.hpp>
+#include <components/esm/refid.hpp>
+#include <components/esm3/loadpgrd.hpp>
+
+namespace ESM
+{
+    class ESMReader;
+}
 
 namespace CSMWorld
 {
     struct Cell;
-    template<typename T, typename AT>
+    template <typename T>
     class IdCollection;
 
     /// \brief Wrapper for Pathgrid record
@@ -18,10 +23,10 @@ namespace CSMWorld
     /// Exterior cell coordinates are encoded in the pathgrid ID.
     struct Pathgrid : public ESM::Pathgrid
     {
-        std::string mId;
+        ESM::RefId mId;
 
-        void load (ESM::ESMReader &esm, bool &isDeleted, const IdCollection<Cell>& cells);
-        void load (ESM::ESMReader &esm, bool &isDeleted);
+        void load(ESM::ESMReader& esm, bool& isDeleted, const IdCollection<Cell>& cells);
+        void load(ESM::ESMReader& esm, bool& isDeleted);
     };
 }
 

@@ -1,10 +1,10 @@
 #ifndef MWGUI_TRAININGWINDOW_H
 #define MWGUI_TRAININGWINDOW_H
 
-#include "windowbase.hpp"
 #include "referenceinterface.hpp"
 #include "timeadvancer.hpp"
 #include "waitdialog.hpp"
+#include "windowbase.hpp"
 
 namespace MWMechanics
 {
@@ -34,7 +34,7 @@ namespace MWGui
     protected:
         void onReferenceUnavailable() override;
 
-        void onCancelButtonClicked (MyGUI::Widget* sender);
+        void onCancelButtonClicked(MyGUI::Widget* sender);
         void onTrainingSelected(MyGUI::Widget* sender);
 
         void onTrainingProgressChanged(int cur, int total);
@@ -42,7 +42,7 @@ namespace MWGui
 
         // Retrieve the base skill value if the setting 'training skills based on base skill' is set;
         // otherwise returns the modified skill
-        float getSkillForTraining(const MWMechanics::NpcStats& stats, int skillId) const;
+        float getSkillForTraining(const MWMechanics::NpcStats& stats, ESM::RefId id) const;
 
         MyGUI::Widget* mTrainingOptions;
         MyGUI::Button* mCancelButton;
@@ -50,7 +50,6 @@ namespace MWGui
 
         WaitDialogProgressBar mProgressBar;
         TimeAdvancer mTimeAdvancer;
-        bool mTrainingSkillBasedOnBaseSkill;    //corresponds to the setting 'training skills based on base skill'
     };
 
 }

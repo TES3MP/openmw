@@ -2,9 +2,8 @@
 #define CSM_WOLRD_COLUMNS_H
 
 #include <string>
+#include <utility>
 #include <vector>
-
-#include "columnbase.hpp"
 
 namespace CSMWorld
 {
@@ -280,7 +279,7 @@ namespace CSMWorld
             ColumnId_NpcReputation = 258,
             ColumnId_NpcRank = 259,
             ColumnId_Gold = 260,
-            ColumnId_NpcPersistence = 261,
+            // unused
 
             ColumnId_RaceAttributes = 262,
             ColumnId_Male = 263,
@@ -343,6 +342,11 @@ namespace CSMWorld
             ColumnId_FactionAttrib1 = 311,
             ColumnId_FactionAttrib2 = 312,
 
+            ColumnId_Persistent = 313,
+            ColumnId_Blocked = 314,
+
+            ColumnId_LevelledCreatureId = 315,
+
             // Allocated to a separate value range, so we don't get a collision should we ever need
             // to extend the number of use values.
             ColumnId_UseValue1 = 0x10000,
@@ -380,14 +384,14 @@ namespace CSMWorld
             ColumnId_Skill7 = 0x50006
         };
 
-        std::string getName (ColumnId column);
+        std::string getName(ColumnId column);
 
-        int getId (const std::string& name);
+        int getId(const std::string& name);
         ///< Will return -1 for an invalid name.
 
-        bool hasEnums (ColumnId column);
+        bool hasEnums(ColumnId column);
 
-        std::vector<std::pair<int,std::string>> getEnums (ColumnId column);
+        std::vector<std::pair<int, std::string>> getEnums(ColumnId column);
         ///< Returns an empty vector, if \a column isn't an enum type column.
     }
 }

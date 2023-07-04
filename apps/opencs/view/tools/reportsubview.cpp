@@ -2,27 +2,32 @@
 
 #include "reporttable.hpp"
 
-CSVTools::ReportSubView::ReportSubView (const CSMWorld::UniversalId& id, CSMDoc::Document& document)
-: CSVDoc::SubView (id), mDocument (document), mRefreshState (0)
+#include <apps/opencs/view/doc/subview.hpp>
+
+#include "../../model/doc/document.hpp"
+#include "../../model/doc/state.hpp"
+
+CSVTools::ReportSubView::ReportSubView(const CSMWorld::UniversalId& id, CSMDoc::Document& document)
+    : CSVDoc::SubView(id)
+    , mDocument(document)
+    , mRefreshState(0)
 {
-    if (id.getType()==CSMWorld::UniversalId::Type_VerificationResults)
+    if (id.getType() == CSMWorld::UniversalId::Type_VerificationResults)
         mRefreshState = CSMDoc::State_Verifying;
 
-    setWidget (mTable = new ReportTable (document, id, false, mRefreshState, this));
+    setWidget(mTable = new ReportTable(document, id, false, mRefreshState, this));
 
-    connect (mTable, SIGNAL (editRequest (const CSMWorld::UniversalId&, const std::string&)),
-        SIGNAL (focusId (const CSMWorld::UniversalId&, const std::string&)));
+    connect(mTable, &ReportTable::editRequest, this, &ReportSubView::focusId);
 
-    if (mRefreshState==CSMDoc::State_Verifying)
+    if (mRefreshState == CSMDoc::State_Verifying)
     {
-        connect (mTable, SIGNAL (refreshRequest()), this, SLOT (refreshRequest()));
+        connect(mTable, &ReportTable::refreshRequest, this, &ReportSubView::refreshRequest);
 
-        connect (&document, SIGNAL (stateChanged (int, CSMDoc::Document *)),
-            mTable, SLOT (stateChanged (int, CSMDoc::Document *)));
+        connect(&document, &CSMDoc::Document::stateChanged, mTable, &ReportTable::stateChanged);
     }
 }
 
-void CSVTools::ReportSubView::setEditLock (bool locked)
+void CSVTools::ReportSubView::setEditLock(bool locked)
 {
     // ignored. We don't change document state anyway.
 }
@@ -31,10 +36,10 @@ void CSVTools::ReportSubView::refreshRequest()
 {
     if (!(mDocument.getState() & mRefreshState))
     {
-        if (mRefreshState==CSMDoc::State_Verifying)
+        if (mRefreshState == CSMDoc::State_Verifying)
         {
             mTable->clear();
-            mDocument.verify (getUniversalId());
+            mDocument.verify(getUniversalId());
         }
     }
 }

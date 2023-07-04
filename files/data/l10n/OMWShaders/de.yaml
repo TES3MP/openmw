@@ -1,0 +1,34 @@
+# Post-processing HUD
+
+Abovewater: "Überwasser"
+ActiveShaders: "Aktive Shader"
+Author: "Autor"
+Description: "Beschreibung"
+InactiveShaders: "Inaktive Shader"
+InExteriors: "Außenbereich"
+InInteriors: "Innenbereich"
+KeyboardControls: |
+    Tastatursteuerung::
+
+    Shift+Pfeil-Rechts > Aktiviere Shader
+    Shift+Pfeil-Links > Deaktiviere Shader
+    Shift+Pfeil-Hoch > Verschiebe Shader nach oben
+    Shift+Pfeil-Runter > Verschiebe Shader nach unten
+PostProcessHUD: "Nachbearbeitungs HUD"
+ResetShader: "Setze Shader auf Standardzustand zurück"
+ShaderLocked: "Verschlossen"
+ShaderLockedDescription: "Kann nicht umgeschaltet oder verschoben werden, gesteuert durch externes Lua-Skript"
+ShaderResetUniform: "r"
+Underwater: "Unterwasser"
+Version: "Version"
+
+
+# Built-in post-processing shaders
+
+DisplayDepthName: "Visualisiert den Tiefenpuffer."
+DisplayDepthFactorDescription: "Bestimmt die Korrelation zwischen dem Pixeltiefenwert und seiner Ausgabefarbe. Hohe Werte führen zu einem helleren Bild."
+DisplayDepthFactorName: "Farbfaktor"
+ContrastLevelDescription: "Kontraststufe"
+ContrastLevelName: "Kontrast"
+GammaLevelDescription: "Gamma-Level"
+GammaLevelName: "Gamma"

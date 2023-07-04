@@ -1,9 +1,10 @@
 #ifndef CSV_WORLD_NESTEDTABLE_H
 #define CSV_WORLD_NESTEDTABLE_H
 
-#include <QEvent>
-
 #include "dragrecordtable.hpp"
+
+#include <string>
+#include <vector>
 
 class QAction;
 class QContextMenuEvent;
@@ -28,24 +29,20 @@ namespace CSVWorld
     {
         Q_OBJECT
 
-        QAction *mAddNewRowAction;
-        QAction *mRemoveRowAction;
-        TableEditIdAction *mEditIdAction;
+        QAction* mAddNewRowAction;
+        QAction* mRemoveRowAction;
+        TableEditIdAction* mEditIdAction;
         CSMWorld::NestedTableProxyModel* mModel;
-        CSMWorld::CommandDispatcher *mDispatcher;
+        CSMWorld::CommandDispatcher* mDispatcher;
 
     public:
-        NestedTable(CSMDoc::Document& document,
-                    CSMWorld::UniversalId id,
-                    CSMWorld::NestedTableProxyModel* model,
-                    QWidget* parent = nullptr,
-                    bool editable = true,
-                    bool fixedRows = false);
+        NestedTable(CSMDoc::Document& document, CSMWorld::UniversalId id, CSMWorld::NestedTableProxyModel* model,
+            QWidget* parent = nullptr, bool editable = true, bool fixedRows = false);
 
         std::vector<CSMWorld::UniversalId> getDraggedRecords() const override;
 
     private:
-        void contextMenuEvent (QContextMenuEvent *event) override;
+        void contextMenuEvent(QContextMenuEvent* event) override;
 
     private slots:
         void removeRowActionTriggered();
@@ -55,7 +52,7 @@ namespace CSVWorld
         void editCell();
 
     signals:
-        void editRequest(const CSMWorld::UniversalId &id, const std::string &hint);
+        void editRequest(const CSMWorld::UniversalId& id, const std::string& hint);
     };
 }
 

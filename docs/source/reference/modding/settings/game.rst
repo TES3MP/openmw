@@ -16,7 +16,7 @@ If the setting is 2, the crosshair is the colour of the colour crosshair owned s
 If the setting is 3, both the tool tip background and the crosshair are coloured.
 The crosshair is not visible if crosshair is false.
 
-This setting can be configured in Advanced tab of the launcher.
+This setting can be configured in the Settings tab of the launcher.
 
 show projectile damage
 ----------------------
@@ -27,7 +27,7 @@ show projectile damage
 
 If this setting is true, the damage bonus of arrows and bolts will show on their tooltip.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 show melee info
 ---------------
@@ -38,7 +38,7 @@ show melee info
 
 If this setting is true, the reach and speed of weapons will show on their tooltip.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 show enchant chance
 -------------------
@@ -49,7 +49,7 @@ show enchant chance
 
 Whether or not the chance of success will be displayed in the enchanting menu.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 best attack
 -----------
@@ -78,7 +78,7 @@ If this setting is false, player has to wait until end of death animation in all
 Makes using of summoned creatures exploit (looting summoned Dremoras and Golden Saints for expensive weapons) a lot harder.
 Conflicts with mannequin mods, which use SkipAnim to prevent end of death animation.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 difficulty
 ----------
@@ -123,7 +123,21 @@ and the caster will absorb their own stat resulting in no effect on either the c
 This makes the gameplay as a mage easier, but these spells become imbalanced.
 This is how Morrowind behaves.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
+
+classic calm spells behavior
+----------------------------------------
+
+:Type:		boolean
+:Range: 	True/False
+:Default:	True
+
+If this setting is true, Calm spells will take their target out of combat every frame.
+This means that a Calm spell of any magnitude will always take actors out of combat for the entirety of its duration.
+This is how Morrowind behaves without the Morrowind Code Patch. If this setting is off,
+Calm spells will only take their target out of combat once. Allowing them to re-engage if the spell was not sufficiently strong.
+
+This setting can be toggled in the Settings tab of the launcher.
 
 use magic item animations
 -------------------------
@@ -147,7 +161,7 @@ show effect duration
 Show the remaining duration of magic effects and lights if this setting is true.
 The remaining duration is displayed in the tooltip by hovering over the magical effect.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 enchanted weapons are magical
 -----------------------------
@@ -159,7 +173,7 @@ enchanted weapons are magical
 Make enchanted weapons without Magical flag bypass normal weapons resistance (and weakness) certain creatures have.
 This is how Morrowind behaves.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 prevent merchant equipping
 --------------------------
@@ -170,7 +184,7 @@ prevent merchant equipping
 
 Prevent merchants from equipping items that are sold to them.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 followers attack on sight
 -------------------------
@@ -182,7 +196,7 @@ followers attack on sight
 Make player followers and escorters start combat with enemies who have started combat with them or the player.
 Otherwise they wait for the enemies or the player to do an attack first.
 Please note this setting has not been extensively tested and could have side effects with certain quests.
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 shield sheathing
 ----------------
@@ -237,7 +251,7 @@ If this setting is true,
 disposition change of merchants caused by trading will be permanent and won't be discarded upon exiting dialogue with them.
 This imitates the option that Morrowind Code Patch offers.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 only appropriate ammunition bypasses resistance
 -----------------------------------------------
@@ -250,7 +264,7 @@ If this setting is true, you will have to use the appropriate ammunition to bypa
 An enchanted bow with chitin arrows will no longer be enough for the purpose, while a steel longbow with glass arrows will still work.
 This was previously the default engine behavior that diverged from Morrowind design.
 
-This setting can be toggled in Advanced tab of the launcher.
+This setting can be toggled in the Settings tab of the launcher.
 
 strength influences hand to hand
 --------------------------------
@@ -266,7 +280,7 @@ Morrowind Code Patch uses for its equivalent feature: damage is multiplied by it
 1: Strength attribute is factored in damage from any actor
 2: Strength attribute is factored in damage from any actor except werewolves
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 normalise race speed
 --------------------
@@ -275,13 +289,13 @@ normalise race speed
 :Range:		True/False
 :Default:	False
 
-By default race weight is factored into horizontal movement speed like in Morrowind.
+By default race weight is factored into horizontal movement and magic projectile speed like in Morrowind.
 For example, an NPC which has 1.2 race weight is faster than an NPC with the exact same stats and weight 1.0 by a factor of 120%.
 If this setting is true, race weight is ignored in the calculations which allows for a movement behavior
 equivalent to the one introduced by the equivalent Morrowind Code Patch feature.
 This makes the movement speed behavior more fair between different races.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 projectiles enchant multiplier
 ------------------------------
@@ -314,7 +328,7 @@ Morrowind Code Patch adds an option to make it possible for Damage Fatigue spell
 Setting the value of this setting to true will remove the 0 lower cap from the value,
 allowing Damage Fatigue to reduce Fatigue to a value below zero.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 turn to movement direction
 --------------------------
@@ -329,7 +343,7 @@ If disabled then the whole character's body is pointed to the direction of view.
 
 If enabled then the character turns lower body to the direction of movement. Upper body is turned partially. Head is always pointed to the direction of view. In combat mode it works only for diagonal movement. In non-combat mode it changes straight right and straight left movement as well. Also turns the whole body up or down when swimming according to the movement direction.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 smooth movement
 ---------------
@@ -342,7 +356,7 @@ Makes NPCs and player movement more smooth.
 
 Recommended to use with "turn to movement direction" enabled.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 smooth movement player turning delay
 ------------------------------------
@@ -364,7 +378,7 @@ NPCs avoid collisions
 
 If enabled NPCs apply evasion maneuver to avoid collisions with others.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 NPCs give way
 -------------
@@ -386,7 +400,7 @@ swim upward correction
 
 Makes player swim a bit upward from the line of sight. Applies only in third person mode. Intended to make simpler swimming without diving.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 swim upward coef
 ----------------
@@ -396,7 +410,7 @@ swim upward coef
 :Default:	0.2
 
 Regulates strength of the "swim upward correction" effect (if enabled).
-Makes player swim a bit upward (or downward in case of negative value) from the line of sight. Recommened range of values is from 0.0 to 0.25.
+Makes player swim a bit upward (or downward in case of negative value) from the line of sight. Recommended range of values is from 0.0 to 0.25.
 
 This setting can only be configured by editing the settings configuration file.
 
@@ -413,7 +427,7 @@ If disabled then the 3 best skills of trainers and the training limits take into
 
 If enabled then the 3 best skills of trainers and the training limits are based on the trainer base skills.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 always allow stealing from knocked out actors
 ---------------------------------------------
@@ -427,7 +441,7 @@ even if the fighting NPC is knocked out.
 
 This setting allows the player to steal items from fighting NPCs that were knocked out if enabled.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
 
 graphic herbalism
 -----------------
@@ -441,7 +455,7 @@ Some mods add harvestable container models. When this setting is enabled, activa
 When this setting is turned off or when activating a regular container, the menu will open as usual.
 
 allow actors to follow over water surface
----------------------
+-----------------------------------------
 
 :Type:		boolean
 :Range:		True/False
@@ -454,4 +468,52 @@ If disabled actors without the ability to swim will not follow other actors to t
 .. note::
     Has effect only when Navigator is enabled.
 
-This setting can be controlled in Advanced tab of the launcher.
+This setting can be controlled in the Settings tab of the launcher.
+
+default actor pathfind half extents
+-----------------------------------
+
+:Type:		3D vector floating point
+:Range:		All components > 0
+:Default:	29.27999496459961 28.479997634887695 66.5
+
+Actor half extents used for exterior cells to generate navmesh.
+Changing the value will invalidate navmesh disk cache.
+
+day night switches
+------------------
+
+:Type:      boolean
+:Range:		True/False
+:Default:	True
+
+Some mods add models which change visuals based on time of day. When this setting is enabled, supporting models will automatically make use of Day/night state.
+
+unarmed creature attacks damage armor
+-------------------------------------
+
+:Type:		boolean
+:Range:		True/False
+:Default:	False
+
+If disabled unarmed creature attacks do not reduce armor condition, just as with vanilla engine.
+
+If enabled unarmed creature attacks reduce armor condition, the same as attacks from NPCs and armed creatures.
+
+This setting can be controlled in the Settings tab of the launcher, under Game Mechanics.
+
+actor collision shape type
+--------------------------
+
+:Type:		integer
+:Range:		0, 1, 2
+:Default:	0 (Axis-aligned bounding box)
+
+Collision is used for both physics simulation and navigation mesh generation for pathfinding.
+Cylinder gives the best consistency bewtween available navigation paths and ability to move by them.
+Changing this value affects navigation mesh generation therefore navigation mesh disk cache generated for one value
+will not be useful with another.
+
+* 0: Axis-aligned bounding box
+* 1: Rotating box
+* 2: Cylinder

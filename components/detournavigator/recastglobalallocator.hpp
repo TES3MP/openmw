@@ -3,6 +3,8 @@
 
 #include "recasttempallocator.hpp"
 
+#include <RecastAlloc.h>
+
 #include <cstdlib>
 
 namespace DetourNavigator
@@ -10,10 +12,7 @@ namespace DetourNavigator
     class RecastGlobalAllocator
     {
     public:
-        static void init()
-        {
-            instance();
-        }
+        static void init() { instance(); }
 
         static void* alloc(size_t size, rcAllocHint hint)
         {
@@ -39,10 +38,7 @@ namespace DetourNavigator
         }
 
     private:
-        RecastGlobalAllocator()
-        {
-            rcAllocSetCustom(&RecastGlobalAllocator::alloc, &RecastGlobalAllocator::free);
-        }
+        RecastGlobalAllocator() { rcAllocSetCustom(&RecastGlobalAllocator::alloc, &RecastGlobalAllocator::free); }
 
         static RecastGlobalAllocator& instance()
         {

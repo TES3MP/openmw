@@ -3,21 +3,18 @@
 
 #include <map>
 
-#include <components/esm/loadnpc.hpp>
-#include <components/esm/player.hpp>
-#include <components/esm/dialoguestate.hpp>
-#include <components/esm/globalmap.hpp>
-#include <components/esm/loadcrea.hpp>
-#include <components/esm/loadnpc.hpp>
-#include <components/esm/controlsstate.hpp>
+#include <components/esm3/controlsstate.hpp>
+#include <components/esm3/dialoguestate.hpp>
+#include <components/esm3/globalmap.hpp>
+#include <components/esm3/loadcell.hpp>
+#include <components/esm3/loadcrea.hpp>
+#include <components/esm3/loadnpc.hpp>
+#include <components/esm3/player.hpp>
 
-#include "importnpcc.hpp"
-#include "importcrec.hpp"
 #include "importcntc.hpp"
-#include "importplayer.hpp"
+#include "importcrec.hpp"
+#include "importnpcc.hpp"
 #include "importsplm.h"
-
-
 
 namespace ESSImport
 {
@@ -36,7 +33,7 @@ namespace ESSImport
         ESM::ControlsState mControlsState;
 
         // cells which should show an explored overlay on the global map
-        std::set<std::pair<int, int> > mExploredCells;
+        std::set<std::pair<int, int>> mExploredCells;
 
         ESM::GlobalMap mGlobalMapState;
 
@@ -44,15 +41,15 @@ namespace ESSImport
         float mHour;
 
         // key <refIndex, refId>
-        std::map<std::pair<int, std::string>, CREC> mCreatureChanges;
-        std::map<std::pair<int, std::string>, NPCC> mNpcChanges;
-        std::map<std::pair<int, std::string>, CNTC> mContainerChanges;
+        std::map<std::pair<int, ESM::RefId>, CREC> mCreatureChanges;
+        std::map<std::pair<int, ESM::RefId>, NPCC> mNpcChanges;
+        std::map<std::pair<int, ESM::RefId>, CNTC> mContainerChanges;
 
-        std::map<std::pair<int, std::string>, int> mActorIdMap;
+        std::map<std::pair<int, ESM::RefId>, int> mActorIdMap;
         int mNextActorId;
 
-        std::map<std::string, ESM::Creature> mCreatures;
-        std::map<std::string, ESM::NPC> mNpcs;
+        std::map<ESM::RefId, ESM::Creature> mCreatures;
+        std::map<ESM::RefId, ESM::NPC> mNpcs;
 
         std::vector<SPLM::ActiveSpell> mActiveSpells;
 
@@ -63,20 +60,15 @@ namespace ESSImport
             , mHour(0.f)
             , mNextActorId(0)
         {
-            ESM::CellId playerCellId;
-            playerCellId.mPaged = true;
-            playerCellId.mIndex.mX = playerCellId.mIndex.mY = 0;
-            mPlayer.mCellId = playerCellId;
-            mPlayer.mLastKnownExteriorPosition[0]
-                = mPlayer.mLastKnownExteriorPosition[1]
-                = mPlayer.mLastKnownExteriorPosition[2]
-                = 0.0f;
+            mPlayer.mCellId = ESM::RefId::esm3ExteriorCell(0, 0);
+            mPlayer.mLastKnownExteriorPosition[0] = mPlayer.mLastKnownExteriorPosition[1]
+                = mPlayer.mLastKnownExteriorPosition[2] = 0.0f;
             mPlayer.mHasMark = 0;
             mPlayer.mCurrentCrimeId = -1; // TODO
             mPlayer.mPaidCrimeId = -1;
             mPlayer.mObject.blank();
             mPlayer.mObject.mEnabled = true;
-            mPlayer.mObject.mRef.mRefID = "player"; // REFR.mRefID would be PlayerSaveGame
+            mPlayer.mObject.mRef.mRefID = ESM::RefId::stringRefId("player"); // REFR.mRefID would be PlayerSaveGame
             mPlayer.mObject.mCreatureStats.mActorId = generateActorId();
 
             mGlobalMapState.mBounds.mMinX = 0;
@@ -87,10 +79,7 @@ namespace ESSImport
             mPlayerBase.blank();
         }
 
-        int generateActorId()
-        {
-            return mNextActorId++;
-        }
+        int generateActorId() { return mNextActorId++; }
     };
 
 }

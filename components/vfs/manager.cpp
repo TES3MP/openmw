@@ -1,76 +1,41 @@
 #include "manager.hpp"
 
+#include <algorithm>
 #include <stdexcept>
 
-#include <components/misc/stringops.hpp>
+#include <components/files/conversion.hpp>
+#include <components/misc/strings/lower.hpp>
 
 #include "archive.hpp"
-
-namespace
-{
-
-    char strict_normalize_char(char ch)
-    {
-        return ch == '\\' ? '/' : ch;
-    }
-
-    char nonstrict_normalize_char(char ch)
-    {
-        return ch == '\\' ? '/' : Misc::StringUtils::toLower(ch);
-    }
-
-    void normalize_path(std::string& path, bool strict)
-    {
-        char (*normalize_char)(char) = strict ? &strict_normalize_char : &nonstrict_normalize_char;
-        std::transform(path.begin(), path.end(), path.begin(), normalize_char);
-    }
-
-}
+#include "pathutil.hpp"
 
 namespace VFS
 {
-
-    Manager::Manager(bool strict)
-        : mStrict(strict)
-    {
-
-    }
-
-    Manager::~Manager()
-    {
-        reset();
-    }
-
     void Manager::reset()
     {
         mIndex.clear();
-        for (std::vector<Archive*>::iterator it = mArchives.begin(); it != mArchives.end(); ++it)
-            delete *it;
         mArchives.clear();
     }
 
-    void Manager::addArchive(Archive *archive)
+    void Manager::addArchive(std::unique_ptr<Archive>&& archive)
     {
-        mArchives.push_back(archive);
+        mArchives.push_back(std::move(archive));
     }
 
     void Manager::buildIndex()
     {
         mIndex.clear();
 
-        for (std::vector<Archive*>::const_iterator it = mArchives.begin(); it != mArchives.end(); ++it)
-            (*it)->listResources(mIndex, mStrict ? &strict_normalize_char : &nonstrict_normalize_char);
+        for (const auto& archive : mArchives)
+            archive->listResources(mIndex);
     }
 
-    Files::IStreamPtr Manager::get(const std::string &name) const
+    Files::IStreamPtr Manager::get(std::string_view name) const
     {
-        std::string normalized = name;
-        normalize_path(normalized, mStrict);
-
-        return getNormalized(normalized);
+        return getNormalized(Path::normalizeFilename(name));
     }
 
-    Files::IStreamPtr Manager::getNormalized(const std::string &normalizedName) const
+    Files::IStreamPtr Manager::getNormalized(const std::string& normalizedName) const
     {
         std::map<std::string, File*>::const_iterator found = mIndex.find(normalizedName);
         if (found == mIndex.end())
@@ -78,33 +43,50 @@ namespace VFS
         return found->second->open();
     }
 
-    bool Manager::exists(const std::string &name) const
+    bool Manager::exists(std::string_view name) const
     {
-        std::string normalized = name;
-        normalize_path(normalized, mStrict);
-
-        return mIndex.find(normalized) != mIndex.end();
+        return mIndex.find(Path::normalizeFilename(name)) != mIndex.end();
     }
 
-    const std::map<std::string, File*>& Manager::getIndex() const
+    std::string Manager::getArchive(std::string_view name) const
     {
-        return mIndex;
-    }
-
-    void Manager::normalizeFilename(std::string &name) const
-    {
-        normalize_path(name, mStrict);
-    }
-
-    std::string Manager::getArchive(const std::string& name) const
-    {
-        std::string normalized = name;
-        normalize_path(normalized, mStrict);
-        for(auto it = mArchives.rbegin(); it != mArchives.rend(); ++it)
+        std::string normalized = Path::normalizeFilename(name);
+        for (auto it = mArchives.rbegin(); it != mArchives.rend(); ++it)
         {
-            if((*it)->contains(normalized, mStrict ? &strict_normalize_char : &nonstrict_normalize_char))
+            if ((*it)->contains(normalized))
                 return (*it)->getDescription();
         }
         return {};
+    }
+
+    std::filesystem::path Manager::getAbsoluteFileName(const std::filesystem::path& name) const
+    {
+        std::string normalized = Files::pathToUnicodeString(name);
+        Path::normalizeFilenameInPlace(normalized);
+
+        const auto found = mIndex.find(normalized);
+        if (found == mIndex.end())
+            throw std::runtime_error("Resource '" + normalized + "' not found");
+        return found->second->getPath();
+    }
+
+    namespace
+    {
+        bool startsWith(std::string_view text, std::string_view start)
+        {
+            return text.rfind(start, 0) == 0;
+        }
+    }
+
+    Manager::RecursiveDirectoryRange Manager::getRecursiveDirectoryIterator(std::string_view path) const
+    {
+        if (path.empty())
+            return { mIndex.begin(), mIndex.end() };
+        std::string normalized = Path::normalizeFilename(path);
+        const auto it = mIndex.lower_bound(normalized);
+        if (it == mIndex.end() || !startsWith(it->first, normalized))
+            return { it, it };
+        ++normalized.back();
+        return { it, mIndex.lower_bound(normalized) };
     }
 }

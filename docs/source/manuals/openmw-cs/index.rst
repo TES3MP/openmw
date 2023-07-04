@@ -22,5 +22,12 @@ few chapters to familiarise yourself with the new interface.
     files-and-directories
     starting-dialog
     tables
+    tables-file
+    tables-world
+    tables-mechanics
+    tables-characters
+    tables-assets
     record-types
     record-filters
+    cell-view
+    records-drag-and-drop

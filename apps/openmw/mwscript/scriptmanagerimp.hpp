@@ -2,13 +2,16 @@
 #define GAME_SCRIPT_SCRIPTMANAGER_H
 
 #include <map>
+#include <set>
 #include <string>
 
-#include <components/compiler/streamerrorhandler.hpp>
 #include <components/compiler/fileparser.hpp>
+#include <components/compiler/streamerrorhandler.hpp>
 
 #include <components/interpreter/interpreter.hpp>
 #include <components/interpreter/types.hpp>
+
+#include <components/esm/refid.hpp>
 
 #include "../mwbase/scriptmanager.hpp"
 
@@ -34,57 +37,54 @@ namespace MWScript
 {
     class ScriptManager : public MWBase::ScriptManager
     {
-            Compiler::StreamErrorHandler mErrorHandler;
-            const MWWorld::ESMStore& mStore;
-            Compiler::Context& mCompilerContext;
-            Compiler::FileParser mParser;
-            Interpreter::Interpreter mInterpreter;
-            bool mOpcodesInstalled;
+        Compiler::StreamErrorHandler mErrorHandler;
+        const MWWorld::ESMStore& mStore;
+        Compiler::Context& mCompilerContext;
+        Compiler::FileParser mParser;
+        Interpreter::Interpreter mInterpreter;
+        bool mOpcodesInstalled;
 
-            struct CompiledScript
+        struct CompiledScript
+        {
+            Interpreter::Program mProgram;
+            Compiler::Locals mLocals;
+            std::set<ESM::RefId> mInactive;
+
+            explicit CompiledScript(Interpreter::Program&& program, const Compiler::Locals& locals)
+                : mProgram(std::move(program))
+                , mLocals(locals)
             {
-                std::vector<Interpreter::Type_Code> mByteCode;
-                Compiler::Locals mLocals;
-                bool mActive;
+            }
+        };
 
-                CompiledScript(const std::vector<Interpreter::Type_Code>& code, const Compiler::Locals& locals)
-                {
-                    mByteCode = code;
-                    mLocals = locals;
-                    mActive = true;
-                }
-            };
+        std::unordered_map<ESM::RefId, CompiledScript> mScripts;
+        GlobalScripts mGlobalScripts;
+        std::unordered_map<ESM::RefId, Compiler::Locals> mOtherLocals;
+        std::vector<ESM::RefId> mScriptBlacklist;
 
-            typedef std::map<std::string, CompiledScript> ScriptCollection;
+    public:
+        ScriptManager(const MWWorld::ESMStore& store, Compiler::Context& compilerContext, int warningsMode,
+            const std::vector<ESM::RefId>& scriptBlacklist);
 
-            ScriptCollection mScripts;
-            GlobalScripts mGlobalScripts;
-            std::map<std::string, Compiler::Locals> mOtherLocals;
-            std::vector<std::string> mScriptBlacklist;
+        void clear() override;
 
-        public:
+        bool run(const ESM::RefId& name, Interpreter::Context& interpreterContext) override;
+        ///< Run the script with the given name (compile first, if not compiled yet)
 
-            ScriptManager (const MWWorld::ESMStore& store,
-                Compiler::Context& compilerContext, int warningsMode,
-                const std::vector<std::string>& scriptBlacklist);
+        bool compile(const ESM::RefId& name) override;
+        ///< Compile script with the given namen
+        /// \return Success?
 
-            void clear() override;
+        std::pair<int, int> compileAll() override;
+        ///< Compile all scripts
+        /// \return count, success
 
-            bool run (const std::string& name, Interpreter::Context& interpreterContext) override;
-            ///< Run the script with the given name (compile first, if not compiled yet)
+        const Compiler::Locals& getLocals(const ESM::RefId& name) override;
+        ///< Return locals for script \a name.
 
-            bool compile (const std::string& name) override;
-            ///< Compile script with the given namen
-            /// \return Success?
+        GlobalScripts& getGlobalScripts() override;
 
-            std::pair<int, int> compileAll() override;
-            ///< Compile all scripts
-            /// \return count, success
-
-            const Compiler::Locals& getLocals (const std::string& name) override;
-            ///< Return locals for script \a name.
-
-            GlobalScripts& getGlobalScripts() override;
+        const Compiler::Extensions& getExtensions() const override;
     };
 }
 

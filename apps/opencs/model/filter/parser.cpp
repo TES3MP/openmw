@@ -1,21 +1,39 @@
 #include "parser.hpp"
 
+#include <algorithm>
 #include <cctype>
-#include <stdexcept>
 #include <sstream>
+#include <stdexcept>
+#include <vector>
 
-#include <components/misc/stringops.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/model/world/record.hpp>
+
+#include <components/esm3/filter.hpp>
+#include <components/misc/strings/lower.hpp>
 
 #include "../world/columns.hpp"
 #include "../world/data.hpp"
-#include "../world/idcollection.hpp"
 
-#include "booleannode.hpp"
-#include "ornode.hpp"
 #include "andnode.hpp"
+#include "booleannode.hpp"
 #include "notnode.hpp"
+#include "ornode.hpp"
 #include "textnode.hpp"
 #include "valuenode.hpp"
+
+namespace
+{
+    bool isAlpha(char c)
+    {
+        return std::isalpha(static_cast<unsigned char>(c));
+    }
+
+    bool isDigit(char c)
+    {
+        return std::isdigit(static_cast<unsigned char>(c));
+    }
+}
 
 namespace CSMFilter
 {
@@ -46,49 +64,70 @@ namespace CSMFilter
         std::string mString;
         double mNumber;
 
-        Token (Type type = Type_None);
+        Token(Type type = Type_None);
 
-        Token (Type type, const std::string& string);
+        Token(Type type, const std::string& string);
         ///< Non-string type that can also be interpreted as a string.
 
-        Token (const std::string& string);
+        Token(const std::string& string);
 
-        Token (double number);
+        Token(double number);
 
         operator bool() const;
 
         bool isString() const;
     };
 
-    Token::Token (Type type) : mType (type), mNumber(0.0) {}
+    Token::Token(Type type)
+        : mType(type)
+        , mNumber(0.0)
+    {
+    }
 
-    Token::Token (Type type, const std::string& string) : mType (type), mString (string), mNumber(0.0) {}
+    Token::Token(Type type, const std::string& string)
+        : mType(type)
+        , mString(string)
+        , mNumber(0.0)
+    {
+    }
 
-    Token::Token (const std::string& string) : mType (Type_String), mString (string), mNumber(0.0) {}
+    Token::Token(const std::string& string)
+        : mType(Type_String)
+        , mString(string)
+        , mNumber(0.0)
+    {
+    }
 
-    Token::Token (double number) : mType (Type_Number), mNumber (number) {}
+    Token::Token(double number)
+        : mType(Type_Number)
+        , mNumber(number)
+    {
+    }
 
     bool Token::isString() const
     {
-        return mType==Type_String || mType>=Type_Keyword_True;
+        return mType == Type_String || mType >= Type_Keyword_True;
     }
 
     Token::operator bool() const
     {
-        return mType!=Type_None;
+        return mType != Type_None;
     }
 
-    bool operator== (const Token& left, const Token& right)
+    bool operator==(const Token& left, const Token& right)
     {
-        if (left.mType!=right.mType)
+        if (left.mType != right.mType)
             return false;
 
         switch (left.mType)
         {
-            case Token::Type_String: return left.mString==right.mString;
-            case Token::Type_Number: return left.mNumber==right.mNumber;
+            case Token::Type_String:
+                return left.mString == right.mString;
+            case Token::Type_Number:
+                return left.mNumber == right.mNumber;
 
-            default: return true;
+            default:
+                return true;
         }
     }
 }
@@ -97,19 +136,19 @@ CSMFilter::Token CSMFilter::Parser::getStringToken()
 {
     std::string string;
 
-    int size = static_cast<int> (mInput.size());
+    int size = static_cast<int>(mInput.size());
 
-    for (; mIndex<size; ++mIndex)
+    for (; mIndex < size; ++mIndex)
     {
         char c = mInput[mIndex];
 
-        if (std::isalpha (c) || c==':' || c=='_' || (!string.empty() && std::isdigit (c)) || c=='"' ||
-            (!string.empty() && string[0]=='"'))
+        if (isAlpha(c) || c == ':' || c == '_' || (!string.empty() && isDigit(c)) || c == '"'
+            || (!string.empty() && string[0] == '"'))
             string += c;
         else
             break;
 
-        if (c=='"' && string.size()>1)
+        if (c == '"' && string.size() > 1)
         {
             ++mIndex;
             break;
@@ -118,49 +157,49 @@ CSMFilter::Token CSMFilter::Parser::getStringToken()
 
     if (!string.empty())
     {
-        if (string[0]=='"' && (string[string.size()-1]!='"' || string.size()<2) )
+        if (string[0] == '"' && (string[string.size() - 1] != '"' || string.size() < 2))
         {
             error();
-            return Token (Token::Type_None);
+            return Token(Token::Type_None);
         }
 
-        if (string[0]!='"' && string[string.size()-1]=='"')
+        if (string[0] != '"' && string[string.size() - 1] == '"')
         {
             error();
-            return Token (Token::Type_None);
+            return Token(Token::Type_None);
         }
 
-        if (string[0]=='"')
-            return string.substr (1, string.size()-2);
+        if (string[0] == '"')
+            return string.substr(1, string.size() - 2);
     }
 
-    return checkKeywords (string);
+    return checkKeywords(string);
 }
 
 CSMFilter::Token CSMFilter::Parser::getNumberToken()
 {
     std::string string;
 
-    int size = static_cast<int> (mInput.size());
+    int size = static_cast<int>(mInput.size());
 
     bool hasDecimalPoint = false;
     bool hasDigit = false;
 
-    for (; mIndex<size; ++mIndex)
+    for (; mIndex < size; ++mIndex)
     {
         char c = mInput[mIndex];
 
-        if (std::isdigit (c))
+        if (isDigit(c))
         {
             string += c;
             hasDigit = true;
         }
-        else if (c=='.' && !hasDecimalPoint)
+        else if (c == '.' && !hasDecimalPoint)
         {
             string += c;
             hasDecimalPoint = true;
         }
-        else if (string.empty() && c=='-')
+        else if (string.empty() && c == '-')
             string += c;
         else
             break;
@@ -169,77 +208,92 @@ CSMFilter::Token CSMFilter::Parser::getNumberToken()
     if (!hasDigit)
     {
         error();
-        return Token (Token::Type_None);
+        return Token(Token::Type_None);
     }
 
     float value;
-    std::istringstream stream (string.c_str());
+    std::istringstream stream(string.c_str());
     stream >> value;
 
     return value;
 }
 
-CSMFilter::Token CSMFilter::Parser::checkKeywords (const Token& token)
+CSMFilter::Token CSMFilter::Parser::checkKeywords(const Token& token)
 {
-    static const char *sKeywords[] =
-    {
-        "true", "false",
-        "and", "or", "not",
-        "string", "value",
-        0
+    static const char* sKeywords[] = {
+        "true",
+        "false",
+        "and",
+        "or",
+        "not",
+        "string",
+        "value",
+        nullptr,
     };
 
-    std::string string = Misc::StringUtils::lowerCase (token.mString);
+    std::string string = Misc::StringUtils::lowerCase(token.mString);
 
-    for (int i=0; sKeywords[i]; ++i)
-        if (sKeywords[i]==string || (string.size()==1 && sKeywords[i][0]==string[0]))
-            return Token (static_cast<Token::Type> (i+Token::Type_Keyword_True), token.mString);
+    for (int i = 0; sKeywords[i]; ++i)
+        if (sKeywords[i] == string || (string.size() == 1 && sKeywords[i][0] == string[0]))
+            return Token(static_cast<Token::Type>(i + Token::Type_Keyword_True), token.mString);
 
     return token;
 }
 
 CSMFilter::Token CSMFilter::Parser::getNextToken()
 {
-    int size = static_cast<int> (mInput.size());
+    int size = static_cast<int>(mInput.size());
 
     char c = 0;
 
-    for (; mIndex<size; ++mIndex)
+    for (; mIndex < size; ++mIndex)
     {
         c = mInput[mIndex];
 
-        if (c!=' ')
+        if (c != ' ')
             break;
     }
 
-    if (mIndex>=size)
-        return Token (Token::Type_EOS);
+    if (mIndex >= size)
+        return Token(Token::Type_EOS);
 
     switch (c)
     {
-        case '(': ++mIndex; return Token (Token::Type_Open);
-        case ')': ++mIndex; return Token (Token::Type_Close);
-        case '[': ++mIndex; return Token (Token::Type_OpenSquare);
-        case ']': ++mIndex; return Token (Token::Type_CloseSquare);
-        case ',': ++mIndex; return Token (Token::Type_Comma);
-        case '!': ++mIndex; return Token (Token::Type_OneShot);
+        case '(':
+            ++mIndex;
+            return Token(Token::Type_Open);
+        case ')':
+            ++mIndex;
+            return Token(Token::Type_Close);
+        case '[':
+            ++mIndex;
+            return Token(Token::Type_OpenSquare);
+        case ']':
+            ++mIndex;
+            return Token(Token::Type_CloseSquare);
+        case ',':
+            ++mIndex;
+            return Token(Token::Type_Comma);
+        case '!':
+            ++mIndex;
+            return Token(Token::Type_OneShot);
     }
 
-    if (c=='"' || c=='_' || std::isalpha (c) || c==':')
+    if (c == '"' || c == '_' || isAlpha(c) || c == ':')
         return getStringToken();
 
-    if (c=='-' || c=='.' || std::isdigit (c))
+    if (c == '-' || c == '.' || isDigit(c))
         return getNumberToken();
 
     error();
-    return Token (Token::Type_None);
+    return Token(Token::Type_None);
 }
 
-std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseImp (bool allowEmpty, bool ignoreOneShot)
+std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseImp(bool allowEmpty, bool ignoreOneShot)
 {
     if (Token token = getNextToken())
     {
-        if (token==Token (Token::Type_OneShot))
+        if (token == Token(Token::Type_OneShot))
             token = getNextToken();
 
         if (token)
@@ -247,16 +301,16 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseImp (bool allowEmpty, b
             {
                 case Token::Type_Keyword_True:
 
-                    return std::shared_ptr<CSMFilter::Node> (new BooleanNode (true));
+                    return std::make_shared<BooleanNode>(true);
 
                 case Token::Type_Keyword_False:
 
-                    return std::shared_ptr<CSMFilter::Node> (new BooleanNode (false));
+                    return std::make_shared<BooleanNode>(false);
 
                 case Token::Type_Keyword_And:
                 case Token::Type_Keyword_Or:
 
-                    return parseNAry (token);
+                    return parseNAry(token);
 
                 case Token::Type_Keyword_Not:
                 {
@@ -265,7 +319,7 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseImp (bool allowEmpty, b
                     if (mError)
                         return std::shared_ptr<Node>();
 
-                    return std::shared_ptr<CSMFilter::Node> (new NotNode (node));
+                    return std::make_shared<NotNode>(node);
                 }
 
                 case Token::Type_Keyword_Text:
@@ -292,13 +346,13 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseImp (bool allowEmpty, b
     return std::shared_ptr<Node>();
 }
 
-std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseNAry (const Token& keyword)
+std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseNAry(const Token& keyword)
 {
-    std::vector<std::shared_ptr<Node> > nodes;
+    std::vector<std::shared_ptr<Node>> nodes;
 
     Token token = getNextToken();
 
-    if (token.mType!=Token::Type_Open)
+    if (token.mType != Token::Type_Open)
     {
         error();
         return std::shared_ptr<Node>();
@@ -311,25 +365,29 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseNAry (const Token& keyw
         if (mError)
             return std::shared_ptr<Node>();
 
-        nodes.push_back (node);
+        nodes.push_back(node);
 
         token = getNextToken();
 
-        if (!token || (token.mType!=Token::Type_Close && token.mType!=Token::Type_Comma))
+        if (!token || (token.mType != Token::Type_Close && token.mType != Token::Type_Comma))
         {
             error();
             return std::shared_ptr<Node>();
         }
 
-        if (token.mType==Token::Type_Close)
+        if (token.mType == Token::Type_Close)
             break;
     }
 
     switch (keyword.mType)
     {
-        case Token::Type_Keyword_And: return std::shared_ptr<CSMFilter::Node> (new AndNode (nodes));
-        case Token::Type_Keyword_Or: return std::shared_ptr<CSMFilter::Node> (new OrNode (nodes));
-        default: error(); return std::shared_ptr<Node>();
+        case Token::Type_Keyword_And:
+            return std::make_shared<AndNode>(nodes);
+        case Token::Type_Keyword_Or:
+            return std::make_shared<OrNode>(nodes);
+        default:
+            error();
+            return std::shared_ptr<Node>();
     }
 }
 
@@ -337,7 +395,7 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseText()
 {
     Token token = getNextToken();
 
-    if (token.mType!=Token::Type_Open)
+    if (token.mType != Token::Type_Open)
     {
         error();
         return std::shared_ptr<Node>();
@@ -351,17 +409,17 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseText()
     // parse column ID
     int columnId = -1;
 
-    if (token.mType==Token::Type_Number)
+    if (token.mType == Token::Type_Number)
     {
-        if (static_cast<int> (token.mNumber)==token.mNumber)
-            columnId = static_cast<int> (token.mNumber);
+        if (static_cast<int>(token.mNumber) == token.mNumber)
+            columnId = static_cast<int>(token.mNumber);
     }
     else if (token.isString())
     {
-        columnId = CSMWorld::Columns::getId (token.mString);
+        columnId = CSMWorld::Columns::getId(token.mString);
     }
 
-    if (columnId<0)
+    if (columnId < 0)
     {
         error();
         return std::shared_ptr<Node>();
@@ -369,7 +427,7 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseText()
 
     token = getNextToken();
 
-    if (token.mType!=Token::Type_Comma)
+    if (token.mType != Token::Type_Comma)
     {
         error();
         return std::shared_ptr<Node>();
@@ -388,20 +446,20 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseText()
 
     token = getNextToken();
 
-    if (token.mType!=Token::Type_Close)
+    if (token.mType != Token::Type_Close)
     {
         error();
         return std::shared_ptr<Node>();
     }
 
-    return std::shared_ptr<Node> (new TextNode (columnId, text));
+    return std::make_shared<TextNode>(columnId, text);
 }
 
 std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
 {
     Token token = getNextToken();
 
-    if (token.mType!=Token::Type_Open)
+    if (token.mType != Token::Type_Open)
     {
         error();
         return std::shared_ptr<Node>();
@@ -415,17 +473,17 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
     // parse column ID
     int columnId = -1;
 
-    if (token.mType==Token::Type_Number)
+    if (token.mType == Token::Type_Number)
     {
-        if (static_cast<int> (token.mNumber)==token.mNumber)
-            columnId = static_cast<int> (token.mNumber);
+        if (static_cast<int>(token.mNumber) == token.mNumber)
+            columnId = static_cast<int>(token.mNumber);
     }
     else if (token.isString())
     {
-        columnId = CSMWorld::Columns::getId (token.mString);
+        columnId = CSMWorld::Columns::getId(token.mString);
     }
 
-    if (columnId<0)
+    if (columnId < 0)
     {
         error();
         return std::shared_ptr<Node>();
@@ -433,7 +491,7 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
 
     token = getNextToken();
 
-    if (token.mType!=Token::Type_Comma)
+    if (token.mType != Token::Type_Comma)
     {
         error();
         return std::shared_ptr<Node>();
@@ -447,7 +505,7 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
 
     token = getNextToken();
 
-    if (token.mType==Token::Type_Number)
+    if (token.mType == Token::Type_Number)
     {
         // single value
         lower = upper = token.mNumber;
@@ -456,9 +514,9 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
     else
     {
         // interval
-        if (token.mType==Token::Type_OpenSquare)
+        if (token.mType == Token::Type_OpenSquare)
             lowerType = ValueNode::Type_Closed;
-        else if (token.mType!=Token::Type_CloseSquare && token.mType!=Token::Type_Open)
+        else if (token.mType != Token::Type_CloseSquare && token.mType != Token::Type_Open)
         {
             error();
             return std::shared_ptr<Node>();
@@ -466,19 +524,19 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
 
         token = getNextToken();
 
-        if (token.mType==Token::Type_Number)
+        if (token.mType == Token::Type_Number)
         {
             lower = token.mNumber;
 
             token = getNextToken();
 
-            if (token.mType!=Token::Type_Comma)
+            if (token.mType != Token::Type_Comma)
             {
                 error();
                 return std::shared_ptr<Node>();
             }
         }
-        else if (token.mType==Token::Type_Comma)
+        else if (token.mType == Token::Type_Comma)
         {
             lowerType = ValueNode::Type_Infinite;
         }
@@ -490,7 +548,7 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
 
         token = getNextToken();
 
-        if (token.mType==Token::Type_Number)
+        if (token.mType == Token::Type_Number)
         {
             upper = token.mNumber;
 
@@ -499,12 +557,12 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
         else
             upperType = ValueNode::Type_Infinite;
 
-        if (token.mType==Token::Type_CloseSquare)
+        if (token.mType == Token::Type_CloseSquare)
         {
-            if (upperType!=ValueNode::Type_Infinite)
+            if (upperType != ValueNode::Type_Infinite)
                 upperType = ValueNode::Type_Closed;
         }
-        else if (token.mType!=Token::Type_OpenSquare && token.mType!=Token::Type_Close)
+        else if (token.mType != Token::Type_OpenSquare && token.mType != Token::Type_Close)
         {
             error();
             return std::shared_ptr<Node>();
@@ -513,13 +571,13 @@ std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::parseValue()
 
     token = getNextToken();
 
-    if (token.mType!=Token::Type_Close)
+    if (token.mType != Token::Type_Close)
     {
         error();
         return std::shared_ptr<Node>();
     }
 
-    return std::shared_ptr<Node> (new ValueNode (columnId, lowerType, upperType, lower, upper));
+    return std::make_shared<ValueNode>(columnId, lowerType, upperType, lower, upper);
 }
 
 void CSMFilter::Parser::error()
@@ -527,10 +585,14 @@ void CSMFilter::Parser::error()
     mError = true;
 }
 
-CSMFilter::Parser::Parser (const CSMWorld::Data& data)
-: mIndex (0), mError (false), mData (data) {}
+CSMFilter::Parser::Parser(const CSMWorld::Data& data)
+    : mIndex(0)
+    , mError(false)
+    , mData(data)
+{
+}
 
-bool CSMFilter::Parser::parse (const std::string& filter, bool allowPredefined)
+bool CSMFilter::Parser::parse(const std::string& filter, bool allowPredefined)
 {
     // reset
     mFilter.reset();
@@ -543,19 +605,19 @@ bool CSMFilter::Parser::parse (const std::string& filter, bool allowPredefined)
     if (allowPredefined)
         token = getNextToken();
 
-    if (allowPredefined && token==Token (Token::Type_EOS))
+    if (allowPredefined && token == Token(Token::Type_EOS))
     {
         mFilter.reset();
         return true;
     }
-    else if (!allowPredefined || token==Token (Token::Type_OneShot))
+    else if (!allowPredefined || token == Token(Token::Type_OneShot))
     {
-        std::shared_ptr<Node> node = parseImp (true, token!=Token (Token::Type_OneShot));
+        std::shared_ptr<Node> node = parseImp(true, token != Token(Token::Type_OneShot));
 
         if (mError)
             return false;
 
-        if (getNextToken()!=Token (Token::Type_EOS))
+        if (getNextToken() != Token(Token::Type_EOS))
         {
             error();
             return false;
@@ -566,30 +628,30 @@ bool CSMFilter::Parser::parse (const std::string& filter, bool allowPredefined)
         else
         {
             // Empty filter string equals to filter "true".
-            mFilter.reset (new BooleanNode (true));
+            mFilter = std::make_shared<BooleanNode>(true);
         }
 
         return true;
     }
     // We do not use isString() here, because there could be a pre-defined filter with an ID that is
     // equal a filter keyword.
-    else if (token.mType==Token::Type_String)
+    else if (token.mType == Token::Type_String)
     {
-        if (getNextToken()!=Token (Token::Type_EOS))
+        if (getNextToken() != Token(Token::Type_EOS))
         {
             error();
             return false;
         }
 
-        int index = mData.getFilters().searchId (token.mString);
+        const int index = mData.getFilters().searchId(ESM::RefId::stringRefId(token.mString));
 
-        if (index==-1)
+        if (index == -1)
         {
             error();
             return false;
         }
 
-        const CSMWorld::Record<ESM::Filter>& record = mData.getFilters().getRecord (index);
+        const CSMWorld::Record<ESM::Filter>& record = mData.getFilters().getRecord(index);
 
         if (record.isDeleted())
         {
@@ -597,7 +659,7 @@ bool CSMFilter::Parser::parse (const std::string& filter, bool allowPredefined)
             return false;
         }
 
-        return parse (record.get().mFilter, false);
+        return parse(record.get().mFilter, false);
     }
     else
     {
@@ -609,7 +671,7 @@ bool CSMFilter::Parser::parse (const std::string& filter, bool allowPredefined)
 std::shared_ptr<CSMFilter::Node> CSMFilter::Parser::getFilter() const
 {
     if (mError)
-        throw std::logic_error ("No filter available");
+        throw std::logic_error("No filter available");
 
     return mFilter;
 }

@@ -1,19 +1,20 @@
 #include "commands.hpp"
 
-#include <QPointer>
+#include <memory>
+
+#include <apps/opencs/view/render/editmode.hpp>
+#include <apps/opencs/view/render/terrainselection.hpp>
 
 #include <components/debug/debuglog.hpp>
-#include <components/esm/loadland.hpp>
 
-#include "editmode.hpp"
-#include "terrainselection.hpp"
 #include "terrainshapemode.hpp"
-#include "terraintexturemode.hpp"
 #include "worldspacewidget.hpp"
 
-CSVRender::DrawTerrainSelectionCommand::DrawTerrainSelectionCommand(WorldspaceWidget* worldspaceWidget, QUndoCommand* parent)
+CSVRender::DrawTerrainSelectionCommand::DrawTerrainSelectionCommand(
+    WorldspaceWidget* worldspaceWidget, QUndoCommand* parent)
     : mWorldspaceWidget(worldspaceWidget)
-{ }
+{
+}
 
 void CSVRender::DrawTerrainSelectionCommand::redo()
 {

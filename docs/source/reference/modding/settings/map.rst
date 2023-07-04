@@ -29,7 +29,7 @@ Values from 12 to 36 are recommended. For reference, Vvardenfell is approximatel
 
 .. Warning::
 	Changing this setting affects saved games. The currently explored area is stored as an image
-	in the save file that's overlayed on the default world map in game.
+	in the save file that's overlaid on the default world map in game.
 	When you increase the resolution of the map, the overlay of earlier saved games will be scaled up on load,
 	and appear blurry. When you visit the cell again, the overlay for that cell is regenerated at the new resolution,
 	so the blurry areas can be corrected by revisiting all the cells you've already visited.
@@ -101,5 +101,33 @@ This setting controls the canvas size of the GUI mode local map window.
 Larger values result in a larger physical map size on screen,
 and typically require more panning to see all available portions of the map.
 This larger size also enables an overall greater level of detail if the local map resolution setting is also increased.
+
+This setting can not be configured except by editing the settings configuration file.
+
+allow zooming
+-------------
+
+:Type:		boolean
+:Range:		True/False
+:Default:	False
+
+If this setting is true the user can zoom in/out on local and global map with the mouse wheel.
+
+This setting can be controlled in the Settings tab of the launcher.
+
+max local viewing distance
+---------------------------
+
+:Type:		integer
+:Range:		> 0
+:Default:	10
+
+This setting controls the viewing distance on local map when 'distant terrain' is enabled.
+If this setting is greater than the viewing distance then only up to the viewing distance is used for local map, otherwise the viewing distance is used.
+If view distance is changed in settings menu during the game, then viewable distance on the local map is not updated.
+
+.. warning::
+	Increasing this setting can increase cell load times,
+	because the localmap take a snapshot of each cell contained in a square of 2 x (max local viewing distance) + 1 square.
 
 This setting can not be configured except by editing the settings configuration file.

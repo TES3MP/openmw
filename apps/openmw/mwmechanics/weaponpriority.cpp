@@ -1,6 +1,8 @@
 #include "weaponpriority.hpp"
 
-#include <components/esm/loadench.hpp>
+#include <components/esm3/loadcrea.hpp>
+#include <components/esm3/loadench.hpp>
+#include <components/esm3/loadgmst.hpp>
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
@@ -9,18 +11,18 @@
 #include "../mwworld/esmstore.hpp"
 #include "../mwworld/inventorystore.hpp"
 
-#include "combat.hpp"
 #include "aicombataction.hpp"
+#include "combat.hpp"
 #include "spellpriority.hpp"
 #include "spellutil.hpp"
 #include "weapontype.hpp"
 
 namespace MWMechanics
 {
-    float rateWeapon (const MWWorld::Ptr &item, const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy, int type,
-                      float arrowRating, float boltRating)
+    float rateWeapon(const MWWorld::Ptr& item, const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy, int type,
+        float arrowRating, float boltRating)
     {
-        if (enemy.isEmpty() || item.getTypeName() != typeid(ESM::Weapon).name())
+        if (enemy.isEmpty() || item.getType() != ESM::Weapon::sRecordId)
             return 0.f;
 
         if (item.getClass().hasItemHealth(item) && item.getClass().getItemHealth(item) == 0)
@@ -38,7 +40,7 @@ namespace MWMechanics
         if (type == -1 && weapclass == ESM::WeaponType::Ammo)
             return 0.f;
 
-        float rating=0.f;
+        float rating = 0.f;
         static const float fAIMeleeWeaponMult = gmst.find("fAIMeleeWeaponMult")->mValue.getFloat();
         float ratingMult = fAIMeleeWeaponMult;
 
@@ -46,7 +48,7 @@ namespace MWMechanics
         {
             // Underwater ranged combat is impossible
             if (world->isUnderwater(MWWorld::ConstPtr(actor), 0.75f)
-             || world->isUnderwater(MWWorld::ConstPtr(enemy), 0.75f))
+                || world->isUnderwater(MWWorld::ConstPtr(enemy), 0.75f))
                 return 0.f;
 
             // Use a higher rating multiplier if the actor is out of enemy's reach, use the normal mult otherwise
@@ -106,30 +108,30 @@ namespace MWMechanics
             const ESM::Enchantment* enchantment = world->getStore().get<ESM::Enchantment>().find(weapon->mEnchant);
             if (enchantment->mData.mType == ESM::Enchantment::WhenStrikes)
             {
-                int castCost = getEffectiveEnchantmentCastCost(static_cast<float>(enchantment->mData.mCost), actor);
+                int castCost = getEffectiveEnchantmentCastCost(*enchantment, actor);
                 float charge = item.getCellRef().getEnchantmentCharge();
 
-                if (charge == -1 || charge >= castCost || weapclass == ESM::WeaponType::Thrown || weapclass == ESM::WeaponType::Ammo)
-                    rating += rateEffects(enchantment->mEffects, actor, enemy);
+                if (charge == -1 || charge >= castCost || weapclass == ESM::WeaponType::Thrown
+                    || weapclass == ESM::WeaponType::Ammo)
+                    rating += rateEffects(enchantment->mEffects, actor, enemy, false);
             }
         }
 
         int value = 50.f;
         if (actor.getClass().isNpc())
         {
-            int skill = item.getClass().getEquipmentSkill(item);
-            if (skill != -1)
-               value = actor.getClass().getSkill(actor, skill);
+            ESM::RefId skill = item.getClass().getEquipmentSkill(item);
+            if (!skill.empty())
+                value = actor.getClass().getSkill(actor, skill);
         }
         else
         {
-            MWWorld::LiveCellRef<ESM::Creature> *ref = actor.get<ESM::Creature>();
+            MWWorld::LiveCellRef<ESM::Creature>* ref = actor.get<ESM::Creature>();
             value = ref->mBase->mData.mCombat;
         }
 
         // Take hit chance in account, but do not allow rating become negative.
-        float chance = getHitChance(actor, enemy, value) / 100.f;
-        rating *= std::min(1.f, std::max(0.01f, chance));
+        rating *= std::clamp(getHitChance(actor, enemy, value) / 100.f, 0.01f, 1.f);
 
         if (weapclass != ESM::WeaponType::Ammo)
             rating *= weapon->mData.mSpeed;
@@ -137,7 +139,7 @@ namespace MWMechanics
         return rating * ratingMult;
     }
 
-    float rateAmmo(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy, MWWorld::Ptr &bestAmmo, int ammoType)
+    float rateAmmo(const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy, MWWorld::Ptr& bestAmmo, int ammoType)
     {
         float bestAmmoRating = 0.f;
         if (!actor.getClass().hasInventoryStore(actor))
@@ -158,15 +160,17 @@ namespace MWMechanics
         return bestAmmoRating;
     }
 
-    float rateAmmo(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy, int ammoType)
+    float rateAmmo(const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy, int ammoType)
     {
         MWWorld::Ptr emptyPtr;
         return rateAmmo(actor, enemy, emptyPtr, ammoType);
     }
 
-    float vanillaRateWeaponAndAmmo(const MWWorld::Ptr& weapon, const MWWorld::Ptr& ammo, const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy)
+    float vanillaRateWeaponAndAmmo(
+        const MWWorld::Ptr& weapon, const MWWorld::Ptr& ammo, const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy)
     {
-        const MWWorld::Store<ESM::GameSetting>& gmst = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+        const MWWorld::Store<ESM::GameSetting>& gmst
+            = MWBase::Environment::get().getESMStore()->get<ESM::GameSetting>();
 
         static const float fAIMeleeWeaponMult = gmst.find("fAIMeleeWeaponMult")->mValue.getFloat();
         static const float fAIMeleeArmorMult = gmst.find("fAIMeleeArmorMult")->mValue.getFloat();
@@ -197,7 +201,7 @@ namespace MWMechanics
         float thrustRating = esmWeap->mData.mThrust[1] * skillMult * fAIMeleeWeaponMult;
 
         return actor.getClass().getArmorRating(actor) * fAIMeleeArmorMult
-                    + std::max(std::max(chopRating, slashRating), thrustRating);
+            + std::max(std::max(chopRating, slashRating), thrustRating);
     }
 
 }

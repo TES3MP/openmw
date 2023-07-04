@@ -1,12 +1,21 @@
 #ifndef CSV_FILTER_RECORDFILTERBOX_H
 #define CSV_FILTER_RECORDFILTERBOX_H
 
+#include <memory>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include <QVariant>
 #include <QWidget>
-#include <QtCore/qnamespace.h>
 
-#include <QHBoxLayout>
+#include "filterdata.hpp"
 
-#include "../../model/filter/node.hpp"
+namespace CSMFilter
+{
+    class Node;
+}
 
 namespace CSMWorld
 {
@@ -19,24 +28,22 @@ namespace CSVFilter
 
     class RecordFilterBox : public QWidget
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            EditWidget *mEdit;
+        EditWidget* mEdit;
 
-        public:
+    public:
+        RecordFilterBox(CSMWorld::Data& data, QWidget* parent = nullptr);
 
-            RecordFilterBox (CSMWorld::Data& data, QWidget *parent = nullptr);
+        void setFilter(const std::string& filter);
 
-            void setFilter (const std::string& filter);
+        void useFilterRequest(const std::string& idOfFilter);
 
-            void useFilterRequest(const std::string& idOfFilter);
+        void createFilterRequest(const std::vector<FilterData>& sourceFilter, Qt::DropAction action);
 
-            void createFilterRequest(std::vector<std::pair<std::string, std::vector<std::string> > >& filterSource,
-                                     Qt::DropAction action);
+    signals:
 
-        signals:
-
-            void filterChanged (std::shared_ptr<CSMFilter::Node> filter);
+        void filterChanged(std::shared_ptr<CSMFilter::Node> filter);
     };
 
 }

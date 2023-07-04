@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 
+#include <osg/StateSet>
 #include <osg/Texture2D>
 
 #include <components/debug/debuglog.hpp>
@@ -10,20 +11,21 @@
 namespace osgMyGUI
 {
 
-    OSGTexture::OSGTexture(const std::string &name, Resource::ImageManager* imageManager)
-      : mName(name)
-      , mImageManager(imageManager)
-      , mFormat(MyGUI::PixelFormat::Unknow)
-      , mUsage(MyGUI::TextureUsage::Default)
-      , mNumElemBytes(0)
-      , mWidth(0)
-      , mHeight(0)
+    OSGTexture::OSGTexture(const std::string& name, Resource::ImageManager* imageManager)
+        : mName(name)
+        , mImageManager(imageManager)
+        , mFormat(MyGUI::PixelFormat::Unknow)
+        , mUsage(MyGUI::TextureUsage::Default)
+        , mNumElemBytes(0)
+        , mWidth(0)
+        , mHeight(0)
     {
     }
 
-    OSGTexture::OSGTexture(osg::Texture2D *texture)
+    OSGTexture::OSGTexture(osg::Texture2D* texture, osg::StateSet* injectState)
         : mImageManager(nullptr)
         , mTexture(texture)
+        , mInjectState(injectState)
         , mFormat(MyGUI::PixelFormat::Unknow)
         , mUsage(MyGUI::TextureUsage::Default)
         , mNumElemBytes(0)
@@ -32,15 +34,13 @@ namespace osgMyGUI
     {
     }
 
-    OSGTexture::~OSGTexture()
-    {
-    }
+    OSGTexture::~OSGTexture() {}
 
     void OSGTexture::createManual(int width, int height, MyGUI::TextureUsage usage, MyGUI::PixelFormat format)
     {
         GLenum glfmt = GL_NONE;
         size_t numelems = 0;
-        switch(format.getValue())
+        switch (format.getValue())
         {
             case MyGUI::PixelFormat::L8:
                 glfmt = GL_LUMINANCE;
@@ -59,7 +59,7 @@ namespace osgMyGUI
                 numelems = 4;
                 break;
         }
-        if(glfmt == GL_NONE)
+        if (glfmt == GL_NONE)
             throw std::runtime_error("Texture format not supported");
 
         mTexture = new osg::Texture2D();
@@ -90,12 +90,12 @@ namespace osgMyGUI
         mHeight = 0;
     }
 
-    void OSGTexture::loadFromFile(const std::string &fname)
+    void OSGTexture::loadFromFile(const std::string& fname)
     {
         if (!mImageManager)
             throw std::runtime_error("No imagemanager set");
 
-        osg::ref_ptr<osg::Image> image (mImageManager->getImage(fname));
+        osg::ref_ptr<osg::Image> image(mImageManager->getImage(fname));
         mTexture = new osg::Texture2D(image);
         mTexture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
         mTexture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
@@ -110,12 +110,12 @@ namespace osgMyGUI
         mUsage = MyGUI::TextureUsage::Static;
     }
 
-    void OSGTexture::saveToFile(const std::string &fname)
+    void OSGTexture::saveToFile(const std::string& fname)
     {
         Log(Debug::Warning) << "Would save image to file " << fname;
     }
 
-    void *OSGTexture::lock(MyGUI::TextureUsage /*access*/)
+    void* OSGTexture::lock(MyGUI::TextureUsage /*access*/)
     {
         if (!mTexture.valid())
             throw std::runtime_error("Texture is not created");
@@ -123,10 +123,8 @@ namespace osgMyGUI
             throw std::runtime_error("Texture already locked");
 
         mLockedImage = new osg::Image();
-        mLockedImage->allocateImage(
-            mTexture->getTextureWidth(), mTexture->getTextureHeight(), mTexture->getTextureDepth(),
-            mTexture->getSourceFormat(), mTexture->getSourceType()
-        );
+        mLockedImage->allocateImage(mTexture->getTextureWidth(), mTexture->getTextureHeight(),
+            mTexture->getTextureDepth(), mTexture->getSourceFormat(), mTexture->getSourceType());
 
         return mLockedImage->data();
     }
@@ -163,8 +161,8 @@ namespace osgMyGUI
         return nullptr;
     }
 
-#if MYGUI_VERSION > MYGUI_DEFINE_VERSION(3, 4, 0)
     void OSGTexture::setShader(const std::string& _shaderName)
-    { Log(Debug::Warning) << "OSGTexture::setShader is not implemented"; }
-#endif
+    {
+        Log(Debug::Warning) << "OSGTexture::setShader is not implemented";
+    }
 }

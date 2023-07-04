@@ -1,30 +1,36 @@
 #ifndef CSM_TOOLS_ENCHANTMENTCHECK_H
 #define CSM_TOOLS_ENCHANTMENTCHECK_H
 
-#include <components/esm/loadench.hpp>
-
 #include "../world/idcollection.hpp"
 
 #include "../doc/stage.hpp"
+
+namespace CSMDoc
+{
+    class Messages;
+}
+
+namespace ESM
+{
+    struct Enchantment;
+}
 
 namespace CSMTools
 {
     /// \brief Make sure that enchantment records are correct
     class EnchantmentCheckStage : public CSMDoc::Stage
     {
-            const CSMWorld::IdCollection<ESM::Enchantment>& mEnchantments;
-            bool mIgnoreBaseRecords;
+        const CSMWorld::IdCollection<ESM::Enchantment>& mEnchantments;
+        bool mIgnoreBaseRecords;
 
-        public:
+    public:
+        EnchantmentCheckStage(const CSMWorld::IdCollection<ESM::Enchantment>& enchantments);
 
-            EnchantmentCheckStage (const CSMWorld::IdCollection<ESM::Enchantment>& enchantments);
+        int setup() override;
+        ///< \return number of steps
 
-            int setup() override;
-            ///< \return number of steps
-
-            void perform (int stage, CSMDoc::Messages& messages) override;
-            ///< Messages resulting from this tage will be appended to \a messages.
-
+        void perform(int stage, CSMDoc::Messages& messages) override;
+        ///< Messages resulting from this tage will be appended to \a messages.
     };
 }
 

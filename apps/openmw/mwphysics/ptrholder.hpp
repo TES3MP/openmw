@@ -1,7 +1,13 @@
 #ifndef OPENMW_MWPHYSICS_PTRHOLDER_H
 #define OPENMW_MWPHYSICS_PTRHOLDER_H
 
+#include <memory>
 #include <mutex>
+#include <utility>
+
+#include <osg/Vec3d>
+
+#include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 
 #include "../mwworld/ptr.hpp"
 
@@ -10,31 +16,47 @@ namespace MWPhysics
     class PtrHolder
     {
     public:
-        virtual ~PtrHolder() {}
-
-        void updatePtr(const MWWorld::Ptr& updated)
+        explicit PtrHolder(const MWWorld::Ptr& ptr, const osg::Vec3f& position)
+            : mPtr(ptr)
+            , mSimulationPosition(position)
+            , mPosition(position)
+            , mPreviousPosition(position)
         {
-            std::scoped_lock lock(mMutex);
-            mPtr = updated;
         }
 
-        MWWorld::Ptr getPtr()
+        virtual ~PtrHolder() = default;
+
+        void updatePtr(const MWWorld::Ptr& updated) { mPtr = updated; }
+
+        MWWorld::Ptr getPtr() const { return mPtr; }
+
+        btCollisionObject* getCollisionObject() const { return mCollisionObject.get(); }
+
+        void setVelocity(osg::Vec3f velocity) { mVelocity = velocity; }
+
+        osg::Vec3f velocity() { return std::exchange(mVelocity, osg::Vec3f()); }
+
+        void setSimulationPosition(const osg::Vec3f& position) { mSimulationPosition = position; }
+
+        osg::Vec3f getSimulationPosition() const { return mSimulationPosition; }
+
+        void setPosition(const osg::Vec3f& position)
         {
-            std::scoped_lock lock(mMutex);
-            return mPtr;
+            mPreviousPosition = mPosition;
+            mPosition = position;
         }
 
-        MWWorld::ConstPtr getPtr() const
-        {
-            std::scoped_lock lock(mMutex);
-            return mPtr;
-        }
+        osg::Vec3d getPosition() const { return mPosition; }
+
+        osg::Vec3d getPreviousPosition() const { return mPreviousPosition; }
 
     protected:
         MWWorld::Ptr mPtr;
-
-    private:
-        mutable std::mutex mMutex;
+        std::unique_ptr<btCollisionObject> mCollisionObject;
+        osg::Vec3f mVelocity;
+        osg::Vec3f mSimulationPosition;
+        osg::Vec3d mPosition;
+        osg::Vec3d mPreviousPosition;
     };
 }
 

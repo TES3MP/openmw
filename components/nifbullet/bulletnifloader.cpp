@@ -1,417 +1,420 @@
 #include "bulletnifloader.hpp"
 
+#include <cassert>
+#include <sstream>
+#include <tuple>
+#include <variant>
 #include <vector>
 
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletCollision/CollisionShapes/btTriangleMesh.h>
-#include <BulletCollision/CollisionShapes/btScaledBvhTriangleMeshShape.h>
 
 #include <components/debug/debuglog.hpp>
 
 #include <components/misc/convert.hpp>
-#include <components/misc/stringops.hpp>
 
-#include <components/nif/node.hpp>
+#include <components/misc/strings/algorithm.hpp>
+
 #include <components/nif/data.hpp>
 #include <components/nif/extra.hpp>
+#include <components/nif/node.hpp>
+#include <components/nif/parent.hpp>
+
+#include <components/files/conversion.hpp>
 
 namespace
 {
 
-osg::Matrixf getWorldTransform(const Nif::Node *node)
-{
-    if(node->parent != nullptr)
-        return node->trafo.toMatrix() * getWorldTransform(node->parent);
-    return node->trafo.toMatrix();
-}
-
-bool pathFileNameStartsWithX(const std::string& path)
-{
-    const std::size_t slashpos = path.find_last_of("/\\");
-    const std::size_t letterPos = slashpos == std::string::npos ? 0 : slashpos + 1;
-    return letterPos < path.size() && (path[letterPos] == 'x' || path[letterPos] == 'X');
-}
-
-void fillTriangleMesh(btTriangleMesh& mesh, const Nif::NiTriShapeData& data, const osg::Matrixf &transform)
-{
-    const std::vector<osg::Vec3f> &vertices = data.vertices;
-    const std::vector<unsigned short> &triangles = data.triangles;
-    mesh.preallocateVertices(static_cast<int>(vertices.size()));
-    mesh.preallocateIndices(static_cast<int>(triangles.size()));
-
-    for (std::size_t i = 0; i < triangles.size(); i += 3)
+    bool pathFileNameStartsWithX(const std::string& path)
     {
-        mesh.addTriangle(
-            Misc::Convert::toBullet(vertices[triangles[i + 0]] * transform),
-            Misc::Convert::toBullet(vertices[triangles[i + 1]] * transform),
-            Misc::Convert::toBullet(vertices[triangles[i + 2]] * transform)
-        );
+        const std::size_t slashpos = path.find_last_of("/\\");
+        const std::size_t letterPos = slashpos == std::string::npos ? 0 : slashpos + 1;
+        return letterPos < path.size() && (path[letterPos] == 'x' || path[letterPos] == 'X');
     }
-}
 
-void fillTriangleMesh(btTriangleMesh& mesh, const Nif::NiTriStripsData& data, const osg::Matrixf &transform)
-{
-    const std::vector<osg::Vec3f> &vertices = data.vertices;
-    const std::vector<std::vector<unsigned short>> &strips = data.strips;
-    mesh.preallocateVertices(static_cast<int>(vertices.size()));
-    int numTriangles = 0;
-    for (const std::vector<unsigned short>& strip : strips)
+    void prepareTriangleMesh(btTriangleMesh& mesh, const Nif::NiTriBasedGeomData& data)
     {
-        // Each strip with N points contains information about N-2 triangles.
-        if (strip.size() >= 3)
-            numTriangles += static_cast<int>(strip.size()-2);
+        // FIXME: copying vertices/indices individually is unreasonable
+        const std::vector<osg::Vec3f>& vertices = data.vertices;
+        mesh.preallocateVertices(static_cast<int>(vertices.size()));
+        for (const osg::Vec3f& vertex : vertices)
+            mesh.findOrAddVertex(Misc::Convert::toBullet(vertex), false);
+
+        mesh.preallocateIndices(static_cast<int>(data.mNumTriangles * 3));
     }
-    mesh.preallocateIndices(static_cast<int>(numTriangles));
 
-    // It's triangulation time. Totally not a NifSkope spell ripoff.
-    for (const std::vector<unsigned short>& strip : strips)
+    void fillTriangleMesh(btTriangleMesh& mesh, const Nif::NiTriShapeData& data)
     {
-        // Can't make a triangle from less than 3 points.
-        if (strip.size() < 3)
-            continue;
+        prepareTriangleMesh(mesh, data);
+        const std::vector<unsigned short>& triangles = data.triangles;
+        for (std::size_t i = 0; i < triangles.size(); i += 3)
+            mesh.addTriangleIndices(triangles[i + 0], triangles[i + 1], triangles[i + 2]);
+    }
 
-        unsigned short a = strip[0], b = strip[0], c = strip[1];
-        for (size_t i = 2; i < strip.size(); i++)
+    void fillTriangleMesh(btTriangleMesh& mesh, const Nif::NiTriStripsData& data)
+    {
+        prepareTriangleMesh(mesh, data);
+        for (const std::vector<unsigned short>& strip : data.strips)
         {
-            a = b;
-            b = c;
-            c = strip[i];
-            if (a != b && b != c && a != c)
+            if (strip.size() < 3)
+                continue;
+
+            unsigned short a;
+            unsigned short b = strip[0];
+            unsigned short c = strip[1];
+            for (size_t i = 2; i < strip.size(); i++)
             {
-                if (i%2==0)
-                {
-                    mesh.addTriangle(
-                        Misc::Convert::toBullet(vertices[a] * transform),
-                        Misc::Convert::toBullet(vertices[b] * transform),
-                        Misc::Convert::toBullet(vertices[c] * transform)
-                    );
-                }
+                a = b;
+                b = c;
+                c = strip[i];
+                if (a == b || b == c || a == c)
+                    continue;
+                if (i % 2 == 0)
+                    mesh.addTriangleIndices(a, b, c);
                 else
-                {
-                    mesh.addTriangle(
-                        Misc::Convert::toBullet(vertices[a] * transform),
-                        Misc::Convert::toBullet(vertices[c] * transform),
-                        Misc::Convert::toBullet(vertices[b] * transform)
-                    );
-                }
+                    mesh.addTriangleIndices(a, c, b);
             }
         }
     }
-}
 
-void fillTriangleMesh(btTriangleMesh& mesh, const Nif::NiGeometry* geometry, const osg::Matrixf &transform = osg::Matrixf())
-{
-    if (geometry->recType == Nif::RC_NiTriShape || geometry->recType == Nif::RC_BSLODTriShape)
-        fillTriangleMesh(mesh, static_cast<const Nif::NiTriShapeData&>(geometry->data.get()), transform);
-    else if (geometry->recType == Nif::RC_NiTriStrips)
-        fillTriangleMesh(mesh, static_cast<const Nif::NiTriStripsData&>(geometry->data.get()), transform);
-}
+    template <class Function>
+    auto handleNiGeometry(const Nif::NiGeometry& geometry, Function&& function)
+        -> decltype(function(static_cast<const Nif::NiTriShapeData&>(geometry.data.get())))
+    {
+        if (geometry.recType == Nif::RC_NiTriShape || geometry.recType == Nif::RC_BSLODTriShape)
+        {
+            if (geometry.data->recType != Nif::RC_NiTriShapeData)
+                return {};
+
+            auto data = static_cast<const Nif::NiTriShapeData*>(geometry.data.getPtr());
+            if (data->triangles.empty())
+                return {};
+
+            return function(static_cast<const Nif::NiTriShapeData&>(*data));
+        }
+
+        if (geometry.recType == Nif::RC_NiTriStrips)
+        {
+            if (geometry.data->recType != Nif::RC_NiTriStripsData)
+                return {};
+
+            auto data = static_cast<const Nif::NiTriStripsData*>(geometry.data.getPtr());
+            if (data->strips.empty())
+                return {};
+
+            return function(static_cast<const Nif::NiTriStripsData&>(*data));
+        }
+
+        return {};
+    }
+
+    std::unique_ptr<btTriangleMesh> makeChildMesh(const Nif::NiGeometry& geometry)
+    {
+        return handleNiGeometry(geometry, [&](const auto& data) {
+            auto mesh = std::make_unique<btTriangleMesh>();
+            fillTriangleMesh(*mesh, data);
+            return mesh;
+        });
+    }
 
 }
 
 namespace NifBullet
 {
 
-osg::ref_ptr<Resource::BulletShape> BulletNifLoader::load(const Nif::File& nif)
-{
-    mShape = new Resource::BulletShape;
-
-    mCompoundShape.reset();
-    mStaticMesh.reset();
-    mAvoidStaticMesh.reset();
-
-    const size_t numRoots = nif.numRoots();
-    std::vector<const Nif::Node*> roots;
-    for (size_t i = 0; i < numRoots; ++i)
+    osg::ref_ptr<Resource::BulletShape> BulletNifLoader::load(Nif::FileView nif)
     {
-        const Nif::Record* r = nif.getRoot(i);
-        if (!r)
-            continue;
-        const Nif::Node* node = dynamic_cast<const Nif::Node*>(r);
-        if (node)
-            roots.emplace_back(node);
-    }
-    const std::string filename = nif.getFilename();
-    if (roots.empty())
-    {
-        warn("Found no root nodes in NIF file " + filename);
+        mShape = new Resource::BulletShape;
+
+        mCompoundShape.reset();
+        mAvoidCompoundShape.reset();
+
+        mShape->mFileHash = nif.getHash();
+
+        const size_t numRoots = nif.numRoots();
+        std::vector<const Nif::Node*> roots;
+        for (size_t i = 0; i < numRoots; ++i)
+        {
+            const Nif::Record* r = nif.getRoot(i);
+            if (!r)
+                continue;
+            const Nif::Node* node = dynamic_cast<const Nif::Node*>(r);
+            if (node)
+                roots.emplace_back(node);
+        }
+        const std::string filename = Files::pathToUnicodeString(nif.getFilename());
+        mShape->mFileName = filename;
+        if (roots.empty())
+        {
+            warn("Found no root nodes in NIF file " + filename);
+            return mShape;
+        }
+
+        // Try to find a valid bounding box first. If one's found for any root node, use that.
+        for (const Nif::Node* node : roots)
+        {
+            if (findBoundingBox(*node, filename))
+            {
+                const btVector3 extents = Misc::Convert::toBullet(mShape->mCollisionBox.mExtents);
+                const btVector3 center = Misc::Convert::toBullet(mShape->mCollisionBox.mCenter);
+                auto compound = std::make_unique<btCompoundShape>();
+                auto boxShape = std::make_unique<btBoxShape>(extents);
+                btTransform transform = btTransform::getIdentity();
+                transform.setOrigin(center);
+                compound->addChildShape(transform, boxShape.get());
+                std::ignore = boxShape.release();
+
+                mShape->mCollisionShape.reset(compound.release());
+                return mShape;
+            }
+        }
+        // files with the name convention xmodel.nif usually have keyframes stored in a separate file xmodel.kf (see
+        // Animation::addAnimSource). assume all nodes in the file will be animated
+        // TODO: investigate whether this should and could be optimized.
+        const bool isAnimated = pathFileNameStartsWithX(filename);
+
+        // If there's no bounding box, we'll have to generate a Bullet collision shape
+        // from the collision data present in every root node.
+        for (const Nif::Node* node : roots)
+        {
+            bool hasCollisionNode = hasRootCollisionNode(*node);
+            bool hasCollisionShape = hasCollisionNode && !collisionShapeIsEmpty(*node);
+            if (hasCollisionNode && !hasCollisionShape)
+                mShape->mVisualCollisionType = Resource::VisualCollisionType::Camera;
+            bool generateCollisionShape = !hasCollisionShape;
+            handleNode(filename, *node, nullptr, 0, generateCollisionShape, isAnimated, generateCollisionShape, false,
+                mShape->mVisualCollisionType);
+        }
+
+        if (mCompoundShape)
+            mShape->mCollisionShape = std::move(mCompoundShape);
+
+        if (mAvoidCompoundShape)
+            mShape->mAvoidCollisionShape = std::move(mAvoidCompoundShape);
+
         return mShape;
     }
 
-    // Try to find a valid bounding box first. If one's found for any root node, use that.
-    for (const Nif::Node* node : roots)
+    // Find a boundingBox in the node hierarchy.
+    // Return: use bounding box for collision?
+    bool BulletNifLoader::findBoundingBox(const Nif::Node& node, const std::string& filename)
     {
-        if (findBoundingBox(node, filename))
+        if (node.hasBounds)
         {
-            const btVector3 extents = Misc::Convert::toBullet(mShape->mCollisionBox.extents);
-            const btVector3 center = Misc::Convert::toBullet(mShape->mCollisionBox.center);
-            std::unique_ptr<btCompoundShape> compound (new btCompoundShape);
-            std::unique_ptr<btBoxShape> boxShape(new btBoxShape(extents));
-            btTransform transform = btTransform::getIdentity();
-            transform.setOrigin(center);
-            compound->addChildShape(transform, boxShape.get());
-            boxShape.release();
-
-            mShape->mCollisionShape = compound.release();
-            return mShape;
-        }
-    }
-    // files with the name convention xmodel.nif usually have keyframes stored in a separate file xmodel.kf (see Animation::addAnimSource).
-    // assume all nodes in the file will be animated
-    const bool isAnimated = pathFileNameStartsWithX(filename);
-
-    // If there's no bounding box, we'll have to generate a Bullet collision shape
-    // from the collision data present in every root node.
-    for (const Nif::Node* node : roots)
-    {
-        bool autogenerated = hasAutoGeneratedCollision(node);
-        handleNode(filename, node, 0, autogenerated, isAnimated, autogenerated);
-    }
-
-    if (mCompoundShape)
-    {
-        if (mStaticMesh)
-        {
-            btTransform trans;
-            trans.setIdentity();
-            std::unique_ptr<btCollisionShape> child(new Resource::TriangleMeshShape(mStaticMesh.get(), true));
-            mCompoundShape->addChildShape(trans, child.get());
-            child.release();
-            mStaticMesh.release();
-        }
-        mShape->mCollisionShape = mCompoundShape.release();
-    }
-    else if (mStaticMesh)
-    {
-        mShape->mCollisionShape = new Resource::TriangleMeshShape(mStaticMesh.get(), true);
-        mStaticMesh.release();
-    }
-
-    if (mAvoidStaticMesh)
-    {
-        mShape->mAvoidCollisionShape = new Resource::TriangleMeshShape(mAvoidStaticMesh.get(), false);
-        mAvoidStaticMesh.release();
-    }
-
-    return mShape;
-}
-
-// Find a boundingBox in the node hierarchy.
-// Return: use bounding box for collision?
-bool BulletNifLoader::findBoundingBox(const Nif::Node* node, const std::string& filename)
-{
-    if (node->hasBounds)
-    {
-        unsigned int type = node->bounds.type;
-        switch (type)
-        {
-            case Nif::NiBoundingVolume::Type::BOX_BV:
-                mShape->mCollisionBox.extents = node->bounds.box.extents;
-                mShape->mCollisionBox.center = node->bounds.box.center;
-                break;
-            default:
+            unsigned int type = node.bounds.type;
+            switch (type)
             {
-                std::stringstream warning;
-                warning << "Unsupported NiBoundingVolume type " << type << " in node " << node->recIndex;
-                warning << " in file " << filename;
-                warn(warning.str());
+                case Nif::NiBoundingVolume::Type::BOX_BV:
+                    mShape->mCollisionBox.mExtents = node.bounds.box.extents;
+                    mShape->mCollisionBox.mCenter = node.bounds.box.center;
+                    break;
+                default:
+                {
+                    std::stringstream warning;
+                    warning << "Unsupported NiBoundingVolume type " << type << " in node " << node.recIndex;
+                    warning << " in file " << filename;
+                    warn(warning.str());
+                }
+            }
+
+            if (node.hasBBoxCollision())
+            {
+                return true;
             }
         }
 
-        if (node->flags & Nif::NiNode::Flag_BBoxCollision)
+        if (const Nif::NiNode* ninode = dynamic_cast<const Nif::NiNode*>(&node))
         {
-            return true;
+            const Nif::NodeList& list = ninode->children;
+            for (const auto& child : list)
+                if (!child.empty() && findBoundingBox(child.get(), filename))
+                    return true;
         }
+        return false;
     }
 
-    const Nif::NiNode *ninode = dynamic_cast<const Nif::NiNode*>(node);
-    if(ninode)
+    bool BulletNifLoader::hasRootCollisionNode(const Nif::Node& rootNode) const
     {
-        const Nif::NodeList &list = ninode->children;
-        for(size_t i = 0;i < list.length();i++)
+        if (const Nif::NiNode* ninode = dynamic_cast<const Nif::NiNode*>(&rootNode))
         {
-            if(!list[i].empty())
+            for (const auto& child : ninode->children)
             {
-                if (findBoundingBox(list[i].getPtr(), filename))
+                if (child.empty())
+                    continue;
+                if (child.getPtr()->recType == Nif::RC_RootCollisionNode)
                     return true;
             }
         }
+        return false;
     }
-    return false;
-}
 
-bool BulletNifLoader::hasAutoGeneratedCollision(const Nif::Node* rootNode)
-{
-    const Nif::NiNode *ninode = dynamic_cast<const Nif::NiNode*>(rootNode);
-    if(ninode)
+    bool BulletNifLoader::collisionShapeIsEmpty(const Nif::Node& rootNode) const
     {
-        const Nif::NodeList &list = ninode->children;
-        for(size_t i = 0;i < list.length();i++)
+        if (const Nif::NiNode* ninode = dynamic_cast<const Nif::NiNode*>(&rootNode))
         {
-            if(!list[i].empty())
+            for (const auto& child : ninode->children)
             {
-                if(list[i].getPtr()->recType == Nif::RC_RootCollisionNode)
+                if (child.empty())
+                    continue;
+                const Nif::Node* childNode = child.getPtr();
+                if (childNode->recType != Nif::RC_RootCollisionNode)
+                    continue;
+                const Nif::NiNode* niChildnode
+                    = static_cast<const Nif::NiNode*>(childNode); // RootCollisionNode is always a NiNode
+                if (childNode->hasBounds || niChildnode->children.size() > 0)
                     return false;
             }
         }
+        return true;
     }
-    return true;
-}
 
-void BulletNifLoader::handleNode(const std::string& fileName, const Nif::Node *node, int flags,
-        bool isCollisionNode, bool isAnimated, bool autogenerated, bool avoid)
-{
-    // TODO: allow on-the fly collision switching via toggling this flag
-    if (node->recType == Nif::RC_NiCollisionSwitch && !(node->flags & Nif::NiNode::Flag_ActiveCollision))
-        return;
-
-    // Accumulate the flags from all the child nodes. This works for all
-    // the flags we currently use, at least.
-    flags |= node->flags;
-
-    if (!node->controller.empty() && node->controller->recType == Nif::RC_NiKeyframeController
-            && (node->controller->flags & Nif::NiNode::ControllerFlag_Active))
-        isAnimated = true;
-
-    isCollisionNode = isCollisionNode || (node->recType == Nif::RC_RootCollisionNode);
-
-    // Don't collide with AvoidNode shapes
-    avoid = avoid || (node->recType == Nif::RC_AvoidNode);
-
-    // We encountered a RootCollisionNode inside autogenerated mesh. It is not right.
-    if (node->recType == Nif::RC_RootCollisionNode && autogenerated)
-        Log(Debug::Info) << "RootCollisionNode is not attached to the root node in " << fileName << ". Treating it as a common NiTriShape.";
-
-    // Check for extra data
-    for (Nif::ExtraPtr e = node->extra; !e.empty(); e = e->next)
+    void BulletNifLoader::handleNode(const std::string& fileName, const Nif::Node& node, const Nif::Parent* parent,
+        int flags, bool isCollisionNode, bool isAnimated, bool autogenerated, bool avoid,
+        Resource::VisualCollisionType& visualCollisionType)
     {
-        if (e->recType == Nif::RC_NiStringExtraData)
-        {
-            // String markers may contain important information
-            // affecting the entire subtree of this node
-            Nif::NiStringExtraData *sd = (Nif::NiStringExtraData*)e.getPtr();
+        // TODO: allow on-the fly collision switching via toggling this flag
+        if (node.recType == Nif::RC_NiCollisionSwitch && !node.collisionActive())
+            return;
 
-            if (Misc::StringUtils::ciCompareLen(sd->string, "NC", 2) == 0)
+        // If RootCollisionNode is empty we treat it as NCC flag and autogenerate collision shape as there was no
+        // RootCollisionNode. So ignoring it here if `autogenerated` is true and collisionType was set to `Camera`.
+        if (node.recType == Nif::RC_RootCollisionNode && autogenerated
+            && visualCollisionType == Resource::VisualCollisionType::Camera)
+            return;
+
+        // Accumulate the flags from all the child nodes. This works for all
+        // the flags we currently use, at least.
+        flags |= node.flags;
+
+        if (!node.controller.empty() && node.controller->recType == Nif::RC_NiKeyframeController
+            && node.controller->isActive())
+            isAnimated = true;
+
+        isCollisionNode = isCollisionNode || (node.recType == Nif::RC_RootCollisionNode);
+
+        // Don't collide with AvoidNode shapes
+        avoid = avoid || (node.recType == Nif::RC_AvoidNode);
+
+        // We encountered a RootCollisionNode inside autogenerated mesh. It is not right.
+        if (node.recType == Nif::RC_RootCollisionNode && autogenerated)
+            Log(Debug::Info) << "RootCollisionNode is not attached to the root node in " << fileName
+                             << ". Treating it as a common NiTriShape.";
+
+        // Check for extra data
+        std::vector<Nif::ExtraPtr> extraCollection;
+        for (Nif::ExtraPtr e = node.extra; !e.empty(); e = e->next)
+            extraCollection.emplace_back(e);
+        for (const auto& extraNode : node.extralist)
+            if (!extraNode.empty())
+                extraCollection.emplace_back(extraNode);
+        for (const auto& e : extraCollection)
+        {
+            if (e->recType == Nif::RC_NiStringExtraData)
             {
-                // No collision. Use an internal flag setting to mark this.
-                flags |= 0x800;
+                // String markers may contain important information
+                // affecting the entire subtree of this node
+                Nif::NiStringExtraData* sd = (Nif::NiStringExtraData*)e.getPtr();
+
+                if (Misc::StringUtils::ciStartsWith(sd->string, "NC"))
+                {
+                    // NCC flag in vanilla is partly case sensitive: prefix NC is case insensitive but second C needs be
+                    // uppercase
+                    if (sd->string.length() > 2 && sd->string[2] == 'C')
+                        // Collide only with camera.
+                        visualCollisionType = Resource::VisualCollisionType::Camera;
+                    else
+                        // No collision.
+                        visualCollisionType = Resource::VisualCollisionType::Default;
+                }
+                else if (sd->string == "MRK" && autogenerated)
+                {
+                    // Marker can still have collision if the model explicitely specifies it via a RootCollisionNode.
+                    return;
+                }
             }
-            else if (sd->string == "MRK" && autogenerated)
+            else if (e->recType == Nif::RC_BSXFlags)
             {
-                // Marker can still have collision if the model explicitely specifies it via a RootCollisionNode.
-                return;
+                auto bsxFlags = static_cast<const Nif::NiIntegerExtraData*>(e.getPtr());
+                if (bsxFlags->data & 32) // Editor marker flag
+                    return;
             }
-
         }
-    }
 
-    if (isCollisionNode)
-    {
-        // NOTE: a trishape with hasBounds=true, but no BBoxCollision flag should NOT go through handleNiTriShape!
-        // It must be ignored completely.
-        // (occurs in tr_ex_imp_wall_arch_04.nif)
-        if(!node->hasBounds && (node->recType == Nif::RC_NiTriShape
-                                || node->recType == Nif::RC_NiTriStrips
-                                || node->recType == Nif::RC_BSLODTriShape))
+        if (isCollisionNode)
         {
-            handleNiTriShape(node, flags, getWorldTransform(node), isAnimated, avoid);
+            // NOTE: a trishape with hasBounds=true, but no BBoxCollision flag should NOT go through handleNiTriShape!
+            // It must be ignored completely.
+            // (occurs in tr_ex_imp_wall_arch_04.nif)
+            if (!node.hasBounds
+                && (node.recType == Nif::RC_NiTriShape || node.recType == Nif::RC_NiTriStrips
+                    || node.recType == Nif::RC_BSLODTriShape))
+            {
+                handleNiTriShape(static_cast<const Nif::NiGeometry&>(node), parent, isAnimated, avoid);
+            }
         }
-    }
 
-    // For NiNodes, loop through children
-    const Nif::NiNode *ninode = dynamic_cast<const Nif::NiNode*>(node);
-    if(ninode)
-    {
-        const Nif::NodeList &list = ninode->children;
-        for(size_t i = 0;i < list.length();i++)
+        // For NiNodes, loop through children
+        if (const Nif::NiNode* ninode = dynamic_cast<const Nif::NiNode*>(&node))
         {
-            if(!list[i].empty())
-                handleNode(fileName, list[i].getPtr(), flags, isCollisionNode, isAnimated, autogenerated, avoid);
+            const Nif::NodeList& list = ninode->children;
+            const Nif::Parent currentParent{ *ninode, parent };
+            for (const auto& child : list)
+            {
+                if (child.empty())
+                    continue;
+
+                assert(std::find(child->parents.begin(), child->parents.end(), ninode) != child->parents.end());
+                handleNode(fileName, child.get(), &currentParent, flags, isCollisionNode, isAnimated, autogenerated,
+                    avoid, visualCollisionType);
+            }
         }
     }
-}
 
-void BulletNifLoader::handleNiTriShape(const Nif::Node *nifNode, int flags, const osg::Matrixf &transform,
-                                       bool isAnimated, bool avoid)
-{
-    assert(nifNode != nullptr);
-
-    // If the object was marked "NCO" earlier, it shouldn't collide with
-    // anything. So don't do anything.
-    if ((flags & 0x800))
-        return;
-
-    auto niGeometry = static_cast<const Nif::NiGeometry*>(nifNode);
-    if (niGeometry->data.empty() || niGeometry->data->vertices.empty())
-        return;
-
-    if (niGeometry->recType == Nif::RC_NiTriShape || niGeometry->recType == Nif::RC_BSLODTriShape)
+    void BulletNifLoader::handleNiTriShape(
+        const Nif::NiGeometry& niGeometry, const Nif::Parent* nodeParent, bool isAnimated, bool avoid)
     {
-        if (niGeometry->data->recType != Nif::RC_NiTriShapeData)
+        if (niGeometry.data.empty() || niGeometry.data->vertices.empty())
             return;
 
-        auto data = static_cast<const Nif::NiTriShapeData*>(niGeometry->data.getPtr());
-        if (data->triangles.empty())
-            return;
-    }
-    else if (niGeometry->recType == Nif::RC_NiTriStrips)
-    {
-        if (niGeometry->data->recType != Nif::RC_NiTriStripsData)
+        if (!niGeometry.skin.empty())
+            isAnimated = false;
+
+        std::unique_ptr<btTriangleMesh> childMesh = makeChildMesh(niGeometry);
+        if (childMesh == nullptr || childMesh->getNumTriangles() == 0)
             return;
 
-        auto data = static_cast<const Nif::NiTriStripsData*>(niGeometry->data.getPtr());
-        if (data->strips.empty())
-            return;
-    }
+        auto childShape = std::make_unique<Resource::TriangleMeshShape>(childMesh.get(), true);
+        std::ignore = childMesh.release();
 
-    if (!niGeometry->skin.empty())
-        isAnimated = false;
+        osg::Matrixf transform = niGeometry.trafo.toMatrix();
+        for (const Nif::Parent* parent = nodeParent; parent != nullptr; parent = parent->mParent)
+            transform *= parent->mNiNode.trafo.toMatrix();
+        childShape->setLocalScaling(Misc::Convert::toBullet(transform.getScale()));
+        transform.orthoNormalize(transform);
 
-    if (isAnimated)
-    {
-        if (!mCompoundShape)
-            mCompoundShape.reset(new btCompoundShape);
+        btTransform trans;
+        trans.setOrigin(Misc::Convert::toBullet(transform.getTrans()));
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                trans.getBasis()[i][j] = transform(j, i);
 
-        std::unique_ptr<btTriangleMesh> childMesh(new btTriangleMesh);
-
-        fillTriangleMesh(*childMesh, niGeometry);
-
-        std::unique_ptr<Resource::TriangleMeshShape> childShape(new Resource::TriangleMeshShape(childMesh.get(), true));
-        childMesh.release();
-
-        float scale = nifNode->trafo.scale;
-        const Nif::Node* parent = nifNode;
-        while (parent->parent)
+        if (!avoid)
         {
-            parent = parent->parent;
-            scale *= parent->trafo.scale;
+            if (!mCompoundShape)
+                mCompoundShape.reset(new btCompoundShape);
+
+            if (isAnimated)
+                mShape->mAnimatedShapes.emplace(niGeometry.recIndex, mCompoundShape->getNumChildShapes());
+            mCompoundShape->addChildShape(trans, childShape.get());
         }
-        osg::Quat q = transform.getRotate();
-        osg::Vec3f v = transform.getTrans();
-        childShape->setLocalScaling(btVector3(scale, scale, scale));
+        else
+        {
+            if (!mAvoidCompoundShape)
+                mAvoidCompoundShape.reset(new btCompoundShape);
+            mAvoidCompoundShape->addChildShape(trans, childShape.get());
+        }
 
-        btTransform trans(btQuaternion(q.x(), q.y(), q.z(), q.w()), btVector3(v.x(), v.y(), v.z()));
-
-        mShape->mAnimatedShapes.emplace(nifNode->recIndex, mCompoundShape->getNumChildShapes());
-
-        mCompoundShape->addChildShape(trans, childShape.get());
-        childShape.release();
+        std::ignore = childShape.release();
     }
-    else if (avoid)
-    {
-        if (!mAvoidStaticMesh)
-            mAvoidStaticMesh.reset(new btTriangleMesh(false));
-
-        fillTriangleMesh(*mAvoidStaticMesh, niGeometry, transform);
-    }
-    else
-    {
-        if (!mStaticMesh)
-            mStaticMesh.reset(new btTriangleMesh(false));
-
-        // Static shape, just transform all vertices into position
-        fillTriangleMesh(*mStaticMesh, niGeometry, transform);
-    }
-}
 
 } // namespace NifBullet

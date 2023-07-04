@@ -1,13 +1,10 @@
 #ifndef WINDOWS_CRASHCATCHER_HPP
 #define WINDOWS_CRASHCATCHER_HPP
 
-#include <string>
-
-#undef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <filesystem>
 
 #include <components/crashcatcher/crashcatcher.hpp>
+#include <components/windows.hpp>
 
 namespace Crash
 {
@@ -30,12 +27,10 @@ namespace Crash
     class CrashCatcher final
     {
     public:
-
-        CrashCatcher(int argc, char **argv, const std::string& crashLogPath);
+        CrashCatcher(int argc, char** argv, const std::filesystem::path& crashLogPath);
         ~CrashCatcher();
 
     private:
-
         static CrashCatcher* sInstance;
 
         //  mapped SHM area
@@ -59,7 +54,7 @@ namespace Crash
 
         void shmUnlock();
 
-        void startMonitorProcess(const std::string& crashLogPath);
+        void startMonitorProcess(const std::filesystem::path& crashLogPath);
 
         void waitMonitor();
 
@@ -70,7 +65,6 @@ namespace Crash
         void handleVectoredException(PEXCEPTION_POINTERS info);
 
     public:
-
         static LONG WINAPI vectoredExceptionHandler(PEXCEPTION_POINTERS info);
     };
 

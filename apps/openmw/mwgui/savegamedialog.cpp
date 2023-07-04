@@ -1,36 +1,40 @@
 #include "savegamedialog.hpp"
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 #include <MyGUI_ComboBox.h>
 #include <MyGUI_ImageBox.h>
-#include <MyGUI_ListBox.h>
 #include <MyGUI_InputManager.h>
 #include <MyGUI_LanguageManager.h>
 
-#include <osgDB/ReadFile>
 #include <osg/Texture2D>
+#include <osgDB/ReadFile>
 
 #include <components/debug/debuglog.hpp>
 
 #include <components/myguiplatform/myguitexture.hpp>
 
-#include <components/misc/stringops.hpp>
+#include <components/misc/strings/lower.hpp>
 
 #include <components/settings/settings.hpp>
 
+#include <components/files/conversion.hpp>
 #include <components/files/memorystream.hpp>
+#include <components/misc/timeconvert.hpp>
 
-#include "../mwbase/statemanager.hpp"
+#include <components/esm3/loadclas.hpp>
+
 #include "../mwbase/environment.hpp"
-#include "../mwbase/world.hpp"
+#include "../mwbase/statemanager.hpp"
 #include "../mwbase/windowmanager.hpp"
+#include "../mwbase/world.hpp"
 #include "../mwworld/esmstore.hpp"
 
 #include "../mwstate/character.hpp"
 
 #include "confirmationdialog.hpp"
+#include "ustring.hpp"
 
 namespace MWGui
 {
@@ -48,7 +52,6 @@ namespace MWGui
         getWidget(mDeleteButton, "DeleteButton");
         getWidget(mSaveList, "SaveList");
         getWidget(mSaveNameEdit, "SaveNameEdit");
-        getWidget(mSpacer, "Spacer");
         mOkButton->eventMouseButtonClick += MyGUI::newDelegate(this, &SaveGameDialog::onOkButtonClicked);
         mCancelButton->eventMouseButtonClick += MyGUI::newDelegate(this, &SaveGameDialog::onCancelButtonClicked);
         mDeleteButton->eventMouseButtonClick += MyGUI::newDelegate(this, &SaveGameDialog::onDeleteButtonClicked);
@@ -65,7 +68,7 @@ namespace MWGui
         mDeleteButton->setNeedKeyFocus(false);
     }
 
-    void SaveGameDialog::onSlotActivated(MyGUI::ListBox *sender, size_t pos)
+    void SaveGameDialog::onSlotActivated(MyGUI::ListBox* sender, size_t pos)
     {
         onSlotSelected(sender, pos);
         accept();
@@ -82,7 +85,7 @@ namespace MWGui
     void SaveGameDialog::confirmDeleteSave()
     {
         ConfirmationDialog* dialog = MWBase::Environment::get().getWindowManager()->getConfirmationDialog();
-        dialog->askForConfirmation("#{sMessage3}");
+        dialog->askForConfirmation("#{OMWEngine:DeleteGameConfirmation}");
         dialog->eventOkClicked.clear();
         dialog->eventOkClicked += MyGUI::newDelegate(this, &SaveGameDialog::onDeleteSlotConfirmed);
         dialog->eventCancelClicked.clear();
@@ -91,7 +94,7 @@ namespace MWGui
 
     void SaveGameDialog::onDeleteSlotConfirmed()
     {
-        MWBase::Environment::get().getStateManager()->deleteGame (mCurrentCharacter, mCurrentSlot);
+        MWBase::Environment::get().getStateManager()->deleteGame(mCurrentCharacter, mCurrentSlot);
         mSaveList->removeItemAt(mSaveList->getIndexSelected());
         onSlotSelected(mSaveList, mSaveList->getIndexSelected());
         MWBase::Environment::get().getWindowManager()->setKeyFocusWidget(mSaveList);
@@ -103,12 +106,12 @@ namespace MWGui
             mCharacterSelection->removeItemAt(previousIndex);
             if (mCharacterSelection->getItemCount())
             {
-                size_t nextCharacter = std::min(previousIndex, mCharacterSelection->getItemCount()-1);
+                size_t nextCharacter = std::min(previousIndex, mCharacterSelection->getItemCount() - 1);
                 mCharacterSelection->setIndexSelected(nextCharacter);
                 onCharacterSelected(mCharacterSelection, nextCharacter);
             }
             else
-                fillSaveList();
+                mCharacterSelection->setIndexSelected(MyGUI::ITEM_NONE);
         }
     }
 
@@ -117,14 +120,14 @@ namespace MWGui
         MWBase::Environment::get().getWindowManager()->setKeyFocusWidget(mSaveList);
     }
 
-    void SaveGameDialog::onSaveNameChanged(MyGUI::EditBox *sender)
+    void SaveGameDialog::onSaveNameChanged(MyGUI::EditBox* sender)
     {
         // This might have previously been a save slot from the list. If so, that is no longer the case
         mSaveList->setIndexSelected(MyGUI::ITEM_NONE);
         onSlotSelected(mSaveList, MyGUI::ITEM_NONE);
     }
 
-    void SaveGameDialog::onEditSelectAccept(MyGUI::EditBox *sender)
+    void SaveGameDialog::onEditSelectAccept(MyGUI::EditBox* sender)
     {
         accept();
 
@@ -143,7 +146,7 @@ namespace MWGui
     {
         WindowModal::onOpen();
 
-        mSaveNameEdit->setCaption ("");
+        mSaveNameEdit->setCaption({});
         if (mSaving)
             MWBase::Environment::get().getWindowManager()->setKeyFocusWidget(mSaveNameEdit);
         else
@@ -151,7 +154,7 @@ namespace MWGui
 
         center();
 
-        mCharacterSelection->setCaption("");
+        mCharacterSelection->setCaption({});
         mCharacterSelection->removeAllItems();
         mCurrentCharacter = nullptr;
         mCurrentSlot = nullptr;
@@ -164,54 +167,56 @@ namespace MWGui
 
         mCurrentCharacter = mgr->getCurrentCharacter();
 
-        std::string directory =
-            Misc::StringUtils::lowerCase (Settings::Manager::getString ("character", "Saves"));
+        const std::string& directory = Settings::Manager::getString("character", "Saves");
 
         size_t selectedIndex = MyGUI::ITEM_NONE;
 
         for (MWBase::StateManager::CharacterIterator it = mgr->characterBegin(); it != mgr->characterEnd(); ++it)
         {
-            if (it->begin()!=it->end())
+            if (it->begin() != it->end())
             {
+                const ESM::SavedGame& signature = it->getSignature();
+
                 std::stringstream title;
-                title << it->getSignature().mPlayerName;
+                title << signature.mPlayerName;
 
                 // For a custom class, we will not find it in the store (unless we loaded the savegame first).
                 // Fall back to name stored in savegame header in that case.
-                std::string className;
-                if (it->getSignature().mPlayerClassId.empty())
-                    className = it->getSignature().mPlayerClassName;
+                std::string_view className;
+                if (signature.mPlayerClassId.empty())
+                    className = signature.mPlayerClassName;
                 else
                 {
                     // Find the localised name for this class from the store
-                    const ESM::Class* class_ = MWBase::Environment::get().getWorld()->getStore().get<ESM::Class>().search(
-                                it->getSignature().mPlayerClassId);
+                    const ESM::Class* class_
+                        = MWBase::Environment::get().getESMStore()->get<ESM::Class>().search(signature.mPlayerClassId);
                     if (class_)
                         className = class_->mName;
                     else
                         className = "?"; // From an older savegame format that did not support custom classes properly.
                 }
 
-                title << " (#{sLevel} " << it->getSignature().mPlayerLevel << " " << MyGUI::TextIterator::toTagsString(className) << ")";
+                title << " (#{sLevel} " << signature.mPlayerLevel << " "
+                      << MyGUI::TextIterator::toTagsString(toUString(className)) << ")";
 
-                mCharacterSelection->addItem (MyGUI::LanguageManager::getInstance().replaceTags(title.str()));
+                mCharacterSelection->addItem(MyGUI::LanguageManager::getInstance().replaceTags(title.str()));
 
-                if (mCurrentCharacter == &*it ||
-                    (!mCurrentCharacter && !mSaving && directory==Misc::StringUtils::lowerCase (
-                    it->begin()->mPath.parent_path().filename().string())))
+                if (mCurrentCharacter == &*it
+                    || (!mCurrentCharacter && !mSaving
+                        && Misc::StringUtils::ciEqual(
+                            directory, Files::pathToUnicodeString(it->begin()->mPath.parent_path().filename()))))
                 {
                     mCurrentCharacter = &*it;
-                    selectedIndex = mCharacterSelection->getItemCount()-1;
+                    selectedIndex = mCharacterSelection->getItemCount() - 1;
                 }
             }
         }
 
         mCharacterSelection->setIndexSelected(selectedIndex);
         if (selectedIndex == MyGUI::ITEM_NONE)
-            mCharacterSelection->setCaption("Select Character ...");
+            mCharacterSelection->setCaptionWithReplacing("#{OMWEngine:SelectCharacter}");
 
         fillSaveList();
-
     }
 
     void SaveGameDialog::setLoadOrSave(bool load)
@@ -220,7 +225,6 @@ namespace MWGui
         mSaveNameEdit->setVisible(!load);
         mCharacterSelection->setUserString("Hidden", load ? "false" : "true");
         mCharacterSelection->setVisible(load);
-        mSpacer->setUserString("Hidden", load ? "false" : "true");
 
         mDeleteButton->setUserString("Hidden", load ? "false" : "true");
         mDeleteButton->setVisible(load);
@@ -233,12 +237,12 @@ namespace MWGui
         center();
     }
 
-    void SaveGameDialog::onCancelButtonClicked(MyGUI::Widget *sender)
+    void SaveGameDialog::onCancelButtonClicked(MyGUI::Widget* sender)
     {
         setVisible(false);
     }
 
-    void SaveGameDialog::onDeleteButtonClicked(MyGUI::Widget *sender)
+    void SaveGameDialog::onDeleteButtonClicked(MyGUI::Widget* sender)
     {
         if (mCurrentSlot)
             confirmDeleteSave();
@@ -262,7 +266,7 @@ namespace MWGui
             if (mCurrentSlot != nullptr && !reallySure)
             {
                 ConfirmationDialog* dialog = MWBase::Environment::get().getWindowManager()->getConfirmationDialog();
-                dialog->askForConfirmation("#{sMessage4}");
+                dialog->askForConfirmation("#{OMWEngine:OverwriteGameConfirmation}");
                 dialog->eventOkClicked.clear();
                 dialog->eventOkClicked += MyGUI::newDelegate(this, &SaveGameDialog::onConfirmationGiven);
                 dialog->eventCancelClicked.clear();
@@ -271,7 +275,7 @@ namespace MWGui
             }
             if (mSaveNameEdit->getCaption().empty())
             {
-                MWBase::Environment::get().getWindowManager()->messageBox("#{sNotifyMessage65}");
+                MWBase::Environment::get().getWindowManager()->messageBox("#{OMWEngine:EmptySaveNameError}");
                 return;
             }
         }
@@ -283,7 +287,7 @@ namespace MWGui
             if (state == MWBase::StateManager::State_Running && !reallySure)
             {
                 ConfirmationDialog* dialog = MWBase::Environment::get().getWindowManager()->getConfirmationDialog();
-                dialog->askForConfirmation("#{sMessage1}");
+                dialog->askForConfirmation("#{OMWEngine:LoadGameConfirmation}");
                 dialog->eventOkClicked.clear();
                 dialog->eventOkClicked += MyGUI::newDelegate(this, &SaveGameDialog::onConfirmationGiven);
                 dialog->eventCancelClicked.clear();
@@ -293,16 +297,16 @@ namespace MWGui
         }
 
         setVisible(false);
-        MWBase::Environment::get().getWindowManager()->removeGuiMode (MWGui::GM_MainMenu);
+        MWBase::Environment::get().getWindowManager()->removeGuiMode(MWGui::GM_MainMenu);
 
         if (mSaving)
         {
-            MWBase::Environment::get().getStateManager()->saveGame (mSaveNameEdit->getCaption(), mCurrentSlot);
+            MWBase::Environment::get().getStateManager()->saveGame(mSaveNameEdit->getCaption(), mCurrentSlot);
         }
         else
         {
-            assert (mCurrentCharacter && mCurrentSlot);
-            MWBase::Environment::get().getStateManager()->loadGame (mCurrentCharacter, mCurrentSlot->mPath.string());
+            assert(mCurrentCharacter && mCurrentSlot);
+            MWBase::Environment::get().getStateManager()->loadGame(mCurrentCharacter, mCurrentSlot->mPath);
         }
     }
 
@@ -312,16 +316,16 @@ namespace MWGui
             confirmDeleteSave();
     }
 
-    void SaveGameDialog::onOkButtonClicked(MyGUI::Widget *sender)
+    void SaveGameDialog::onOkButtonClicked(MyGUI::Widget* sender)
     {
         accept();
     }
 
-    void SaveGameDialog::onCharacterSelected(MyGUI::ComboBox *sender, size_t pos)
+    void SaveGameDialog::onCharacterSelected(MyGUI::ComboBox* sender, size_t pos)
     {
         MWBase::StateManager* mgr = MWBase::Environment::get().getStateManager();
 
-        unsigned int i=0;
+        unsigned int i = 0;
         const MWState::Character* character = nullptr;
         for (MWBase::StateManager::CharacterIterator it = mgr->characterBegin(); it != mgr->characterEnd(); ++it, ++i)
         {
@@ -376,7 +380,7 @@ namespace MWGui
         return stream.str();
     }
 
-    void SaveGameDialog::onSlotSelected(MyGUI::ListBox *sender, size_t pos)
+    void SaveGameDialog::onSlotSelected(MyGUI::ListBox* sender, size_t pos)
     {
         mOkButton->setEnabled(pos != MyGUI::ITEM_NONE || mSaving);
         mDeleteButton->setEnabled(pos != MyGUI::ITEM_NONE);
@@ -384,8 +388,8 @@ namespace MWGui
         if (pos == MyGUI::ITEM_NONE || !mCurrentCharacter)
         {
             mCurrentSlot = nullptr;
-            mInfoText->setCaption("");
-            mScreenshot->setImageTexture("");
+            mInfoText->setCaption({});
+            mScreenshot->setImageTexture({});
             return;
         }
 
@@ -393,8 +397,9 @@ namespace MWGui
             mSaveNameEdit->setCaption(sender->getItemNameAt(pos));
 
         mCurrentSlot = nullptr;
-        unsigned int i=0;
-        for (MWState::Character::SlotIterator it = mCurrentCharacter->begin(); it != mCurrentCharacter->end(); ++it, ++i)
+        unsigned int i = 0;
+        for (MWState::Character::SlotIterator it = mCurrentCharacter->begin(); it != mCurrentCharacter->end();
+             ++it, ++i)
         {
             if (i == pos)
                 mCurrentSlot = &*it;
@@ -403,53 +408,65 @@ namespace MWGui
             throw std::runtime_error("Can't find selected slot");
 
         std::stringstream text;
-        time_t time = mCurrentSlot->mTimeStamp;
-        struct tm* timeinfo;
-        timeinfo = localtime(&time);
 
-        text << std::put_time(timeinfo, "%Y.%m.%d %T") << "\n";
+        text << Misc::fileTimeToString(mCurrentSlot->mTimeStamp, "%Y.%m.%d %T") << "\n";
 
         text << "#{sLevel} " << mCurrentSlot->mProfile.mPlayerLevel << "\n";
-        text << "#{sCell=" << mCurrentSlot->mProfile.mPlayerCell << "}\n";
+        text << "#{sCell=" << mCurrentSlot->mProfile.mPlayerCellName << "}\n";
 
         int hour = int(mCurrentSlot->mProfile.mInGameTime.mGameHour);
         bool pm = hour >= 12;
-        if (hour >= 13) hour -= 12;
-        if (hour == 0) hour = 12;
+        if (hour >= 13)
+            hour -= 12;
+        if (hour == 0)
+            hour = 12;
 
-        text
-            << mCurrentSlot->mProfile.mInGameTime.mDay << " "
-            << MWBase::Environment::get().getWorld()->getMonthName(mCurrentSlot->mProfile.mInGameTime.mMonth)
-            <<  " " << hour << " " << (pm ? "#{sSaveMenuHelp05}" : "#{sSaveMenuHelp04}");
+        text << mCurrentSlot->mProfile.mInGameTime.mDay << " "
+             << MWBase::Environment::get().getWorld()->getMonthName(mCurrentSlot->mProfile.mInGameTime.mMonth) << " "
+             << hour << " " << (pm ? "#{Calendar:pm}" : "#{Calendar:am}");
 
-        if (Settings::Manager::getBool("timeplayed","Saves"))
+        if (Settings::Manager::getBool("timeplayed", "Saves"))
         {
-            text << "\n" << "Time played: " << formatTimeplayed(mCurrentSlot->mProfile.mTimePlayed);
+            text << "\n"
+                 << "#{OMWEngine:TimePlayed}: " << formatTimeplayed(mCurrentSlot->mProfile.mTimePlayed);
         }
 
         mInfoText->setCaptionWithReplacing(text.str());
 
+        // Reset the image for the case we're unable to recover a screenshot
+        mScreenshotTexture.reset();
+        mScreenshot->setRenderItemTexture(nullptr);
+        mScreenshot->getSubWidgetMain()->_setUVSet(MyGUI::FloatRect(0.f, 0.f, 1.f, 1.f));
 
         // Decode screenshot
         const std::vector<char>& data = mCurrentSlot->mProfile.mScreenshot;
-        Files::IMemStream instream (&data[0], data.size());
+        if (!data.size())
+        {
+            Log(Debug::Warning) << "Selected save file '" << Files::pathToUnicodeString(mCurrentSlot->mPath.filename())
+                                << "' has no savegame screenshot";
+            return;
+        }
+
+        Files::IMemStream instream(data.data(), data.size());
 
         osgDB::ReaderWriter* readerwriter = osgDB::Registry::instance()->getReaderWriterForExtension("jpg");
         if (!readerwriter)
         {
-            Log(Debug::Error) << "Error: Can't open savegame screenshot, no jpg readerwriter found";
+            Log(Debug::Error) << "Can't open savegame screenshot, no jpg readerwriter found";
             return;
         }
 
         osgDB::ReaderWriter::ReadResult result = readerwriter->readImage(instream);
         if (!result.success())
         {
-            Log(Debug::Error) << "Error: Failed to read savegame screenshot: " << result.message() << " code " << result.status();
+            Log(Debug::Error) << "Failed to read savegame screenshot: " << result.message() << " code "
+                              << result.status();
             return;
         }
 
-        osg::ref_ptr<osg::Texture2D> texture (new osg::Texture2D);
+        osg::ref_ptr<osg::Texture2D> texture(new osg::Texture2D);
         texture->setImage(result.getImage());
+        texture->setInternalFormat(GL_RGB);
         texture->setWrap(osg::Texture::WRAP_S, osg::Texture::CLAMP_TO_EDGE);
         texture->setWrap(osg::Texture::WRAP_T, osg::Texture::CLAMP_TO_EDGE);
         texture->setFilter(osg::Texture::MIN_FILTER, osg::Texture::LINEAR);
@@ -457,9 +474,7 @@ namespace MWGui
         texture->setResizeNonPowerOfTwoHint(false);
         texture->setUnRefImageDataAfterApply(true);
 
-        mScreenshotTexture.reset(new osgMyGUI::OSGTexture(texture));
-
+        mScreenshotTexture = std::make_unique<osgMyGUI::OSGTexture>(texture);
         mScreenshot->setRenderItemTexture(mScreenshotTexture.get());
-        mScreenshot->getSubWidgetMain()->_setUVSet(MyGUI::FloatRect(0.f, 0.f, 1.f, 1.f));
     }
 }

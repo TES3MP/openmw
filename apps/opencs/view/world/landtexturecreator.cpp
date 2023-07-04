@@ -2,10 +2,16 @@
 
 #include <cstdint>
 #include <limits>
+#include <stddef.h>
 
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
+
+#include <apps/opencs/model/world/columns.hpp>
+#include <apps/opencs/model/world/data.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/view/world/genericcreator.hpp>
 
 #include "../../model/world/commands.hpp"
 #include "../../model/world/idtable.hpp"
@@ -35,8 +41,8 @@ namespace CSVWorld
         mIndexBox->setMaximum(MaxIndex);
         insertBeforeButtons(mIndexBox, true);
 
-        connect(mNameEdit, SIGNAL(textChanged(const QString&)), this, SLOT(nameChanged(const QString&)));
-        connect(mIndexBox, SIGNAL(valueChanged(int)), this, SLOT(indexChanged(int)));
+        connect(mNameEdit, &QLineEdit::textChanged, this, &LandTextureCreator::nameChanged);
+        connect(mIndexBox, qOverload<int>(&QSpinBox::valueChanged), this, &LandTextureCreator::indexChanged);
     }
 
     void LandTextureCreator::cloneMode(const std::string& originId, const CSMWorld::UniversalId::Type type)
@@ -66,7 +72,7 @@ namespace CSVWorld
 
     std::string LandTextureCreator::getErrors() const
     {
-        if (getData().getLandTextures().searchId(getId()) >= 0)
+        if (getData().getLandTextures().searchId(ESM::RefId::stringRefId(getId())) >= 0)
         {
             return "Index is already in use";
         }

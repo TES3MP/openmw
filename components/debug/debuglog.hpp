@@ -1,10 +1,8 @@
 #ifndef DEBUG_LOG_H
 #define DEBUG_LOG_H
 
-#include <mutex>
+#include <filesystem>
 #include <iostream>
-
-#include <osg/io_utils>
 
 namespace Debug
 {
@@ -25,42 +23,29 @@ namespace Debug
 
 class Log
 {
-    static std::mutex sLock;
-
-    std::unique_lock<std::mutex> mLock;
 public:
-    // Locks a global lock while the object is alive
-    Log(Debug::Level level) :
-    mLock(sLock),
-    mLevel(level)
-    {
-        // If the app has no logging system enabled, log level is not specified.
-        // Show all messages without marker - we just use the plain cout in this case.
-        if (Debug::CurrentDebugLevel == Debug::NoLevel)
-            return;
+    explicit Log(Debug::Level level);
+    ~Log();
 
-        if (mLevel <= Debug::CurrentDebugLevel)
-            std::cout << static_cast<unsigned char>(mLevel);
-    }
-
-    // Perfect forwarding wrappers to give the chain of objects to cout
-    template<typename T>
-    Log& operator<<(T&& rhs)
+    template <typename T>
+    Log& operator<<(const T& rhs)
     {
-        if (mLevel <= Debug::CurrentDebugLevel)
-            std::cout << std::forward<T>(rhs);
+        if (mShouldLog)
+            std::cout << rhs;
 
         return *this;
     }
 
-    ~Log()
-    {
-        if (mLevel <= Debug::CurrentDebugLevel)
-            std::cout << std::endl;
-    }
+    Log& operator<<(const std::filesystem::path& rhs);
+
+    Log& operator<<(const std::u8string& rhs);
+
+    Log& operator<<(std::u8string_view rhs);
+
+    Log& operator<<(const char8_t* rhs);
 
 private:
-    Debug::Level mLevel;
+    const bool mShouldLog;
 };
 
 #endif

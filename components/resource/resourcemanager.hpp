@@ -22,7 +22,7 @@ namespace Resource
     class BaseResourceManager
     {
     public:
-        virtual ~BaseResourceManager() {}
+        virtual ~BaseResourceManager() = default;
         virtual void updateCache(double referenceTime) {}
         virtual void clearCache() {}
         virtual void setExpiryDelay(double expiryDelay) {}
@@ -31,7 +31,8 @@ namespace Resource
     };
 
     /// @brief Base class for managers that require a virtual file system and object cache.
-    /// @par This base class implements clearing of the cache, but populating it and what it's used for is up to the individual sub classes.
+    /// @par This base class implements clearing of the cache, but populating it and what it's used for is up to the
+    /// individual sub classes.
     template <class KeyType>
     class GenericResourceManager : public BaseResourceManager
     {
@@ -45,7 +46,7 @@ namespace Resource
         {
         }
 
-        virtual ~GenericResourceManager() {}
+        virtual ~GenericResourceManager() = default;
 
         /// Clear cache entries that have not been referenced for longer than expiryDelay.
         void updateCache(double referenceTime) override
@@ -58,7 +59,8 @@ namespace Resource
         void clearCache() override { mCache->clear(); }
 
         /// How long to keep objects in cache after no longer being referenced.
-        void setExpiryDelay (double expiryDelay) override { mExpiryDelay = expiryDelay; }
+        void setExpiryDelay(double expiryDelay) override { mExpiryDelay = expiryDelay; }
+        double getExpiryDelay() const { return mExpiryDelay; }
 
         const VFS::Manager* getVFS() const { return mVFS; }
 
@@ -72,11 +74,13 @@ namespace Resource
         double mExpiryDelay;
     };
 
-
     class ResourceManager : public GenericResourceManager<std::string>
     {
     public:
-        ResourceManager(const VFS::Manager* vfs) : GenericResourceManager<std::string>(vfs) {}
+        ResourceManager(const VFS::Manager* vfs)
+            : GenericResourceManager<std::string>(vfs)
+        {
+        }
     };
 
 }

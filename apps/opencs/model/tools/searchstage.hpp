@@ -5,6 +5,11 @@
 
 #include "search.hpp"
 
+namespace CSMDoc
+{
+    class Messages;
+}
+
 namespace CSMWorld
 {
     class IdTableBase;
@@ -13,24 +18,23 @@ namespace CSMWorld
 namespace CSMTools
 {
     class SearchOperation;
-    
+
     class SearchStage : public CSMDoc::Stage
     {
-            const CSMWorld::IdTableBase *mModel;
-            Search mSearch;
-            const SearchOperation *mOperation;
+        const CSMWorld::IdTableBase* mModel;
+        Search mSearch;
+        const SearchOperation* mOperation;
 
-        public:
+    public:
+        SearchStage(const CSMWorld::IdTableBase* model);
 
-            SearchStage (const CSMWorld::IdTableBase *model);
+        int setup() override;
+        ///< \return number of steps
 
-            int setup() override;
-            ///< \return number of steps
+        void perform(int stage, CSMDoc::Messages& messages) override;
+        ///< Messages resulting from this stage will be appended to \a messages.
 
-            void perform (int stage, CSMDoc::Messages& messages) override;
-            ///< Messages resulting from this stage will be appended to \a messages.
-
-            void setOperation (const SearchOperation *operation);
+        void setOperation(const SearchOperation* operation);
     };
 }
 

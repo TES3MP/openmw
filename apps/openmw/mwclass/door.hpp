@@ -1,64 +1,67 @@
 #ifndef GAME_MWCLASS_DOOR_H
 #define GAME_MWCLASS_DOOR_H
 
-#include <components/esm/loaddoor.hpp>
+#include <components/esm3/loaddoor.hpp>
 
-#include "../mwworld/class.hpp"
+#include "../mwworld/registeredclass.hpp"
 
 namespace MWClass
 {
-    class Door : public MWWorld::Class
+    class Door : public MWWorld::RegisteredClass<Door>
     {
-            void ensureCustomData (const MWWorld::Ptr& ptr) const;
+        friend MWWorld::RegisteredClass<Door>;
 
-            MWWorld::Ptr copyToCellImpl(const MWWorld::ConstPtr &ptr, MWWorld::CellStore &cell) const override;
+        Door();
 
-        public:
+        void ensureCustomData(const MWWorld::Ptr& ptr) const;
 
-            void insertObjectRendering (const MWWorld::Ptr& ptr, const std::string& model, MWRender::RenderingInterface& renderingInterface) const override;
-            ///< Add reference into a cell for rendering
+        MWWorld::Ptr copyToCellImpl(const MWWorld::ConstPtr& ptr, MWWorld::CellStore& cell) const override;
 
-            void insertObject(const MWWorld::Ptr& ptr, const std::string& model, MWPhysics::PhysicsSystem& physics) const override;
+    public:
+        void insertObjectRendering(const MWWorld::Ptr& ptr, const std::string& model,
+            MWRender::RenderingInterface& renderingInterface) const override;
+        ///< Add reference into a cell for rendering
 
-            bool isDoor() const override;
+        void insertObject(const MWWorld::Ptr& ptr, const std::string& model, const osg::Quat& rotation,
+            MWPhysics::PhysicsSystem& physics) const override;
+        void insertObjectPhysics(const MWWorld::Ptr& ptr, const std::string& model, const osg::Quat& rotation,
+            MWPhysics::PhysicsSystem& physics) const override;
 
-            bool useAnim() const override;
+        bool isDoor() const override;
 
-            std::string getName (const MWWorld::ConstPtr& ptr) const override;
-            ///< \return name or ID; can return an empty string.
+        bool useAnim() const override;
 
-            std::shared_ptr<MWWorld::Action> activate (const MWWorld::Ptr& ptr,
-                const MWWorld::Ptr& actor) const override;
-            ///< Generate action for activation
+        std::string_view getName(const MWWorld::ConstPtr& ptr) const override;
+        ///< \return name or ID; can return an empty string.
 
-            MWGui::ToolTipInfo getToolTipInfo (const MWWorld::ConstPtr& ptr, int count) const override;
-            ///< @return the content of the tool tip to be displayed. raises exception if the object has no tooltip.
+        std::unique_ptr<MWWorld::Action> activate(const MWWorld::Ptr& ptr, const MWWorld::Ptr& actor) const override;
+        ///< Generate action for activation
 
-            static std::string getDestination (const MWWorld::LiveCellRef<ESM::Door>& door);
-            ///< @return destination cell name or token
+        MWGui::ToolTipInfo getToolTipInfo(const MWWorld::ConstPtr& ptr, int count) const override;
+        ///< @return the content of the tool tip to be displayed. raises exception if the object has no tooltip.
 
-            bool canLock(const MWWorld::ConstPtr &ptr) const override;
+        static std::string getDestination(const MWWorld::LiveCellRef<ESM::Door>& door);
+        ///< @return destination cell name or token
 
-            bool allowTelekinesis(const MWWorld::ConstPtr &ptr) const override;
-            ///< Return whether this class of object can be activated with telekinesis
+        bool canLock(const MWWorld::ConstPtr& ptr) const override;
 
-            std::string getScript (const MWWorld::ConstPtr& ptr) const override;
-            ///< Return name of the script attached to ptr
+        bool allowTelekinesis(const MWWorld::ConstPtr& ptr) const override;
+        ///< Return whether this class of object can be activated with telekinesis
 
-            static void registerSelf();
+        ESM::RefId getScript(const MWWorld::ConstPtr& ptr) const override;
+        ///< Return name of the script attached to ptr
 
-            std::string getModel(const MWWorld::ConstPtr &ptr) const override;
+        std::string getModel(const MWWorld::ConstPtr& ptr) const override;
 
-            MWWorld::DoorState getDoorState (const MWWorld::ConstPtr &ptr) const override;
-            /// This does not actually cause the door to move. Use World::activateDoor instead.
-            void setDoorState (const MWWorld::Ptr &ptr, MWWorld::DoorState state) const override;
+        MWWorld::DoorState getDoorState(const MWWorld::ConstPtr& ptr) const override;
+        /// This does not actually cause the door to move. Use World::activateDoor instead.
+        void setDoorState(const MWWorld::Ptr& ptr, MWWorld::DoorState state) const override;
 
+        void readAdditionalState(const MWWorld::Ptr& ptr, const ESM::ObjectState& state) const override;
+        ///< Read additional state from \a state into \a ptr.
 
-            void readAdditionalState (const MWWorld::Ptr& ptr, const ESM::ObjectState& state) const override;
-            ///< Read additional state from \a state into \a ptr.
-
-            void writeAdditionalState (const MWWorld::ConstPtr& ptr, ESM::ObjectState& state) const override;
-            ///< Write additional state from \a ptr into \a state.
+        void writeAdditionalState(const MWWorld::ConstPtr& ptr, ESM::ObjectState& state) const override;
+        ///< Write additional state from \a ptr into \a state.
     };
 }
 

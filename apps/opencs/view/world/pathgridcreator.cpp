@@ -2,6 +2,13 @@
 
 #include <QLabel>
 
+#include <memory>
+
+#include <apps/opencs/model/world/columnbase.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/model/world/subcellcollection.hpp>
+#include <apps/opencs/view/world/genericcreator.hpp>
+
 #include "../../model/doc/document.hpp"
 
 #include "../../model/world/columns.hpp"
@@ -11,6 +18,8 @@
 
 #include "../widget/droplineedit.hpp"
 
+class QUndoStack;
+
 std::string CSVWorld::PathgridCreator::getId() const
 {
     return mCell->text().toUtf8().constData();
@@ -18,21 +27,16 @@ std::string CSVWorld::PathgridCreator::getId() const
 
 CSMWorld::IdTable& CSVWorld::PathgridCreator::getPathgridsTable() const
 {
-    return dynamic_cast<CSMWorld::IdTable&> (
-        *getData().getTableModel(getCollectionId())
-    );
+    return dynamic_cast<CSMWorld::IdTable&>(*getData().getTableModel(getCollectionId()));
 }
 
-CSVWorld::PathgridCreator::PathgridCreator(
-    CSMWorld::Data& data,
-    QUndoStack& undoStack,
-    const CSMWorld::UniversalId& id,
-    CSMWorld::IdCompletionManager& completionManager
-) : GenericCreator(data, undoStack, id)
+CSVWorld::PathgridCreator::PathgridCreator(CSMWorld::Data& data, QUndoStack& undoStack, const CSMWorld::UniversalId& id,
+    CSMWorld::IdCompletionManager& completionManager)
+    : GenericCreator(data, undoStack, id)
 {
     setManualEditing(false);
 
-    QLabel *label = new QLabel("Cell", this);
+    QLabel* label = new QLabel("Cell", this);
     insertBeforeButtons(label, false);
 
     // Add cell ID input with auto-completion.
@@ -42,13 +46,11 @@ CSVWorld::PathgridCreator::PathgridCreator(
     mCell->setCompleter(completionManager.getCompleter(displayType).get());
     insertBeforeButtons(mCell, true);
 
-    connect(mCell, SIGNAL (textChanged(const QString&)), this, SLOT (cellChanged()));
-    connect(mCell, SIGNAL (returnPressed()), this, SLOT (inputReturnPressed()));
+    connect(mCell, &CSVWidget::DropLineEdit::textChanged, this, &PathgridCreator::cellChanged);
+    connect(mCell, &CSVWidget::DropLineEdit::returnPressed, this, &PathgridCreator::inputReturnPressed);
 }
 
-void CSVWorld::PathgridCreator::cloneMode(
-    const std::string& originId,
-    const CSMWorld::UniversalId::Type type)
+void CSVWorld::PathgridCreator::cloneMode(const std::string& originId, const CSMWorld::UniversalId::Type type)
 {
     CSVWorld::GenericCreator::cloneMode(originId, type);
 
@@ -60,7 +62,7 @@ void CSVWorld::PathgridCreator::cloneMode(
 
 std::string CSVWorld::PathgridCreator::getErrors() const
 {
-    std::string cellId = getId();
+    const ESM::RefId cellId = ESM::RefId::stringRefId(getId());
 
     // Check user input for any errors.
     std::string errors;
@@ -96,14 +98,8 @@ void CSVWorld::PathgridCreator::cellChanged()
     update();
 }
 
-CSVWorld::Creator *CSVWorld::PathgridCreatorFactory::makeCreator(
-    CSMDoc::Document& document,
-    const CSMWorld::UniversalId& id) const
+CSVWorld::Creator* CSVWorld::PathgridCreatorFactory::makeCreator(
+    CSMDoc::Document& document, const CSMWorld::UniversalId& id) const
 {
-    return new PathgridCreator(
-        document.getData(),
-        document.getUndoStack(),
-        id,
-        document.getIdCompletionManager()
-    );
+    return new PathgridCreator(document.getData(), document.getUndoStack(), id, document.getIdCompletionManager());
 }

@@ -3,17 +3,20 @@
 #include <sstream>
 
 #include <components/debug/debuglog.hpp>
-#include <components/misc/stringops.hpp>
+#include <components/files/conversion.hpp>
+#include <components/misc/strings/algorithm.hpp>
 
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <fstream>
 
 #include <Base64.h>
 
-void Settings::SettingsFileParser::loadSettingsFile(const std::string& file, CategorySettingValueMap& settings, bool base64Encoded)
+void Settings::SettingsFileParser::loadSettingsFile(
+    const std::filesystem::path& file, CategorySettingValueMap& settings, bool base64Encoded, bool overrideExisting)
 {
     mFile = file;
-    boost::filesystem::ifstream fstream;
-    fstream.open(boost::filesystem::path(file));
+    std::ifstream fstream;
+    fstream.open(file);
     auto stream = std::ref<std::istream>(fstream);
 
     std::istringstream decodedStream;
@@ -36,7 +39,7 @@ void Settings::SettingsFileParser::loadSettingsFile(const std::string& file, Cat
     {
         ++mLine;
         std::string line;
-        std::getline( stream.get(), line );
+        std::getline(stream.get(), line);
 
         size_t i = 0;
         if (!skipWhiteSpace(i, line))
@@ -51,9 +54,9 @@ void Settings::SettingsFileParser::loadSettingsFile(const std::string& file, Cat
             if (end == std::string::npos)
                 fail("unterminated category");
 
-            currentCategory = line.substr(i+1, end - (i+1));
+            currentCategory = line.substr(i + 1, end - (i + 1));
             Misc::StringUtils::trim(currentCategory);
-            i = end+1;
+            i = end + 1;
         }
 
         if (!skipWhiteSpace(i, line))
@@ -66,25 +69,29 @@ void Settings::SettingsFileParser::loadSettingsFile(const std::string& file, Cat
         if (settingEnd == std::string::npos)
             fail("unterminated setting name");
 
-        std::string setting = line.substr(i, (settingEnd-i));
+        std::string setting = line.substr(i, (settingEnd - i));
         Misc::StringUtils::trim(setting);
 
-        size_t valueBegin = settingEnd+1;
+        size_t valueBegin = settingEnd + 1;
         std::string value = line.substr(valueBegin);
         Misc::StringUtils::trim(value);
 
-        if (settings.insert(std::make_pair(std::make_pair(currentCategory, setting), value)).second == false)
+        if (overrideExisting)
+            settings[std::make_pair(currentCategory, setting)] = value;
+        else if (settings.insert(std::make_pair(std::make_pair(currentCategory, setting), value)).second == false)
             fail(std::string("duplicate setting: [" + currentCategory + "] " + setting));
     }
 }
 
-void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, const CategorySettingValueMap& settings)
+void Settings::SettingsFileParser::saveSettingsFile(
+    const std::filesystem::path& file, const CategorySettingValueMap& settings)
 {
     using CategorySettingStatusMap = std::map<CategorySetting, bool>;
 
     // No options have been written to the file yet.
     CategorySettingStatusMap written;
-    for (auto it = settings.begin(); it != settings.end(); ++it) {
+    for (auto it = settings.begin(); it != settings.end(); ++it)
+    {
         written[it->first] = false;
     }
 
@@ -103,9 +110,8 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
     // Open the existing settings.cfg file to copy comments.  This might not be the same file
     // as the output file if we're copying the setting from the default settings.cfg for the
     // first time.  A minor change in API to pass the source file might be in order here.
-    boost::filesystem::ifstream istream;
-    boost::filesystem::path ipath(file);
-    istream.open(ipath);
+    std::ifstream istream;
+    istream.open(file);
 
     // Create a new string stream to write the current settings to.  It's likely that the
     // input file and the output file are the same, so this stream serves as a temporary file
@@ -113,7 +119,8 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
     std::stringstream ostream;
 
     // For every line in the input file...
-    while (!istream.eof() && !istream.fail()) {
+    while (!istream.eof() && !istream.fail())
+    {
         std::string line;
         std::getline(istream, line);
 
@@ -130,7 +137,8 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
         }
 
         // Don't add additional newlines at the end of the file otherwise.
-        if (istream.eof()) continue;
+        if (istream.eof())
+            continue;
 
         // Queue entirely blank lines to add them if desired.
         if (!skipWhiteSpace(i, line))
@@ -143,16 +151,19 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
         existing = true;
 
         // Copy comments.
-        if (line[i] == '#') {
+        if (line[i] == '#')
+        {
             ostream << line << std::endl;
             continue;
         }
 
         // Category heading.
-        if (line[i] == '[') {
+        if (line[i] == '[')
+        {
             size_t end = line.find(']', i);
             // This should never happen unless the player edited the file while playing.
-            if (end == std::string::npos) {
+            if (end == std::string::npos)
+            {
                 ostream << "# unterminated category: " << line << std::endl;
                 changed = true;
                 continue;
@@ -165,8 +176,8 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
                 {
                     if (mit->second == false && mit->first.first == currentCategory)
                     {
-                        Log(Debug::Verbose) << "Added new setting: [" << currentCategory << "] "
-                                << mit->first.second << " = " << settings.at(mit->first);
+                        Log(Debug::Verbose) << "Added new setting: [" << currentCategory << "] " << mit->first.second
+                                            << " = " << settings.at(mit->first);
                         ostream << mit->first.second << " = " << settings.at(mit->first) << std::endl;
                         mit->second = true;
                         changed = true;
@@ -177,7 +188,7 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
             }
 
             // Update the current category.
-            currentCategory = line.substr(i+1, end - (i+1));
+            currentCategory = line.substr(i + 1, end - (i + 1));
             Misc::StringUtils::trim(currentCategory);
 
             // Write the (new) current category to the file.
@@ -187,7 +198,7 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
             // A setting can apparently follow the category on an input line.  That's rather
             // inconvenient, since it makes it more likely to have duplicative sections,
             // which our algorithm doesn't like.  Do the best we can.
-            i = end+1;
+            i = end + 1;
         }
 
         // Truncate trailing whitespace, since we're changing the file anayway.
@@ -197,7 +208,8 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
         // If we've found settings before the first category, something's wrong.  This
         // should never happen unless the player edited the file while playing, since
         // the loadSettingsFile() logic rejects it.
-        if (currentCategory.empty()) {
+        if (currentCategory.empty())
+        {
             ostream << "# empty category name: " << line << std::endl;
             changed = true;
             continue;
@@ -206,16 +218,17 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
         // Which setting was at this location in the input file?
         size_t settingEnd = line.find('=', i);
         // This should never happen unless the player edited the file while playing.
-        if (settingEnd == std::string::npos) {
+        if (settingEnd == std::string::npos)
+        {
             ostream << "# unterminated setting name: " << line << std::endl;
             changed = true;
             continue;
         }
-        std::string setting = line.substr(i, (settingEnd-i));
+        std::string setting = line.substr(i, (settingEnd - i));
         Misc::StringUtils::trim(setting);
 
         // Get the existing value so we can see if we've changed it.
-        size_t valueBegin = settingEnd+1;
+        size_t valueBegin = settingEnd + 1;
         std::string value = line.substr(valueBegin);
         Misc::StringUtils::trim(value);
 
@@ -228,7 +241,8 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
         // happen if the player edited the file while playing, because loadSettingsFile()
         // will accept anything and pass it along in the map, but in the future, we might
         // want to handle invalid settings more gracefully here.
-        if (finder == written.end()) {
+        if (finder == written.end())
+        {
             ostream << "# invalid setting: " << line << std::endl;
             changed = true;
             continue;
@@ -240,9 +254,10 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
         // Mark that setting as written.
         finder->second = true;
         // Did we really change it?
-        if (value != settings.at(key)) {
-            Log(Debug::Verbose) << "Changed setting: [" << currentCategory << "] "
-                    << setting << " = " << settings.at(key);
+        if (value != settings.at(key))
+        {
+            Log(Debug::Verbose) << "Changed setting: [" << currentCategory << "] " << setting << " = "
+                                << settings.at(key);
             changed = true;
         }
         // No need to write the current line, because we just emitted a replacement.
@@ -256,10 +271,12 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
 
     // Ensure that all options in the current category have been written.  We must complete
     // the current category at the end of the file before moving on to any new categories.
-    for (CategorySettingStatusMap::iterator mit = written.begin(); mit != written.end(); ++mit) {
-        if (mit->second == false && mit->first.first == currentCategory) {
-            Log(Debug::Verbose) << "Added new setting: [" << mit->first.first << "] "
-                    << mit->first.second << " = " << settings.at(mit->first);
+    for (CategorySettingStatusMap::iterator mit = written.begin(); mit != written.end(); ++mit)
+    {
+        if (mit->second == false && mit->first.first == currentCategory)
+        {
+            Log(Debug::Verbose) << "Added new setting: [" << mit->first.first << "] " << mit->first.second << " = "
+                                << settings.at(mit->first);
             ostream << mit->first.second << " = " << settings.at(mit->first) << std::endl;
             mit->second = true;
             changed = true;
@@ -268,11 +285,13 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
 
     // If there was absolutely nothing in the file (or more likely the file didn't
     // exist), start the newly created file with a helpful comment.
-    if (!existing) {
+    if (!existing)
+    {
         ostream << "# This is the OpenMW user 'settings.cfg' file.  This file only contains" << std::endl;
         ostream << "# explicitly changed settings.  If you would like to revert a setting" << std::endl;
         ostream << "# to its default, simply remove it from this file.  For available" << std::endl;
-        ostream << "# settings, see the file 'files/settings-default.cfg' in our source repo or the documentation at:" << std::endl;
+        ostream << "# settings, see the file 'files/settings-default.cfg' in our source repo or the documentation at:"
+                << std::endl;
         ostream << "#" << std::endl;
         ostream << "#   https://openmw.readthedocs.io/en/master/reference/modding/settings/index.html" << std::endl;
     }
@@ -281,18 +300,21 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
     // It's possible that there are entirely new categories, or that the input file had
     // disappeared completely, so we need ensure that all settings are written to the file
     // regardless of those issues.
-    for (CategorySettingStatusMap::iterator mit = written.begin(); mit != written.end(); ++mit) {
+    for (CategorySettingStatusMap::iterator mit = written.begin(); mit != written.end(); ++mit)
+    {
         // If the setting hasn't been written yet.
-        if (mit->second == false) {
+        if (mit->second == false)
+        {
             // If the catgory has changed, write a new category header.
-            if (mit->first.first != currentCategory) {
+            if (mit->first.first != currentCategory)
+            {
                 currentCategory = mit->first.first;
                 Log(Debug::Verbose) << "Created new setting section: " << mit->first.first;
                 ostream << std::endl;
                 ostream << "[" << currentCategory << "]" << std::endl;
             }
-            Log(Debug::Verbose) << "Added new setting: [" << mit->first.first << "] "
-                    << mit->first.second << " = " << settings.at(mit->first);
+            Log(Debug::Verbose) << "Added new setting: [" << mit->first.first << "] " << mit->first.second << " = "
+                                << settings.at(mit->first);
             // Then write the setting.  No need to mark it as written because we're done.
             ostream << mit->first.second << " = " << settings.at(mit->first) << std::endl;
             changed = true;
@@ -300,10 +322,11 @@ void Settings::SettingsFileParser::saveSettingsFile(const std::string& file, con
     }
 
     // Now install the newly written file in the requested place.
-    if (changed) {
-        Log(Debug::Info) << "Updating settings file: " << ipath;
-        boost::filesystem::ofstream ofstream;
-        ofstream.open(ipath);
+    if (changed)
+    {
+        Log(Debug::Info) << "Updating settings file: " << file;
+        std::ofstream ofstream;
+        ofstream.open(file);
         ofstream << ostream.rdbuf();
         ofstream.close();
     }
@@ -318,9 +341,9 @@ bool Settings::SettingsFileParser::skipWhiteSpace(size_t& i, std::string& str)
     return i < str.size();
 }
 
-void Settings::SettingsFileParser::fail(const std::string& message)
+[[noreturn]] void Settings::SettingsFileParser::fail(const std::string& message)
 {
     std::stringstream error;
-    error << "Error on line " << mLine << " in " << mFile << ":\n" << message;
+    error << "Error on line " << mLine << " in " << Files::pathToUnicodeString(mFile) << ":\n" << message;
     throw std::runtime_error(error.str());
 }

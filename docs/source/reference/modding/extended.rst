@@ -327,6 +327,16 @@ Also groundcover detection should be enabled via settings.cfg:
     [Groundcover]
     enabled = true
 
+Lua scripting
+-------------
+
+OpenMW supports Lua scripts. See :ref:`Lua scripting documentation <OpenMW Lua scripting>`.
+It is not compatible with MWSE. A mod with Lua scripts will work only if it was developed specifically for OpenMW.
+
+Installation of a Lua mod is the same as of any other mod: add ``data=`` and ``content=`` entries to ``openmw.cfg``.
+Files with suffix ``.omwscripts`` are special type of content files and should also be enabled using ``content=`` entries.
+Note that for some mods load order can be important.
+
 .. _`Graphic Herbalism`: https://www.nexusmods.com/morrowind/mods/46599
 .. _`OpenMW Containers Animated`: https://www.nexusmods.com/morrowind/mods/46232
 .. _`Glow in the Dahrk`: https://www.nexusmods.com/morrowind/mods/45886

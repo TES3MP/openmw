@@ -1,35 +1,41 @@
 #include "scenetoolshapebrush.hpp"
 
-#include <QFrame>
-#include <QIcon>
-#include <QTableWidget>
-#include <QHBoxLayout>
-
-#include <QWidget>
-#include <QComboBox>
-#include <QSpinBox>
-#include <QGroupBox>
-#include <QSlider>
-#include <QEvent>
-#include <QDropEvent>
 #include <QButtonGroup>
-#include <QVBoxLayout>
+#include <QComboBox>
 #include <QDragEnterEvent>
-#include <QDrag>
-#include <QTableWidget>
+#include <QDropEvent>
+#include <QFrame>
+#include <QGroupBox>
+#include <QHBoxLayout>
 #include <QHeaderView>
-#include <QApplication>
+#include <QIcon>
+#include <QLabel>
 #include <QSizePolicy>
+#include <QSlider>
+#include <QTableWidget>
+#include <QVBoxLayout>
+#include <QWidget>
+
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+#include <apps/opencs/view/widget/pushbutton.hpp>
 
 #include "brushshapes.hpp"
 #include "scenetool.hpp"
 
-#include "../../model/doc/document.hpp"
 #include "../../model/prefs/state.hpp"
-#include "../../model/world/commands.hpp"
 
+namespace CSVWidget
+{
+    class SceneToolbar;
+}
 
-CSVWidget::ShapeBrushSizeControls::ShapeBrushSizeControls(const QString &title, QWidget *parent)
+namespace CSMDoc
+{
+    class Document;
+}
+
+CSVWidget::ShapeBrushSizeControls::ShapeBrushSizeControls(const QString& title, QWidget* parent)
     : QGroupBox(title, parent)
 {
     mBrushSizeSlider->setTickPosition(QSlider::TicksBothSides);
@@ -40,44 +46,44 @@ CSVWidget::ShapeBrushSizeControls::ShapeBrushSizeControls(const QString &title, 
     mBrushSizeSpinBox->setRange(1, CSMPrefs::get()["3D Scene Editing"]["shapebrush-maximumsize"].toInt());
     mBrushSizeSpinBox->setSingleStep(1);
 
-    QHBoxLayout *layoutSliderSize = new QHBoxLayout;
+    QHBoxLayout* layoutSliderSize = new QHBoxLayout;
     layoutSliderSize->addWidget(mBrushSizeSlider);
     layoutSliderSize->addWidget(mBrushSizeSpinBox);
 
-    connect(mBrushSizeSlider, SIGNAL(valueChanged(int)), mBrushSizeSpinBox, SLOT(setValue(int)));
-    connect(mBrushSizeSpinBox, SIGNAL(valueChanged(int)), mBrushSizeSlider, SLOT(setValue(int)));
+    connect(mBrushSizeSlider, &QSlider::valueChanged, mBrushSizeSpinBox, &QSpinBox::setValue);
+    connect(mBrushSizeSpinBox, qOverload<int>(&QSpinBox::valueChanged), mBrushSizeSlider, &QSlider::setValue);
 
     setLayout(layoutSliderSize);
 }
 
-CSVWidget::ShapeBrushWindow::ShapeBrushWindow(CSMDoc::Document& document, QWidget *parent)
-    : QFrame(parent, Qt::Popup),
-    mDocument(document)
+CSVWidget::ShapeBrushWindow::ShapeBrushWindow(CSMDoc::Document& document, QWidget* parent)
+    : QFrame(parent, Qt::Popup)
+    , mDocument(document)
 {
-    mButtonPoint = new QPushButton(QIcon (QPixmap (":scenetoolbar/brush-point")), "", this);
-    mButtonSquare = new QPushButton(QIcon (QPixmap (":scenetoolbar/brush-square")), "", this);
-    mButtonCircle = new QPushButton(QIcon (QPixmap (":scenetoolbar/brush-circle")), "", this);
-    mButtonCustom = new QPushButton(QIcon (QPixmap (":scenetoolbar/brush-custom")), "", this);
+    mButtonPoint = new QPushButton(QIcon(QPixmap(":scenetoolbar/brush-point")), "", this);
+    mButtonSquare = new QPushButton(QIcon(QPixmap(":scenetoolbar/brush-square")), "", this);
+    mButtonCircle = new QPushButton(QIcon(QPixmap(":scenetoolbar/brush-circle")), "", this);
+    mButtonCustom = new QPushButton(QIcon(QPixmap(":scenetoolbar/brush-custom")), "", this);
 
     mSizeSliders = new ShapeBrushSizeControls("Brush size", this);
 
-    QVBoxLayout *layoutMain = new QVBoxLayout;
+    QVBoxLayout* layoutMain = new QVBoxLayout;
     layoutMain->setSpacing(0);
-    layoutMain->setContentsMargins(4,0,4,4);
+    layoutMain->setContentsMargins(4, 0, 4, 4);
 
-    QHBoxLayout *layoutHorizontal = new QHBoxLayout;
+    QHBoxLayout* layoutHorizontal = new QHBoxLayout;
     layoutHorizontal->setSpacing(0);
-    layoutHorizontal->setContentsMargins (QMargins (0, 0, 0, 0));
+    layoutHorizontal->setContentsMargins(QMargins(0, 0, 0, 0));
 
     configureButtonInitialSettings(mButtonPoint);
     configureButtonInitialSettings(mButtonSquare);
     configureButtonInitialSettings(mButtonCircle);
     configureButtonInitialSettings(mButtonCustom);
 
-    mButtonPoint->setToolTip (toolTipPoint);
-    mButtonSquare->setToolTip (toolTipSquare);
-    mButtonCircle->setToolTip (toolTipCircle);
-    mButtonCustom->setToolTip (toolTipCustom);
+    mButtonPoint->setToolTip(toolTipPoint);
+    mButtonSquare->setToolTip(toolTipSquare);
+    mButtonCircle->setToolTip(toolTipCircle);
+    mButtonCustom->setToolTip(toolTipCustom);
 
     QButtonGroup* brushButtonGroup = new QButtonGroup(this);
     brushButtonGroup->addButton(mButtonPoint);
@@ -102,7 +108,7 @@ CSVWidget::ShapeBrushWindow::ShapeBrushWindow(CSMDoc::Document& document, QWidge
     mToolSelector->addItem(tr("Smooth (paint)"));
     mToolSelector->addItem(tr("Flatten (paint)"));
 
-    QLabel *brushStrengthLabel = new QLabel(this);
+    QLabel* brushStrengthLabel = new QLabel(this);
     brushStrengthLabel->setText("Brush strength:");
 
     mToolStrengthSlider = new QSlider(Qt::Horizontal);
@@ -120,19 +126,19 @@ CSVWidget::ShapeBrushWindow::ShapeBrushWindow(CSMDoc::Document& document, QWidge
 
     setLayout(layoutMain);
 
-    connect(mButtonPoint, SIGNAL(clicked()), this, SLOT(setBrushShape()));
-    connect(mButtonSquare, SIGNAL(clicked()), this, SLOT(setBrushShape()));
-    connect(mButtonCircle, SIGNAL(clicked()), this, SLOT(setBrushShape()));
-    connect(mButtonCustom, SIGNAL(clicked()), this, SLOT(setBrushShape()));
+    connect(mButtonPoint, &QPushButton::clicked, this, &ShapeBrushWindow::setBrushShape);
+    connect(mButtonSquare, &QPushButton::clicked, this, &ShapeBrushWindow::setBrushShape);
+    connect(mButtonCircle, &QPushButton::clicked, this, &ShapeBrushWindow::setBrushShape);
+    connect(mButtonCustom, &QPushButton::clicked, this, &ShapeBrushWindow::setBrushShape);
 }
 
-void CSVWidget::ShapeBrushWindow::configureButtonInitialSettings(QPushButton *button)
+void CSVWidget::ShapeBrushWindow::configureButtonInitialSettings(QPushButton* button)
 {
-  button->setSizePolicy (QSizePolicy (QSizePolicy::Fixed, QSizePolicy::Fixed));
-  button->setContentsMargins (QMargins (0, 0, 0, 0));
-  button->setIconSize (QSize (48-6, 48-6));
-  button->setFixedSize (48, 48);
-  button->setCheckable(true);
+    button->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    button->setContentsMargins(QMargins(0, 0, 0, 0));
+    button->setIconSize(QSize(48 - 6, 48 - 6));
+    button->setFixedSize(48, 48);
+    button->setCheckable(true);
 }
 
 void CSVWidget::ShapeBrushWindow::setBrushSize(int brushSize)
@@ -143,50 +149,51 @@ void CSVWidget::ShapeBrushWindow::setBrushSize(int brushSize)
 
 void CSVWidget::ShapeBrushWindow::setBrushShape()
 {
-    if(mButtonPoint->isChecked()) mBrushShape = BrushShape_Point;
-    if(mButtonSquare->isChecked()) mBrushShape = BrushShape_Square;
-    if(mButtonCircle->isChecked()) mBrushShape = BrushShape_Circle;
-    if(mButtonCustom->isChecked()) mBrushShape = BrushShape_Custom;
+    if (mButtonPoint->isChecked())
+        mBrushShape = BrushShape_Point;
+    if (mButtonSquare->isChecked())
+        mBrushShape = BrushShape_Square;
+    if (mButtonCircle->isChecked())
+        mBrushShape = BrushShape_Circle;
+    if (mButtonCustom->isChecked())
+        mBrushShape = BrushShape_Custom;
     emit passBrushShape(mBrushShape);
 }
 
-void CSVWidget::SceneToolShapeBrush::adjustToolTips()
-{
-}
+void CSVWidget::SceneToolShapeBrush::adjustToolTips() {}
 
-CSVWidget::SceneToolShapeBrush::SceneToolShapeBrush (SceneToolbar *parent, const QString& toolTip, CSMDoc::Document& document)
-: SceneTool (parent, Type_TopAction),
-    mToolTip (toolTip),
-    mDocument (document),
-    mShapeBrushWindow(new ShapeBrushWindow(document, this))
+CSVWidget::SceneToolShapeBrush::SceneToolShapeBrush(
+    SceneToolbar* parent, const QString& toolTip, CSMDoc::Document& document)
+    : SceneTool(parent, Type_TopAction)
+    , mToolTip(toolTip)
+    , mDocument(document)
+    , mShapeBrushWindow(new ShapeBrushWindow(document, this))
 {
     setAcceptDrops(true);
-    connect(mShapeBrushWindow, SIGNAL(passBrushShape(CSVWidget::BrushShape)), this, SLOT(setButtonIcon(CSVWidget::BrushShape)));
+    connect(mShapeBrushWindow, &ShapeBrushWindow::passBrushShape, this, &SceneToolShapeBrush::setButtonIcon);
     setButtonIcon(mShapeBrushWindow->mBrushShape);
 
-    mPanel = new QFrame (this, Qt::Popup);
+    mPanel = new QFrame(this, Qt::Popup);
 
-    QHBoxLayout *layout = new QHBoxLayout (mPanel);
+    QHBoxLayout* layout = new QHBoxLayout(mPanel);
 
-    layout->setContentsMargins (QMargins (0, 0, 0, 0));
+    layout->setContentsMargins(QMargins(0, 0, 0, 0));
 
-    mTable = new QTableWidget (0, 2, this);
+    mTable = new QTableWidget(0, 2, this);
 
-    mTable->setShowGrid (true);
+    mTable->setShowGrid(true);
     mTable->verticalHeader()->hide();
     mTable->horizontalHeader()->hide();
-    mTable->horizontalHeader()->setSectionResizeMode (0, QHeaderView::Stretch);
-    mTable->horizontalHeader()->setSectionResizeMode (1, QHeaderView::Stretch);
-    mTable->setSelectionMode (QAbstractItemView::NoSelection);
+    mTable->horizontalHeader()->setSectionResizeMode(0, QHeaderView::Stretch);
+    mTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    mTable->setSelectionMode(QAbstractItemView::NoSelection);
 
-    layout->addWidget (mTable);
+    layout->addWidget(mTable);
 
-    connect (mTable, SIGNAL (clicked (const QModelIndex&)),
-        this, SLOT (clicked (const QModelIndex&)));
-
+    connect(mTable, &QTableWidget::clicked, this, &SceneToolShapeBrush::clicked);
 }
 
-void CSVWidget::SceneToolShapeBrush::setButtonIcon (CSVWidget::BrushShape brushShape)
+void CSVWidget::SceneToolShapeBrush::setButtonIcon(CSVWidget::BrushShape brushShape)
 {
     QString tooltip = "Change brush settings <p>Currently selected: ";
 
@@ -194,59 +201,55 @@ void CSVWidget::SceneToolShapeBrush::setButtonIcon (CSVWidget::BrushShape brushS
     {
         case BrushShape_Point:
 
-            setIcon (QIcon (QPixmap (":scenetoolbar/brush-point")));
+            setIcon(QIcon(QPixmap(":scenetoolbar/brush-point")));
             tooltip += mShapeBrushWindow->toolTipPoint;
             break;
 
         case BrushShape_Square:
 
-            setIcon (QIcon (QPixmap (":scenetoolbar/brush-square")));
+            setIcon(QIcon(QPixmap(":scenetoolbar/brush-square")));
             tooltip += mShapeBrushWindow->toolTipSquare;
             break;
 
         case BrushShape_Circle:
 
-            setIcon (QIcon (QPixmap (":scenetoolbar/brush-circle")));
+            setIcon(QIcon(QPixmap(":scenetoolbar/brush-circle")));
             tooltip += mShapeBrushWindow->toolTipCircle;
             break;
 
         case BrushShape_Custom:
 
-            setIcon (QIcon (QPixmap (":scenetoolbar/brush-custom")));
+            setIcon(QIcon(QPixmap(":scenetoolbar/brush-custom")));
             tooltip += mShapeBrushWindow->toolTipCustom;
             break;
     }
 
-    setToolTip (tooltip);
+    setToolTip(tooltip);
 }
 
-void CSVWidget::SceneToolShapeBrush::showPanel (const QPoint& position)
-{
-}
+void CSVWidget::SceneToolShapeBrush::showPanel(const QPoint& position) {}
 
-void CSVWidget::SceneToolShapeBrush::updatePanel ()
-{
-}
+void CSVWidget::SceneToolShapeBrush::updatePanel() {}
 
-void CSVWidget::SceneToolShapeBrush::clicked (const QModelIndex& index)
-{
-}
+void CSVWidget::SceneToolShapeBrush::clicked(const QModelIndex& index) {}
 
-void CSVWidget::SceneToolShapeBrush::activate ()
+void CSVWidget::SceneToolShapeBrush::activate()
 {
     QPoint position = QCursor::pos();
-    mShapeBrushWindow->mSizeSliders->mBrushSizeSlider->setRange(1, CSMPrefs::get()["3D Scene Editing"]["shapebrush-maximumsize"].toInt());
-    mShapeBrushWindow->mSizeSliders->mBrushSizeSpinBox->setRange(1, CSMPrefs::get()["3D Scene Editing"]["shapebrush-maximumsize"].toInt());
-    mShapeBrushWindow->move (position);
+    mShapeBrushWindow->mSizeSliders->mBrushSizeSlider->setRange(
+        1, CSMPrefs::get()["3D Scene Editing"]["shapebrush-maximumsize"].toInt());
+    mShapeBrushWindow->mSizeSliders->mBrushSizeSpinBox->setRange(
+        1, CSMPrefs::get()["3D Scene Editing"]["shapebrush-maximumsize"].toInt());
+    mShapeBrushWindow->move(position);
     mShapeBrushWindow->show();
 }
 
-void CSVWidget::SceneToolShapeBrush::dragEnterEvent (QDragEnterEvent *event)
+void CSVWidget::SceneToolShapeBrush::dragEnterEvent(QDragEnterEvent* event)
 {
     emit passEvent(event);
     event->accept();
 }
-void CSVWidget::SceneToolShapeBrush::dropEvent (QDropEvent *event)
+void CSVWidget::SceneToolShapeBrush::dropEvent(QDropEvent* event)
 {
     emit passEvent(event);
     event->accept();

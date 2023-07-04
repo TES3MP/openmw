@@ -3,19 +3,25 @@
 
 #include "lighting.hpp"
 
+#include <osg/Vec4f>
+
+namespace osg
+{
+    class Group;
+}
+
 namespace CSVRender
 {
     class LightingDay : public Lighting
     {
-        public:
+    public:
+        LightingDay() = default;
 
-            LightingDay();
+        void activate(osg::Group* rootNode, bool /*isExterior*/) override;
 
-            void activate (osg::Group* rootNode, bool /*isExterior*/) override;
+        void deactivate() override;
 
-            void deactivate() override;
-
-            osg::Vec4f getAmbientColour(osg::Vec4f *defaultAmbient) override;
+        osg::Vec4f getAmbientColour(osg::Vec4f* defaultAmbient) override;
     };
 }
 

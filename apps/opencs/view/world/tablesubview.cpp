@@ -1,57 +1,95 @@
 #include "tablesubview.hpp"
 
-#include <QVBoxLayout>
-#include <QEvent>
-#include <QHeaderView>
 #include <QApplication>
-#include <QDesktopWidget>
+#include <QCheckBox>
 #include <QDropEvent>
+#include <QEvent>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QPushButton>
+#include <QScreen>
+#include <QVBoxLayout>
+#include <QVariant>
+
+#include <algorithm>
+#include <utility>
+#include <variant>
+
+#include <apps/opencs/view/doc/subview.hpp>
 
 #include "../../model/doc/document.hpp"
 #include "../../model/world/tablemimedata.hpp"
 
 #include "../doc/sizehint.hpp"
 #include "../filter/filterbox.hpp"
+#include "../filter/filterdata.hpp"
 #include "table.hpp"
 #include "tablebottombox.hpp"
-#include "creator.hpp"
 
-CSVWorld::TableSubView::TableSubView (const CSMWorld::UniversalId& id, CSMDoc::Document& document,
-    const CreatorFactoryBase& creatorFactory, bool sorting)
-: SubView (id)
+CSVWorld::TableSubView::TableSubView(
+    const CSMWorld::UniversalId& id, CSMDoc::Document& document, const CreatorFactoryBase& creatorFactory, bool sorting)
+    : SubView(id)
+    , mShowOptions(false)
+    , mOptions(0)
 {
-    QVBoxLayout *layout = new QVBoxLayout;
+    QVBoxLayout* layout = new QVBoxLayout;
 
-    layout->addWidget (mBottom =
-        new TableBottomBox (creatorFactory, document, id, this), 0);
+    layout->addWidget(mBottom = new TableBottomBox(creatorFactory, document, id, this), 0);
 
-    layout->insertWidget (0, mTable =
-        new Table (id, mBottom->canCreateAndDelete(), sorting, document), 2);
+    layout->insertWidget(0, mTable = new Table(id, mBottom->canCreateAndDelete(), sorting, document), 2);
 
-    mFilterBox = new CSVFilter::FilterBox (document.getData(), this);
+    mFilterBox = new CSVFilter::FilterBox(document.getData(), this);
 
-    layout->insertWidget (0, mFilterBox);
+    QHBoxLayout* hLayout = new QHBoxLayout;
+    hLayout->insertWidget(0, mFilterBox);
 
-    CSVDoc::SizeHintWidget *widget = new CSVDoc::SizeHintWidget;
+    mOptions = new QWidget;
 
-    widget->setLayout (layout);
+    QHBoxLayout* optHLayout = new QHBoxLayout;
+    QCheckBox* autoJump = new QCheckBox("Auto Jump");
+    autoJump->setToolTip(
+        "Whether to jump to the modified record."
+        "\nCan be useful in finding the moved or modified"
+        "\nobject instance while 3D editing.");
+    autoJump->setCheckState(Qt::Unchecked);
+    connect(autoJump, &QCheckBox::stateChanged, mTable, &Table::jumpAfterModChanged);
+    optHLayout->insertWidget(0, autoJump);
+    optHLayout->setContentsMargins(QMargins(0, 3, 0, 0));
+    mOptions->setLayout(optHLayout);
+    mOptions->resize(mOptions->width(), mFilterBox->height());
+    mOptions->hide();
 
-    setWidget (widget);
+    QPushButton* opt = new QPushButton();
+    opt->setIcon(QIcon(":startup/configure"));
+    opt->setSizePolicy(QSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed));
+    opt->setToolTip("Open additional options for this subview.");
+    connect(opt, &QPushButton::clicked, this, &TableSubView::toggleOptions);
+
+    QVBoxLayout* buttonLayout = new QVBoxLayout; // work around margin issues
+    buttonLayout->setContentsMargins(QMargins(0 /*left*/, 3 /*top*/, 3 /*right*/, 0 /*bottom*/));
+    buttonLayout->insertWidget(0, opt, 0, Qt::AlignVCenter | Qt::AlignRight);
+    hLayout->insertWidget(1, mOptions);
+    hLayout->insertLayout(2, buttonLayout);
+
+    layout->insertLayout(0, hLayout);
+
+    CSVDoc::SizeHintWidget* widget = new CSVDoc::SizeHintWidget;
+
+    widget->setLayout(layout);
+
+    setWidget(widget);
     // prefer height of the screen and full width of the table
-    const QRect rect = QApplication::desktop()->screenGeometry(this);
+    const QRect rect = QApplication::screenAt(pos())->geometry();
     int frameHeight = 40; // set a reasonable default
-    QWidget *topLevel = QApplication::topLevelAt(pos());
+    QWidget* topLevel = QApplication::topLevelAt(pos());
     if (topLevel)
         frameHeight = topLevel->frameGeometry().height() - topLevel->height();
-    widget->setSizeHint(QSize(mTable->horizontalHeader()->length(), rect.height()-frameHeight));
+    widget->setSizeHint(QSize(mTable->horizontalHeader()->length(), rect.height() - frameHeight));
 
-    connect (mTable, SIGNAL (editRequest (const CSMWorld::UniversalId&, const std::string&)),
-        this, SLOT (editRequest (const CSMWorld::UniversalId&, const std::string&)));
+    connect(mTable, &Table::editRequest, this, &TableSubView::editRequest);
 
-    connect (mTable, SIGNAL (selectionSizeChanged (int)),
-        mBottom, SLOT (selectionSizeChanged (int)));
-    connect (mTable, SIGNAL (tableSizeChanged (int, int, int)),
-        mBottom, SLOT (tableSizeChanged (int, int, int)));
+    connect(mTable, &Table::selectionSizeChanged, mBottom, &TableBottomBox::selectionSizeChanged);
+    connect(mTable, &Table::tableSizeChanged, mBottom, &TableBottomBox::tableSizeChanged);
 
     mTable->tableSizeUpdate();
     mTable->selectionSizeUpdate();
@@ -61,58 +99,53 @@ CSVWorld::TableSubView::TableSubView (const CSMWorld::UniversalId& id, CSMDoc::D
 
     if (mBottom->canCreateAndDelete())
     {
-        connect (mTable, SIGNAL (createRequest()), mBottom, SLOT (createRequest()));
+        connect(mTable, &Table::createRequest, mBottom, &TableBottomBox::createRequest);
 
-        connect (mTable, SIGNAL (cloneRequest(const CSMWorld::UniversalId&)), this,
-                 SLOT(cloneRequest(const CSMWorld::UniversalId&)));
+        connect(
+            mTable, &Table::cloneRequest, this, qOverload<const CSMWorld::UniversalId&>(&TableSubView::cloneRequest));
 
-        connect (this, SIGNAL(cloneRequest(const std::string&, const CSMWorld::UniversalId::Type)),
-                mBottom, SLOT(cloneRequest(const std::string&, const CSMWorld::UniversalId::Type)));
+        connect(this, qOverload<const std::string&, const CSMWorld::UniversalId::Type>(&TableSubView::cloneRequest),
+            mBottom, &TableBottomBox::cloneRequest);
 
-        connect (mTable, SIGNAL(touchRequest(const std::vector<CSMWorld::UniversalId>&)),
-            mBottom, SLOT(touchRequest(const std::vector<CSMWorld::UniversalId>&)));
+        connect(mTable, &Table::createRecordsDirectlyRequest, mBottom, &TableBottomBox::createRecordsDirectlyRequest);
 
-        connect (mTable, SIGNAL(extendedDeleteConfigRequest(const std::vector<std::string> &)),
-            mBottom, SLOT(extendedDeleteConfigRequest(const std::vector<std::string> &)));
-        connect (mTable, SIGNAL(extendedRevertConfigRequest(const std::vector<std::string> &)),
-            mBottom, SLOT(extendedRevertConfigRequest(const std::vector<std::string> &)));
+        connect(mTable, &Table::touchRequest, mBottom, &TableBottomBox::touchRequest);
+
+        connect(mTable, &Table::extendedDeleteConfigRequest, mBottom, &TableBottomBox::extendedDeleteConfigRequest);
+        connect(mTable, &Table::extendedRevertConfigRequest, mBottom, &TableBottomBox::extendedRevertConfigRequest);
     }
-    connect (mBottom, SIGNAL (requestFocus (const std::string&)),
-        mTable, SLOT (requestFocus (const std::string&)));
+    connect(mBottom, &TableBottomBox::requestFocus, mTable, &Table::requestFocus);
 
-    connect (mFilterBox,
-        SIGNAL (recordFilterChanged (std::shared_ptr<CSMFilter::Node>)),
-        mTable, SLOT (recordFilterChanged (std::shared_ptr<CSMFilter::Node>)));
+    connect(mFilterBox, &CSVFilter::FilterBox::recordFilterChanged, mTable, &Table::recordFilterChanged);
 
-    connect(mFilterBox, SIGNAL(recordDropped(std::vector<CSMWorld::UniversalId>&, Qt::DropAction)),
-        this, SLOT(createFilterRequest(std::vector<CSMWorld::UniversalId>&, Qt::DropAction)));
+    connect(mFilterBox, &CSVFilter::FilterBox::recordDropped, this, &TableSubView::createFilterRequest);
 
-    connect (mTable, SIGNAL (closeRequest()), this, SLOT (closeRequest()));
+    connect(mTable, &Table::closeRequest, this, qOverload<>(&TableSubView::closeRequest));
 }
 
-void CSVWorld::TableSubView::setEditLock (bool locked)
+void CSVWorld::TableSubView::setEditLock(bool locked)
 {
-    mTable->setEditLock (locked);
-    mBottom->setEditLock (locked);
+    mTable->setEditLock(locked);
+    mBottom->setEditLock(locked);
 }
 
-void CSVWorld::TableSubView::editRequest (const CSMWorld::UniversalId& id, const std::string& hint)
+void CSVWorld::TableSubView::editRequest(const CSMWorld::UniversalId& id, const std::string& hint)
 {
-    focusId (id, hint);
+    focusId(id, hint);
 }
 
-void CSVWorld::TableSubView::setStatusBar (bool show)
+void CSVWorld::TableSubView::setStatusBar(bool show)
 {
-    mBottom->setStatusBar (show);
+    mBottom->setStatusBar(show);
 }
 
-void CSVWorld::TableSubView::useHint (const std::string& hint)
+void CSVWorld::TableSubView::useHint(const std::string& hint)
 {
     if (hint.empty())
         return;
 
-    if (hint[0]=='f' && hint.size()>=2)
-        mFilterBox->setRecordFilter (hint.substr (2));
+    if (hint[0] == 'f' && hint.size() >= 2)
+        mFilterBox->setRecordFilter(hint.substr(2));
 }
 
 void CSVWorld::TableSubView::cloneRequest(const CSMWorld::UniversalId& toClone)
@@ -120,38 +153,64 @@ void CSVWorld::TableSubView::cloneRequest(const CSMWorld::UniversalId& toClone)
     emit cloneRequest(toClone.getId(), toClone.getType());
 }
 
-void CSVWorld::TableSubView::createFilterRequest (std::vector< CSMWorld::UniversalId>& types, Qt::DropAction action)
+void CSVWorld::TableSubView::createFilterRequest(std::vector<CSMWorld::UniversalId>& types,
+    const std::pair<QVariant, std::string>& columnSearchData, Qt::DropAction action)
 {
-    std::vector<std::pair<std::string, std::vector<std::string> > > filterSource;
-
-    std::vector<std::string> refIdColumns = mTable->getColumnsWithDisplay(CSMWorld::TableMimeData::convertEnums(CSMWorld::UniversalId::Type_Referenceable));
+    std::vector<CSVFilter::FilterData> sourceFilter;
+    std::vector<std::string> refIdColumns = mTable->getColumnsWithDisplay(
+        CSMWorld::TableMimeData::convertEnums(CSMWorld::UniversalId::Type_Referenceable));
     bool hasRefIdDisplay = !refIdColumns.empty();
 
     for (std::vector<CSMWorld::UniversalId>::iterator it(types.begin()); it != types.end(); ++it)
     {
         CSMWorld::UniversalId::Type type = it->getType();
         std::vector<std::string> col = mTable->getColumnsWithDisplay(CSMWorld::TableMimeData::convertEnums(type));
-        if(!col.empty())
+        if (!col.empty())
         {
-            filterSource.emplace_back(it->getId(), col);
+            CSVFilter::FilterData filterData;
+            filterData.searchData = it->getId();
+            filterData.columns = col;
+            sourceFilter.emplace_back(filterData);
         }
 
-        if(hasRefIdDisplay && CSMWorld::TableMimeData::isReferencable(type))
+        if (hasRefIdDisplay && CSMWorld::TableMimeData::isReferencable(type))
         {
-            filterSource.emplace_back(it->getId(), refIdColumns);
+            CSVFilter::FilterData filterData;
+            filterData.searchData = it->getId();
+            filterData.columns = refIdColumns;
+            sourceFilter.emplace_back(filterData);
         }
     }
 
-    mFilterBox->createFilterRequest(filterSource, action);
+    if (!sourceFilter.empty())
+        mFilterBox->createFilterRequest(sourceFilter, action);
+    else
+    {
+        std::vector<CSVFilter::FilterData> sourceFilterByValue;
+
+        QVariant qData = columnSearchData.first;
+        std::string searchColumn = columnSearchData.second;
+        std::vector<std::string> searchColumns;
+        searchColumns.emplace_back(searchColumn);
+
+        CSVFilter::FilterData filterData;
+        filterData.searchData = qData;
+        filterData.columns = searchColumns;
+
+        sourceFilterByValue.emplace_back(filterData);
+
+        mFilterBox->createFilterRequest(sourceFilterByValue, action);
+    }
 }
 
-bool CSVWorld::TableSubView::eventFilter (QObject* object, QEvent* event)
+bool CSVWorld::TableSubView::eventFilter(QObject* object, QEvent* event)
 {
     if (event->type() == QEvent::Drop)
     {
         if (QDropEvent* drop = dynamic_cast<QDropEvent*>(event))
         {
-            const CSMWorld::TableMimeData* tableMimeData = dynamic_cast<const CSMWorld::TableMimeData*>(drop->mimeData());
+            const CSMWorld::TableMimeData* tableMimeData
+                = dynamic_cast<const CSMWorld::TableMimeData*>(drop->mimeData());
             if (!tableMimeData) // May happen when non-records (e.g. plain text) are dragged and dropped
                 return false;
 
@@ -166,7 +225,21 @@ bool CSVWorld::TableSubView::eventFilter (QObject* object, QEvent* event)
     return false;
 }
 
-void CSVWorld::TableSubView::requestFocus (const std::string& id)
+void CSVWorld::TableSubView::toggleOptions()
+{
+    if (mShowOptions)
+    {
+        mShowOptions = false;
+        mOptions->hide();
+    }
+    else
+    {
+        mShowOptions = true;
+        mOptions->show();
+    }
+}
+
+void CSVWorld::TableSubView::requestFocus(const std::string& id)
 {
     mTable->requestFocus(id);
 }

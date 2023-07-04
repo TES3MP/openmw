@@ -3,8 +3,6 @@
 
 #include "containerstore.hpp"
 
-#include "../mwmechanics/magiceffects.hpp"
-
 namespace ESM
 {
     struct MagicEffect;
@@ -23,16 +21,7 @@ namespace MWWorld
         /**
          * Fired when items are equipped or unequipped
          */
-        virtual void equipmentChanged () {}
-
-        /**
-         * @param effect
-         * @param isNew Is this effect new (e.g. the item for it was just now manually equipped)
-         *              or was it loaded from a savegame / initial game state? \n
-         *              If it isn't new, non-looping VFX should not be played.
-         * @param playSound Play effect sound?
-         */
-        virtual void permanentEffectAdded (const ESM::MagicEffect *magicEffect, bool isNew) {}
+        virtual void equipmentChanged() {}
 
         virtual ~InventoryStoreListener() = default;
     };
@@ -40,180 +29,159 @@ namespace MWWorld
     ///< \brief Variant of the ContainerStore for NPCs
     class InventoryStore : public ContainerStore
     {
-        public:
+    public:
+        static constexpr int Slot_Helmet = 0;
+        static constexpr int Slot_Cuirass = 1;
+        static constexpr int Slot_Greaves = 2;
+        static constexpr int Slot_LeftPauldron = 3;
+        static constexpr int Slot_RightPauldron = 4;
+        static constexpr int Slot_LeftGauntlet = 5;
+        static constexpr int Slot_RightGauntlet = 6;
+        static constexpr int Slot_Boots = 7;
+        static constexpr int Slot_Shirt = 8;
+        static constexpr int Slot_Pants = 9;
+        static constexpr int Slot_Skirt = 10;
+        static constexpr int Slot_Robe = 11;
+        static constexpr int Slot_LeftRing = 12;
+        static constexpr int Slot_RightRing = 13;
+        static constexpr int Slot_Amulet = 14;
+        static constexpr int Slot_Belt = 15;
+        static constexpr int Slot_CarriedRight = 16;
+        static constexpr int Slot_CarriedLeft = 17;
+        static constexpr int Slot_Ammunition = 18;
 
-            static constexpr int Slot_Helmet = 0;
-            static constexpr int Slot_Cuirass = 1;
-            static constexpr int Slot_Greaves = 2;
-            static constexpr int Slot_LeftPauldron = 3;
-            static constexpr int Slot_RightPauldron = 4;
-            static constexpr int Slot_LeftGauntlet = 5;
-            static constexpr int Slot_RightGauntlet = 6;
-            static constexpr int Slot_Boots = 7;
-            static constexpr int Slot_Shirt = 8;
-            static constexpr int Slot_Pants = 9;
-            static constexpr int Slot_Skirt = 10;
-            static constexpr int Slot_Robe = 11;
-            static constexpr int Slot_LeftRing = 12;
-            static constexpr int Slot_RightRing = 13;
-            static constexpr int Slot_Amulet = 14;
-            static constexpr int Slot_Belt = 15;
-            static constexpr int Slot_CarriedRight = 16;
-            static constexpr int Slot_CarriedLeft = 17;
-            static constexpr int Slot_Ammunition = 18;
+        static constexpr int Slots = 19;
 
-            static constexpr int Slots = 19;
+        static constexpr int Slot_NoSlot = -1;
 
-            static constexpr int Slot_NoSlot = -1;
+    private:
+        InventoryStoreListener* mInventoryListener;
 
-        private:
+        // Enables updates of magic effects and actor model whenever items are equipped or unequipped.
+        // This is disabled during autoequip to avoid excessive updates
+        bool mUpdatesEnabled;
 
-            MWMechanics::MagicEffects mMagicEffects;
+        bool mFirstAutoEquip;
 
-            InventoryStoreListener* mInventoryListener;
+        typedef std::vector<ContainerStoreIterator> TSlots;
 
-            // Enables updates of magic effects and actor model whenever items are equipped or unequipped.
-            // This is disabled during autoequip to avoid excessive updates
-            bool mUpdatesEnabled;
+        TSlots mSlots;
 
-            bool mFirstAutoEquip;
+        void autoEquipWeapon(TSlots& slots_);
+        void autoEquipArmor(TSlots& slots_);
+        void autoEquipShield(TSlots& slots_);
 
-            // Vanilla allows permanent effects with a random magnitude, so it needs to be stored here.
-            // We also need this to only play sounds and particle effects when the item is equipped, rather than on every update.
-            struct EffectParams
-            {
-                // Modifier to scale between min and max magnitude
-                float mRandom;
-                // Multiplier for when an effect was fully or partially resisted
-                float mMultiplier;
-            };
+        // selected magic item (for using enchantments of type "Cast once" or "Cast when used")
+        ContainerStoreIterator mSelectedEnchantItem;
 
-            typedef std::map<std::string, std::vector<EffectParams> > TEffectMagnitudes;
-            TEffectMagnitudes mPermanentMagicEffectMagnitudes;
+        void copySlots(const InventoryStore& store);
 
-            typedef std::vector<ContainerStoreIterator> TSlots;
+        void initSlots(TSlots& slots_);
 
-            TSlots mSlots;
+        void fireEquipmentChangedEvent();
 
-            void autoEquipWeapon(const MWWorld::Ptr& actor, TSlots& slots_);
-            void autoEquipArmor(const MWWorld::Ptr& actor, TSlots& slots_);
-            void autoEquipShield(const MWWorld::Ptr& actor, TSlots& slots_);
+        void storeEquipmentState(
+            const MWWorld::LiveCellRefBase& ref, int index, ESM::InventoryState& inventory) const override;
+        void readEquipmentState(
+            const MWWorld::ContainerStoreIterator& iter, int index, const ESM::InventoryState& inventory) override;
 
-            // selected magic item (for using enchantments of type "Cast once" or "Cast when used")
-            ContainerStoreIterator mSelectedEnchantItem;
+        ContainerStoreIterator findSlot(int slot) const;
 
-            void copySlots (const InventoryStore& store);
+    public:
+        InventoryStore();
 
-            void initSlots (TSlots& slots_);
+        InventoryStore(const InventoryStore& store);
 
-            void updateMagicEffects(const Ptr& actor);
+        InventoryStore& operator=(const InventoryStore& store);
 
-            void fireEquipmentChangedEvent(const Ptr& actor);
+        const MWWorld::Ptr& getActor() const { return mActor; }
+        void setActor(const MWWorld::Ptr& actor) { mActor = actor; }
 
-            void storeEquipmentState (const MWWorld::LiveCellRefBase& ref, int index, ESM::InventoryState& inventory) const override;
-            void readEquipmentState (const MWWorld::ContainerStoreIterator& iter, int index, const ESM::InventoryState& inventory) override;
+        std::unique_ptr<ContainerStore> clone() override
+        {
+            auto res = std::make_unique<InventoryStore>(*this);
+            res->clearRefNums();
+            return res;
+        }
 
-            ContainerStoreIterator findSlot (int slot) const;
+        ContainerStoreIterator add(
+            const Ptr& itemPtr, int count, bool allowAutoEquip = true, bool resolve = true) override;
+        ///< Add the item pointed to by \a ptr to this container. (Stacks automatically if needed)
+        /// Auto-equip items if specific conditions are fulfilled and allowAutoEquip is true (see the implementation).
+        ///
+        /// \note The item pointed to is not required to exist beyond this function call.
+        ///
+        /// \attention Do not add items to an existing stack by increasing the count instead of
+        /// calling this function!
+        ///
+        /// @return if stacking happened, return iterator to the item that was stacked against, otherwise iterator to
+        /// the newly inserted item.
 
-        public:
+        void equip(int slot, const ContainerStoreIterator& iterator);
+        ///< \warning \a iterator can not be an end()-iterator, use unequip function instead
 
-            InventoryStore();
+        bool isEquipped(const MWWorld::ConstPtr& item);
+        ///< Utility function, returns true if the given item is equipped in any slot
 
-            InventoryStore (const InventoryStore& store);
+        void setSelectedEnchantItem(const ContainerStoreIterator& iterator);
+        ///< set the selected magic item (for using enchantments of type "Cast once" or "Cast when used")
+        /// \note to unset the selected item, call this method with end() iterator
 
-            InventoryStore& operator= (const InventoryStore& store);
+        ContainerStoreIterator getSelectedEnchantItem();
+        ///< @return selected magic item (for using enchantments of type "Cast once" or "Cast when used")
+        /// \note if no item selected, return end() iterator
 
-            std::unique_ptr<ContainerStore> clone() override { return std::make_unique<InventoryStore>(*this); }
+        ContainerStoreIterator getSlot(int slot);
+        ConstContainerStoreIterator getSlot(int slot) const;
 
-            ContainerStoreIterator add (const Ptr& itemPtr, int count, const Ptr& actorPtr, bool allowAutoEquip = true, bool resolve = true) override;
-            ///< Add the item pointed to by \a ptr to this container. (Stacks automatically if needed)
-            /// Auto-equip items if specific conditions are fulfilled and allowAutoEquip is true (see the implementation).
-            ///
-            /// \note The item pointed to is not required to exist beyond this function call.
-            ///
-            /// \attention Do not add items to an existing stack by increasing the count instead of
-            /// calling this function!
-            ///
-            /// @return if stacking happened, return iterator to the item that was stacked against, otherwise iterator to the newly inserted item.
+        ContainerStoreIterator getPreferredShield();
 
-            void equip (int slot, const ContainerStoreIterator& iterator, const Ptr& actor);
-            ///< \warning \a iterator can not be an end()-iterator, use unequip function instead
+        void unequipAll();
+        ///< Unequip all currently equipped items.
 
-            bool isEquipped(const MWWorld::ConstPtr& item);
-            ///< Utility function, returns true if the given item is equipped in any slot
+        void autoEquip();
+        ///< Auto equip items according to stats and item value.
 
-            void setSelectedEnchantItem(const ContainerStoreIterator& iterator);
-            ///< set the selected magic item (for using enchantments of type "Cast once" or "Cast when used")
-            /// \note to unset the selected item, call this method with end() iterator
+        bool stacks(const ConstPtr& ptr1, const ConstPtr& ptr2) const override;
+        ///< @return true if the two specified objects can stack with each other
 
-            ContainerStoreIterator getSelectedEnchantItem();
-            ///< @return selected magic item (for using enchantments of type "Cast once" or "Cast when used")
-            /// \note if no item selected, return end() iterator
+        using ContainerStore::remove;
+        int remove(const Ptr& item, int count, bool equipReplacement = 0, bool resolve = true) override;
+        ///< Remove \a count item(s) designated by \a item from this inventory.
+        ///
+        /// @return the number of items actually removed
 
-            ContainerStoreIterator getSlot (int slot);
-            ConstContainerStoreIterator getSlot(int slot) const;
+        ContainerStoreIterator unequipSlot(int slot, bool applyUpdates = true);
+        ///< Unequip \a slot.
+        ///
+        /// @return an iterator to the item that was previously in the slot
 
-            ContainerStoreIterator getPreferredShield(const MWWorld::Ptr& actor);
+        ContainerStoreIterator unequipItem(const Ptr& item);
+        ///< Unequip an item identified by its Ptr. An exception is thrown
+        /// if the item is not currently equipped.
+        ///
+        /// @return an iterator to the item that was previously in the slot
+        /// (it can be re-stacked so its count may be different than when it
+        /// was equipped).
 
-            void unequipAll(const MWWorld::Ptr& actor);
-            ///< Unequip all currently equipped items.
+        ContainerStoreIterator unequipItemQuantity(const Ptr& item, int count);
+        ///< Unequip a specific quantity of an item identified by its Ptr.
+        /// An exception is thrown if the item is not currently equipped,
+        /// if count <= 0, or if count > the item stack size.
+        ///
+        /// @return an iterator to the unequipped items that were previously
+        /// in the slot (they can be re-stacked so its count may be different
+        /// than the requested count).
 
-            void autoEquip (const MWWorld::Ptr& actor);
-            ///< Auto equip items according to stats and item value.
+        void setInvListener(InventoryStoreListener* listener);
+        ///< Set a listener for various events, see \a InventoryStoreListener
 
-            const MWMechanics::MagicEffects& getMagicEffects() const;
-            ///< Return magic effects from worn items.
+        InventoryStoreListener* getInvListener() const;
 
-            bool stacks (const ConstPtr& ptr1, const ConstPtr& ptr2) const override;
-            ///< @return true if the two specified objects can stack with each other
+        void clear() override;
+        ///< Empty container.
 
-            using ContainerStore::remove;
-            int remove(const Ptr& item, int count, const Ptr& actor, bool equipReplacement = 0, bool resolve = true) override;
-            ///< Remove \a count item(s) designated by \a item from this inventory.
-            ///
-            /// @return the number of items actually removed
-
-            ContainerStoreIterator unequipSlot(int slot, const Ptr& actor, bool applyUpdates = true);
-            ///< Unequip \a slot.
-            ///
-            /// @return an iterator to the item that was previously in the slot
-
-            ContainerStoreIterator unequipItem(const Ptr& item, const Ptr& actor);
-            ///< Unequip an item identified by its Ptr. An exception is thrown
-            /// if the item is not currently equipped.
-            ///
-            /// @return an iterator to the item that was previously in the slot
-            /// (it can be re-stacked so its count may be different than when it
-            /// was equipped).
-
-            ContainerStoreIterator unequipItemQuantity(const Ptr& item, const Ptr& actor, int count);
-            ///< Unequip a specific quantity of an item identified by its Ptr.
-            /// An exception is thrown if the item is not currently equipped,
-            /// if count <= 0, or if count > the item stack size.
-            ///
-            /// @return an iterator to the unequipped items that were previously
-            /// in the slot (they can be re-stacked so its count may be different
-            /// than the requested count).
-
-            void setInvListener (InventoryStoreListener* listener, const Ptr& actor);
-            ///< Set a listener for various events, see \a InventoryStoreListener
-
-            InventoryStoreListener* getInvListener();
-
-            void visitEffectSources (MWMechanics::EffectSourceVisitor& visitor);
-
-            void purgeEffect (short effectId, bool wholeSpell = false);
-            ///< Remove a magic effect
-
-            void purgeEffect (short effectId, const std::string& sourceId, bool wholeSpell = false, int effectIndex=-1);
-            ///< Remove a magic effect
-
-            void clear() override;
-            ///< Empty container.
-
-            void writeState (ESM::InventoryState& state) const override;
-
-            void readState (const ESM::InventoryState& state) override;
+        bool isFirstEquip();
     };
 }
 

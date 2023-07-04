@@ -24,7 +24,8 @@ namespace MWPhysics
     class HeightField : public osg::Object
     {
     public:
-        HeightField(const float* heights, int x, int y, float triSize, float sqrtVerts, float minH, float maxH, const osg::Object* holdObject, PhysicsTaskScheduler* scheduler);
+        HeightField(const float* heights, int x, int y, int size, int verts, float minH, float maxH,
+            const osg::Object* holdObject, PhysicsTaskScheduler* scheduler);
         ~HeightField();
 
         META_Object(MWPhysics, HeightField)

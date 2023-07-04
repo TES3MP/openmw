@@ -1,26 +1,28 @@
 #include "metadata.hpp"
 
-#include <components/esm/loadtes3.hpp>
-#include <components/esm/esmreader.hpp>
-#include <components/esm/esmwriter.hpp>
+#include <components/esm3/esmreader.hpp>
+#include <components/esm3/esmwriter.hpp>
+#include <components/esm3/loadtes3.hpp>
 
 void CSMWorld::MetaData::blank()
 {
-    mFormat = ESM::Header::CurrentFormat;
+    // ESM::Header::CurrentFormat is `1` but since new records are not yet used in opencs
+    // we use the format `0` for compatibility with old versions.
+    mFormatVersion = ESM::DefaultFormatVersion;
     mAuthor.clear();
     mDescription.clear();
 }
 
-void CSMWorld::MetaData::load (ESM::ESMReader& esm)
+void CSMWorld::MetaData::load(ESM::ESMReader& esm)
 {
-    mFormat = esm.getHeader().mFormat;
+    mFormatVersion = esm.getHeader().mFormatVersion;
     mAuthor = esm.getHeader().mData.author;
     mDescription = esm.getHeader().mData.desc;
 }
 
-void CSMWorld::MetaData::save (ESM::ESMWriter& esm) const
+void CSMWorld::MetaData::save(ESM::ESMWriter& esm) const
 {
-    esm.setFormat (mFormat);
-    esm.setAuthor (mAuthor);
-    esm.setDescription (mDescription);
+    esm.setFormatVersion(mFormatVersion);
+    esm.setAuthor(mAuthor);
+    esm.setDescription(mDescription);
 }

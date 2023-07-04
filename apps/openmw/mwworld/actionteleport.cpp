@@ -1,5 +1,6 @@
 #include "actionteleport.hpp"
 
+<<<<<<< HEAD
 /*
     Start of tes3mp addition
 
@@ -19,28 +20,43 @@
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
 #include "../mwbase/mechanicsmanager.hpp"
+=======
+#include <components/esm3/loadcell.hpp>
+#include <components/esm3/loadmgef.hpp>
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
+#include "../mwbase/environment.hpp"
+#include "../mwbase/mechanicsmanager.hpp"
+#include "../mwbase/world.hpp"
+
+#include "../mwmechanics/actorutil.hpp"
 #include "../mwmechanics/creaturestats.hpp"
 
+#include "../mwworld/cellstore.hpp"
 #include "../mwworld/class.hpp"
+#include "../mwworld/worldmodel.hpp"
 
 #include "player.hpp"
 
 namespace MWWorld
 {
-    ActionTeleport::ActionTeleport (const std::string& cellName,
-        const ESM::Position& position, bool teleportFollowers)
-    : Action (true), mCellName (cellName), mPosition (position), mTeleportFollowers(teleportFollowers)
+    ActionTeleport::ActionTeleport(ESM::RefId cellId, const ESM::Position& position, bool teleportFollowers)
+        : Action(true)
+        , mCellId(cellId)
+        , mPosition(position)
+        , mTeleportFollowers(teleportFollowers)
     {
     }
 
-    void ActionTeleport::executeImp (const Ptr& actor)
+    void ActionTeleport::executeImp(const Ptr& actor)
     {
         if (mTeleportFollowers)
         {
             // Find any NPCs that are following the actor and teleport them with him
             std::set<MWWorld::Ptr> followers;
-            getFollowers(actor, followers, true);
+
+            bool toExterior = MWBase::Environment::get().getWorldModel()->getCell(mCellId).isExterior();
+            getFollowers(actor, followers, toExterior, true);
 
             for (std::set<MWWorld::Ptr>::iterator it = followers.begin(); it != followers.end(); ++it)
                 teleport(*it);
@@ -49,17 +65,20 @@ namespace MWWorld
         teleport(actor);
     }
 
-    void ActionTeleport::teleport(const Ptr &actor)
+    void ActionTeleport::teleport(const Ptr& actor)
     {
         MWBase::World* world = MWBase::Environment::get().getWorld();
-        actor.getClass().getCreatureStats(actor).land(actor == world->getPlayerPtr());
-        if(actor == world->getPlayerPtr())
+        MWWorld::WorldModel* worldModel = MWBase::Environment::get().getWorldModel();
+        auto& stats = actor.getClass().getCreatureStats(actor);
+        stats.land(actor == world->getPlayerPtr());
+        stats.setTeleported(true);
+
+        Ptr teleported;
+        if (actor == world->getPlayerPtr())
         {
             world->getPlayer().setTeleported(true);
-            if (mCellName.empty())
-                world->changeToExteriorCell (mPosition, true);
-            else
-                world->changeToInteriorCell (mCellName, mPosition, true);
+            world->changeToCell(mCellId, mPosition, true);
+            teleported = world->getPlayerPtr();
         }
         else
         {
@@ -83,9 +102,8 @@ namespace MWWorld
             mwmp::CellController *cellController = mwmp::Main::get().getCellController();
 
             if (actor.getClass().getCreatureStats(actor).getAiSequence().isInCombat(world->getPlayerPtr()))
-                actor.getClass().getCreatureStats(actor).getAiSequence().stopCombat();
-            else if (mCellName.empty())
             {
+<<<<<<< HEAD
                 int cellX;
                 int cellY;
                 world->positionToIndex(mPosition.pos[0],mPosition.pos[1],cellX,cellY);
@@ -96,8 +114,14 @@ namespace MWWorld
 
                 world->moveObject(actor,world->getExterior(cellX,cellY),
                     mPosition.pos[0],mPosition.pos[1],mPosition.pos[2]);
+=======
+                actor.getClass().getCreatureStats(actor).getAiSequence().stopCombat();
+                return;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
             }
+
             else
+<<<<<<< HEAD
             {
                 newCellStore = world->getInterior(mCellName);
                 if (cellController->isDedicatedActor(actor))
@@ -149,26 +173,40 @@ namespace MWWorld
             /*
                 End of tes3mp addition
             */
+=======
+                teleported = world->moveObject(actor, &worldModel->getCell(mCellId), mPosition.asVec3(), true, true);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         }
+
+        if (!world->isWaterWalkingCastableOnTarget(teleported) && MWMechanics::hasWaterWalking(teleported))
+            teleported.getClass()
+                .getCreatureStats(teleported)
+                .getActiveSpells()
+                .purgeEffect(actor, ESM::MagicEffect::WaterWalking);
     }
 
-    void ActionTeleport::getFollowers(const MWWorld::Ptr& actor, std::set<MWWorld::Ptr>& out, bool includeHostiles) {
+    void ActionTeleport::getFollowers(
+        const MWWorld::Ptr& actor, std::set<MWWorld::Ptr>& out, bool toExterior, bool includeHostiles)
+    {
         std::set<MWWorld::Ptr> followers;
         MWBase::Environment::get().getMechanicsManager()->getActorsFollowing(actor, followers);
 
-        for(std::set<MWWorld::Ptr>::iterator it = followers.begin();it != followers.end();++it)
+        for (std::set<MWWorld::Ptr>::iterator it = followers.begin(); it != followers.end(); ++it)
         {
             MWWorld::Ptr follower = *it;
 
-            std::string script = follower.getClass().getScript(follower);
+            const ESM::RefId& script = follower.getClass().getScript(follower);
 
             if (!includeHostiles && follower.getClass().getCreatureStats(follower).getAiSequence().isInCombat(actor))
                 continue;
 
-            if (!script.empty() && follower.getRefData().getLocals().getIntVar(script, "stayoutside") == 1)
+            if (!toExterior && !script.empty()
+                && follower.getRefData().getLocals().getIntVar(script, "stayoutside") == 1
+                && follower.getCell()->getCell()->isExterior())
                 continue;
 
-            if ((follower.getRefData().getPosition().asVec3() - actor.getRefData().getPosition().asVec3()).length2() > 800 * 800)
+            if ((follower.getRefData().getPosition().asVec3() - actor.getRefData().getPosition().asVec3()).length2()
+                > 800 * 800)
                 continue;
 
             out.emplace(follower);

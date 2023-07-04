@@ -1,13 +1,14 @@
 #ifndef GAME_MWMECHANICS_AISEQUENCE_H
 #define GAME_MWMECHANICS_AISEQUENCE_H
 
-#include <list>
+#include <algorithm>
 #include <memory>
+#include <vector>
 
-#include "aistate.hpp"
 #include "aipackagetypeid.hpp"
+#include "aistate.hpp"
 
-#include <components/esm/loadnpc.hpp>
+#include <components/esm3/loadnpc.hpp>
 
 namespace MWWorld
 {
@@ -22,122 +23,155 @@ namespace ESM
     }
 }
 
-
-
 namespace MWMechanics
 {
     class AiPackage;
     class CharacterController;
-    
-    template< class Base > class DerivedClassStorage;
-    struct AiTemporaryBase;
-    typedef DerivedClassStorage<AiTemporaryBase> AiState;
+
+    using AiPackages = std::vector<std::shared_ptr<AiPackage>>;
 
     /// \brief Sequence of AI-packages for a single actor
     /** The top-most AI package is run each frame. When completed, it is removed from the stack. **/
     class AiSequence
     {
-            ///AiPackages to run though
-            std::list<std::unique_ptr<AiPackage>> mPackages;
+        /// AiPackages to run though
+        AiPackages mPackages;
 
-            ///Finished with top AIPackage, set for one frame
-            bool mDone;
+        /// Finished with top AIPackage, set for one frame
+        bool mDone{};
 
-            ///Does this AI sequence repeat (repeating of Wander packages handled separately)
-            bool mRepeat;
+        int mNumCombatPackages{};
+        int mNumPursuitPackages{};
 
-            ///Copy AiSequence
-            void copy (const AiSequence& sequence);
+        /// Copy AiSequence
+        void copy(const AiSequence& sequence);
 
-            /// The type of AI package that ran last
-            AiPackageTypeId mLastAiPackage;
-            AiState mAiState;
+        /// The type of AI package that ran last
+        AiPackageTypeId mLastAiPackage;
+        AiState mAiState;
 
-        public:
-            ///Default constructor
-            AiSequence();
+        void onPackageAdded(const AiPackage& package);
+        void onPackageRemoved(const AiPackage& package);
 
-            /// Copy Constructor
-            AiSequence (const AiSequence& sequence);
+        AiPackages::iterator erase(AiPackages::iterator package);
 
-            /// Assignment operator
-            AiSequence& operator= (const AiSequence& sequence);
+    public:
+        /// Default constructor
+        AiSequence();
 
-            virtual ~AiSequence();
+        /// Copy Constructor
+        AiSequence(const AiSequence& sequence);
 
-            /// Iterator may be invalidated by any function calls other than begin() or end().
-            std::list<std::unique_ptr<AiPackage>>::const_iterator begin() const;
-            std::list<std::unique_ptr<AiPackage>>::const_iterator end() const;
+        /// Assignment operator
+        AiSequence& operator=(const AiSequence& sequence);
 
-            void erase(std::list<std::unique_ptr<AiPackage>>::const_iterator package);
+        virtual ~AiSequence();
 
-            /// Returns currently executing AiPackage type
-            /** \see enum class AiPackageTypeId **/
-            AiPackageTypeId getTypeId() const;
+        /// Iterator may be invalidated by any function calls other than begin() or end().
+        AiPackages::const_iterator begin() const { return mPackages.begin(); }
+        AiPackages::const_iterator end() const { return mPackages.end(); }
 
-            /// Get the typeid of the Ai package that ran last
-            /** NOT the currently "active" Ai package that will be run in the next frame.
-                This difference is important when an Ai package has just finished and been removed.
-                \see enum class AiPackageTypeId **/
-            AiPackageTypeId getLastRunTypeId() const { return mLastAiPackage; }
+        /// Removes all packages controlled by the predicate.
+        template <typename F>
+        void erasePackagesIf(const F&& pred)
+        {
+            mPackages.erase(std::remove_if(mPackages.begin(), mPackages.end(),
+                                [&](auto& entry) {
+                                    const bool doRemove = pred(entry);
+                                    if (doRemove)
+                                        onPackageRemoved(*entry);
+                                    return doRemove;
+                                }),
+                mPackages.end());
+        }
 
-            /// Return true and assign target if combat package is currently active, return false otherwise
-            bool getCombatTarget (MWWorld::Ptr &targetActor) const;
+        /// Removes a single package controlled by the predicate.
+        template <typename F>
+        void erasePackageIf(const F&& pred)
+        {
+            auto it = std::find_if(mPackages.begin(), mPackages.end(), pred);
+            if (it == mPackages.end())
+                return;
+            erase(it);
+        }
 
-            /// Return true and assign targets for all combat packages, or return false if there are no combat packages
-            bool getCombatTargets(std::vector<MWWorld::Ptr> &targetActors) const;
+        /// Returns currently executing AiPackage type
+        /** \see enum class AiPackageTypeId **/
+        AiPackageTypeId getTypeId() const;
 
-            /// Is there any combat package?
-            bool isInCombat () const;
+        /// Get the typeid of the Ai package that ran last
+        /** NOT the currently "active" Ai package that will be run in the next frame.
+            This difference is important when an Ai package has just finished and been removed.
+            \see enum class AiPackageTypeId **/
+        AiPackageTypeId getLastRunTypeId() const { return mLastAiPackage; }
 
-            /// Are we in combat with any other actor, who's also engaging us?
-            bool isEngagedWithActor () const;
+        /// Return true and assign target if combat package is currently active, return false otherwise
+        bool getCombatTarget(MWWorld::Ptr& targetActor) const;
 
-            /// Does this AI sequence have the given package type?
-            bool hasPackage(AiPackageTypeId typeId) const;
+        /// Return true and assign targets for all combat packages, or return false if there are no combat packages
+        bool getCombatTargets(std::vector<MWWorld::Ptr>& targetActors) const;
 
-            /// Are we in combat with this particular actor?
-            bool isInCombat (const MWWorld::Ptr& actor) const;
+        /// Is there any combat package?
+        bool isInCombat() const;
 
-            bool canAddTarget(const ESM::Position& actorPos, float distToTarget) const;
-            ///< Function assumes that actor can have only 1 target apart player
+        /// Is there any pursuit package.
+        bool isInPursuit() const;
 
-            /// Removes all combat packages until first non-combat or stack empty.
-            void stopCombat();
+        /// Removes all packages using the specified id.
+        void removePackagesById(AiPackageTypeId id);
 
-            /// Has a package been completed during the last update?
-            bool isPackageDone() const;
+        /// Are we in combat with any other actor, who's also engaging us?
+        bool isEngagedWithActor() const;
 
-            /// Removes all pursue packages until first non-pursue or stack empty.
-            void stopPursuit();
+        /// Does this AI sequence have the given package type?
+        bool hasPackage(AiPackageTypeId typeId) const;
 
-            /// Execute current package, switching if needed.
-            void execute (const MWWorld::Ptr& actor, CharacterController& characterController, float duration, bool outOfRange=false);
+        /// Are we in combat with this particular actor?
+        bool isInCombat(const MWWorld::Ptr& actor) const;
 
-            /// Simulate the passing of time using the currently active AI package
-            void fastForward(const MWWorld::Ptr &actor);
+        bool canAddTarget(const ESM::Position& actorPos, float distToTarget) const;
+        ///< Function assumes that actor can have only 1 target apart player
 
-            /// Remove all packages.
-            void clear();
+        /// Removes all combat packages until first non-combat or stack empty.
+        void stopCombat();
 
-            ///< Add \a package to the front of the sequence
-            /** Suspends current package
-                @param actor The actor that owns this AiSequence **/
-            void stack (const AiPackage& package, const MWWorld::Ptr& actor, bool cancelOther=true);
+        /// Removes all combat packages with the given targets
+        void stopCombat(const std::vector<MWWorld::Ptr>& targets);
 
-            /// Return the current active package.
-            /** If there is no active package, it will throw an exception **/
-            const AiPackage& getActivePackage();
+        /// Has a package been completed during the last update?
+        bool isPackageDone() const;
 
-            /// Fills the AiSequence with packages
-            /** Typically used for loading from the ESM
-                \see ESM::AIPackageList **/
-            void fill (const ESM::AIPackageList& list);
+        /// Removes all pursue packages until first non-pursue or stack empty.
+        void stopPursuit();
 
-            bool isEmpty() const;
+        /// Execute current package, switching if needed.
+        void execute(const MWWorld::Ptr& actor, CharacterController& characterController, float duration,
+            bool outOfRange = false);
 
-            void writeState (ESM::AiSequence::AiSequence& sequence) const;
-            void readState (const ESM::AiSequence::AiSequence& sequence);
+        /// Simulate the passing of time using the currently active AI package
+        void fastForward(const MWWorld::Ptr& actor);
+
+        /// Remove all packages.
+        void clear();
+
+        ///< Add \a package to the front of the sequence
+        /** Suspends current package
+            @param actor The actor that owns this AiSequence **/
+        void stack(const AiPackage& package, const MWWorld::Ptr& actor, bool cancelOther = true);
+
+        /// Return the current active package.
+        /** If there is no active package, it will throw an exception **/
+        const AiPackage& getActivePackage() const;
+
+        /// Fills the AiSequence with packages
+        /** Typically used for loading from the ESM
+            \see ESM::AIPackageList **/
+        void fill(const ESM::AIPackageList& list);
+
+        bool isEmpty() const;
+
+        void writeState(ESM::AiSequence::AiSequence& sequence) const;
+        void readState(const ESM::AiSequence::AiSequence& sequence);
     };
 }
 

@@ -1,89 +1,49 @@
 #include "ptr.hpp"
 
-#include <cassert>
+#include "apps/openmw/mwbase/environment.hpp"
 
-#include "containerstore.hpp"
-#include "class.hpp"
-#include "livecellref.hpp"
+#include "worldmodel.hpp"
 
-const std::string& MWWorld::Ptr::getTypeName() const
+namespace MWWorld
 {
-    if(mRef != nullptr)
-        return mRef->mClass->getTypeName();
-    throw std::runtime_error("Can't get type name from an empty object.");
-}
 
-MWWorld::LiveCellRefBase *MWWorld::Ptr::getBase() const
-{
-    if (!mRef)
-        throw std::runtime_error ("Can't access cell ref pointed to by null Ptr");
+    std::string Ptr::toString() const
+    {
+        std::string res = "object";
+        if (getRefData().isDeleted())
+            res = "deleted object";
+        res.append(getCellRef().getRefNum().toString());
+        res.append(" (");
+        res.append(getTypeDescription());
+        res.append(", ");
+        res.append(getCellRef().getRefId().toDebugString());
+        res.append(")");
+        return res;
+    }
 
-    return mRef;
-}
+    SafePtr::SafePtr(const Ptr& ptr)
+        : mId(ptr.getCellRef().getRefNum())
+        , mPtr(ptr)
+        , mLastUpdate(MWBase::Environment::get().getWorldModel()->getPtrRegistryRevision())
+    {
+    }
 
-MWWorld::CellRef& MWWorld::Ptr::getCellRef() const
-{
-    assert(mRef);
+    std::string SafePtr::toString() const
+    {
+        update();
+        if (mPtr.isEmpty())
+            return "object" + mId.toString() + " (not found)";
+        else
+            return mPtr.toString();
+    }
 
-    return mRef->mRef;
-}
-
-MWWorld::RefData& MWWorld::Ptr::getRefData() const
-{
-    assert(mRef);
-
-    return mRef->mData;
-}
-
-void MWWorld::Ptr::setContainerStore (ContainerStore *store)
-{
-    assert (store);
-    assert (!mCell);
-
-    mContainerStore = store;
-}
-
-MWWorld::ContainerStore *MWWorld::Ptr::getContainerStore() const
-{
-    return mContainerStore;
-}
-
-MWWorld::Ptr::operator const void *()
-{
-    return mRef;
-}
-
-// -------------------------------------------------------------------------------
-
-const std::string &MWWorld::ConstPtr::getTypeName() const
-{
-    if(mRef != nullptr)
-        return mRef->mClass->getTypeName();
-    throw std::runtime_error("Can't get type name from an empty object.");
-}
-
-const MWWorld::LiveCellRefBase *MWWorld::ConstPtr::getBase() const
-{
-    if (!mRef)
-        throw std::runtime_error ("Can't access cell ref pointed to by null Ptr");
-
-    return mRef;
-}
-
-void MWWorld::ConstPtr::setContainerStore (const ContainerStore *store)
-{
-    assert (store);
-    assert (!mCell);
-
-    mContainerStore = store;
-}
-
-const MWWorld::ContainerStore *MWWorld::ConstPtr::getContainerStore() const
-{
-    return mContainerStore;
-}
-
-MWWorld::ConstPtr::operator const void *()
-{
-    return mRef;
+    void SafePtr::update() const
+    {
+        const WorldModel& worldModel = *MWBase::Environment::get().getWorldModel();
+        if (mLastUpdate != worldModel.getPtrRegistryRevision())
+        {
+            mPtr = worldModel.getPtr(mId);
+            mLastUpdate = worldModel.getPtrRegistryRevision();
+        }
+    }
 }

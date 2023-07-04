@@ -14,7 +14,6 @@ namespace MWGui
 {
     class ItemView;
     class SortFilterItemModel;
-    class InventoryItemModel;
 
     class ItemSelectionDialog : public WindowModal
     {
@@ -29,14 +28,13 @@ namespace MWGui
         EventHandle_Item eventItemSelected;
         EventHandle_Void eventDialogCanceled;
 
-        void openContainer (const MWWorld::Ptr& container);
+        void openContainer(const MWWorld::Ptr& container);
         void setCategory(int category);
         void setFilter(int filter);
 
     private:
         ItemView* mItemView;
         SortFilterItemModel* mSortModel;
-        InventoryItemModel* mModel;
 
         void onSelectedItem(int index);
 

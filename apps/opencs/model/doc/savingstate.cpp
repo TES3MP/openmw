@@ -1,15 +1,18 @@
 #include "savingstate.hpp"
 
-#include <boost/filesystem/fstream.hpp>
+#include <filesystem>
+#include <utility>
 
-#include "operation.hpp"
 #include "document.hpp"
+#include "operation.hpp"
 
-CSMDoc::SavingState::SavingState (Operation& operation, const boost::filesystem::path& projectPath,
-    ToUTF8::FromType encoding)
-: mOperation (operation), mEncoder (encoding),  mProjectPath (projectPath), mProjectFile (false)
+CSMDoc::SavingState::SavingState(Operation& operation, std::filesystem::path projectPath, ToUTF8::FromType encoding)
+    : mOperation(operation)
+    , mEncoder(encoding)
+    , mProjectPath(std::move(projectPath))
+    , mProjectFile(false)
 {
-    mWriter.setEncoder (&mEncoder);
+    mWriter.setEncoder(&mEncoder);
 }
 
 bool CSMDoc::SavingState::hasError() const
@@ -17,7 +20,7 @@ bool CSMDoc::SavingState::hasError() const
     return mOperation.hasError();
 }
 
-void CSMDoc::SavingState::start (Document& document, bool project)
+void CSMDoc::SavingState::start(Document& document, bool project)
 {
     mProjectFile = project;
 
@@ -33,24 +36,24 @@ void CSMDoc::SavingState::start (Document& document, bool project)
     else
         mPath = document.getSavePath();
 
-    boost::filesystem::path file (mPath.filename().string() + ".tmp");
+    std::filesystem::path file(mPath.filename().u8string() + u8".tmp");
 
     mTmpPath = mPath.parent_path();
 
     mTmpPath /= file;
 }
 
-const boost::filesystem::path& CSMDoc::SavingState::getPath() const
+const std::filesystem::path& CSMDoc::SavingState::getPath() const
 {
     return mPath;
 }
 
-const boost::filesystem::path& CSMDoc::SavingState::getTmpPath() const
+const std::filesystem::path& CSMDoc::SavingState::getTmpPath() const
 {
     return mTmpPath;
 }
 
-boost::filesystem::ofstream& CSMDoc::SavingState::getStream()
+std::ofstream& CSMDoc::SavingState::getStream()
 {
     return mStream;
 }
@@ -65,7 +68,20 @@ bool CSMDoc::SavingState::isProjectFile() const
     return mProjectFile;
 }
 
-std::map<std::string, std::deque<int> >& CSMDoc::SavingState::getSubRecords()
+const std::deque<int>* CSMDoc::SavingState::findSubRecord(const ESM::RefId& refId) const
 {
-    return mSubRecords;
+    const auto it = mSubRecords.find(refId);
+    if (it == mSubRecords.end())
+        return nullptr;
+    return &it->second;
+}
+
+std::deque<int>& CSMDoc::SavingState::getOrInsertSubRecord(const ESM::RefId& refId)
+{
+    return mSubRecords[refId];
+}
+
+void CSMDoc::SavingState::clearSubRecords()
+{
+    mSubRecords.clear();
 }

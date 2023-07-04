@@ -3,7 +3,12 @@
 
 #include <string>
 
-#include <components/esm/loadland.hpp>
+#include <components/esm3/loadland.hpp>
+
+namespace ESM
+{
+    class ESMReader;
+}
 
 namespace CSMWorld
 {
@@ -13,7 +18,7 @@ namespace CSMWorld
     struct Land : public ESM::Land
     {
         /// Loads the metadata and ID
-        void load (ESM::ESMReader &esm, bool &isDeleted);
+        void load(ESM::ESMReader& esm, bool& isDeleted);
 
         static std::string createUniqueRecordId(int x, int y);
         static void parseUniqueRecordId(const std::string& id, int& x, int& y);

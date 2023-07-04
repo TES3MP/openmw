@@ -7,9 +7,13 @@
 
 namespace MWWorld
 {
+    struct CellRefListBase
+    {
+    };
+
     /// \brief Collection of references of one type
     template <typename X>
-    struct CellRefList
+    struct CellRefList : public CellRefListBase
     {
         typedef LiveCellRef<X> LiveRef;
         typedef std::list<LiveRef> List;
@@ -22,16 +26,18 @@ namespace MWWorld
         /// and the build will fail with an ugly three-way cyclic header dependence
         /// so we need to pass the instantiation of the method to the linker, when
         /// all methods are known.
-        void load (ESM::CellRef &ref, bool deleted, const MWWorld::ESMStore &esmStore);
+        void load(ESM::CellRef& ref, bool deleted, const MWWorld::ESMStore& esmStore);
 
-        LiveRef &insert (const LiveRef &item)
+        void load(const ESM4::Reference& ref, bool deleted, const MWWorld::ESMStore& esmStore);
+
+        LiveRef& insert(const LiveRef& item)
         {
             mList.push_back(item);
             return mList.back();
         }
 
         /// Remove all references with the given refNum from this list.
-        void remove (const ESM::RefNum &refNum)
+        void remove(const ESM::RefNum& refNum)
         {
             for (typename List::iterator it = mList.begin(); it != mList.end();)
             {

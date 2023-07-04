@@ -1,26 +1,25 @@
 #include "itemselection.hpp"
 
-#include <MyGUI_TextBox.h>
 #include <MyGUI_Button.h>
+#include <MyGUI_TextBox.h>
 
-#include "itemview.hpp"
 #include "inventoryitemmodel.hpp"
+#include "itemview.hpp"
 #include "sortfilteritemmodel.hpp"
 
 namespace MWGui
 {
 
-    ItemSelectionDialog::ItemSelectionDialog(const std::string &label)
+    ItemSelectionDialog::ItemSelectionDialog(const std::string& label)
         : WindowModal("openmw_itemselection_dialog.layout")
         , mSortModel(nullptr)
-        , mModel(nullptr)
     {
         getWidget(mItemView, "ItemView");
         mItemView->eventItemClicked += MyGUI::newDelegate(this, &ItemSelectionDialog::onSelectedItem);
 
         MyGUI::TextBox* l;
         getWidget(l, "Label");
-        l->setCaptionWithReplacing (label);
+        l->setCaptionWithReplacing(label);
 
         MyGUI::Button* cancelButton;
         getWidget(cancelButton, "CancelButton");
@@ -37,9 +36,9 @@ namespace MWGui
 
     void ItemSelectionDialog::openContainer(const MWWorld::Ptr& container)
     {
-        mModel = new InventoryItemModel(container);
-        mSortModel = new SortFilterItemModel(mModel);
-        mItemView->setModel(mSortModel);
+        auto sortModel = std::make_unique<SortFilterItemModel>(std::make_unique<InventoryItemModel>(container));
+        mSortModel = sortModel.get();
+        mItemView->setModel(std::move(sortModel));
         mItemView->resetScrollBars();
     }
 

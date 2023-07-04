@@ -1,12 +1,30 @@
 #include "journalcheck.hpp"
 
+#include <memory>
 #include <set>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+
+#include <apps/opencs/model/doc/messages.hpp>
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/model/world/info.hpp>
+#include <apps/opencs/model/world/infocollection.hpp>
+#include <apps/opencs/model/world/record.hpp>
+#include <apps/opencs/model/world/universalid.hpp>
+
+#include <components/esm3/loaddial.hpp>
+#include <components/esm3/loadinfo.hpp>
 
 #include "../prefs/state.hpp"
 
-CSMTools::JournalCheckStage::JournalCheckStage(const CSMWorld::IdCollection<ESM::Dialogue> &journals,
-    const CSMWorld::InfoCollection& journalInfos)
-    : mJournals(journals), mJournalInfos(journalInfos)
+CSMTools::JournalCheckStage::JournalCheckStage(
+    const CSMWorld::IdCollection<ESM::Dialogue>& journals, const CSMWorld::InfoCollection& journalInfos)
+    : mJournals(journals)
+    , mJournalInfos(journalInfos)
 {
     mIgnoreBaseRecords = false;
 }
@@ -14,58 +32,57 @@ CSMTools::JournalCheckStage::JournalCheckStage(const CSMWorld::IdCollection<ESM:
 int CSMTools::JournalCheckStage::setup()
 {
     mIgnoreBaseRecords = CSMPrefs::get()["Reports"]["ignore-base-records"].isTrue();
-
+    mInfosByTopic = mJournalInfos.getInfosByTopic();
     return mJournals.getSize();
 }
 
 void CSMTools::JournalCheckStage::perform(int stage, CSMDoc::Messages& messages)
 {
-    const CSMWorld::Record<ESM::Dialogue> &journalRecord = mJournals.getRecord(stage);
+    const CSMWorld::Record<ESM::Dialogue>& journalRecord = mJournals.getRecord(stage);
 
     // Skip "Base" records (setting!) and "Deleted" records
-    if ((mIgnoreBaseRecords && journalRecord.mState == CSMWorld::RecordBase::State_BaseOnly) || journalRecord.isDeleted())
+    if ((mIgnoreBaseRecords && journalRecord.mState == CSMWorld::RecordBase::State_BaseOnly)
+        || journalRecord.isDeleted())
         return;
 
-    const ESM::Dialogue &journal = journalRecord.get();
+    const ESM::Dialogue& journal = journalRecord.get();
     int statusNamedCount = 0;
     int totalInfoCount = 0;
     std::set<int> questIndices;
 
-    CSMWorld::InfoCollection::Range range = mJournalInfos.getTopicRange(journal.mId);
-
-    for (CSMWorld::InfoCollection::RecordConstIterator it = range.first; it != range.second; ++it)
+    if (const auto infos = mInfosByTopic.find(journal.mId); infos != mInfosByTopic.end())
     {
-        const CSMWorld::Record<CSMWorld::Info> infoRecord = (*it);
-
-        if (infoRecord.isDeleted())
-            continue;
-
-        const CSMWorld::Info& journalInfo = infoRecord.get();
-
-        totalInfoCount += 1;
-
-        if (journalInfo.mQuestStatus == ESM::DialInfo::QS_Name)
+        for (const CSMWorld::Record<CSMWorld::Info>* record : infos->second)
         {
-            statusNamedCount += 1;
-        }
+            if (record->isDeleted())
+                continue;
 
-        // Skip "Base" records (setting!)
-        if (mIgnoreBaseRecords && infoRecord.mState == CSMWorld::RecordBase::State_BaseOnly)
-            continue;
+            const CSMWorld::Info& journalInfo = record->get();
 
-        if (journalInfo.mResponse.empty())
-        {
-            CSMWorld::UniversalId id(CSMWorld::UniversalId::Type_JournalInfo, journalInfo.mId);
-            messages.add(id, "Missing journal entry text", "", CSMDoc::Message::Severity_Warning);
-        }
+            totalInfoCount += 1;
 
-        std::pair<std::set<int>::iterator, bool> result = questIndices.insert(journalInfo.mData.mJournalIndex);
+            if (journalInfo.mQuestStatus == ESM::DialInfo::QS_Name)
+            {
+                statusNamedCount += 1;
+            }
 
-        // Duplicate index
-        if (!result.second)
-        {
-            CSMWorld::UniversalId id(CSMWorld::UniversalId::Type_JournalInfo, journalInfo.mId);
-            messages.add(id, "Duplicated quest index " + std::to_string(journalInfo.mData.mJournalIndex), "", CSMDoc::Message::Severity_Error);
+            // Skip "Base" records (setting!)
+            if (mIgnoreBaseRecords && record->mState == CSMWorld::RecordBase::State_BaseOnly)
+                continue;
+
+            if (journalInfo.mResponse.empty())
+            {
+                CSMWorld::UniversalId id(CSMWorld::UniversalId::Type_JournalInfo, journalInfo.mId);
+                messages.add(id, "Missing journal entry text", "", CSMDoc::Message::Severity_Warning);
+            }
+
+            // Duplicate index
+            if (!questIndices.insert(journalInfo.mData.mJournalIndex).second)
+            {
+                CSMWorld::UniversalId id(CSMWorld::UniversalId::Type_JournalInfo, journalInfo.mId);
+                messages.add(id, "Duplicated quest index " + std::to_string(journalInfo.mData.mJournalIndex), "",
+                    CSMDoc::Message::Severity_Error);
+            }
         }
     }
 

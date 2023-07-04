@@ -1,44 +1,34 @@
 #ifndef OPENMW_COMPONENTS_UNREFQUEUE_H
 #define OPENMW_COMPONENTS_UNREFQUEUE_H
 
-#include <deque>
-
-#include <osg/ref_ptr>
 #include <osg/Referenced>
+#include <osg/ref_ptr>
 
-#include <components/sceneutil/workqueue.hpp>
+#include <vector>
 
 namespace SceneUtil
 {
     class WorkQueue;
-    
-    class UnrefWorkItem : public SceneUtil::WorkItem
-    {
-    public:
-        std::deque<osg::ref_ptr<const osg::Referenced> > mObjects;
-        void doWork() override;
-    };
 
     /// @brief Handles unreferencing of objects through the WorkQueue. Typical use scenario
     /// would be the main thread pushing objects that are no longer needed, and the background thread deleting them.
-    class UnrefQueue : public osg::Referenced
+    class UnrefQueue
     {
     public:
-        UnrefQueue();
-
         /// Adds an object to the list of objects to be unreferenced. Call from the main thread.
-        void push(const osg::Referenced* obj);
+        void push(osg::ref_ptr<osg::Referenced>&& obj) { mObjects.push_back(std::move(obj)); }
 
-        /// Adds a WorkItem to the given WorkQueue that will clear the list of objects in a worker thread, thus unreferencing them.
-        /// Call from the main thread.
-        void flush(SceneUtil::WorkQueue* workQueue);
+        void push(const osg::ref_ptr<osg::Referenced>& obj) { mObjects.push_back(obj); }
 
-        unsigned int getNumItems() const;
+        /// Adds a WorkItem to the given WorkQueue that will clear the list of objects in a worker thread,
+        /// thus unreferencing them. Call from the main thread.
+        void flush(SceneUtil::WorkQueue& workQueue);
+
+        std::size_t getSize() const { return mObjects.size(); }
 
     private:
-        osg::ref_ptr<UnrefWorkItem> mWorkItem;
+        std::vector<osg::ref_ptr<osg::Referenced>> mObjects;
     };
-
 }
 
 #endif

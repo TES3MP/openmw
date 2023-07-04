@@ -1,8 +1,10 @@
 #ifndef MWINPUT_CONTROLSWITCH_H
 #define MWINPUT_CONTROLSWITCH_H
 
+#include <cstdint>
 #include <map>
 #include <string>
+#include <string_view>
 
 namespace ESM
 {
@@ -23,8 +25,8 @@ namespace MWInput
     public:
         ControlSwitch();
 
-        bool get(const std::string& key);
-        void set(const std::string& key, bool value);
+        bool get(std::string_view key);
+        void set(std::string_view key, bool value);
         void clear();
 
         void write(ESM::ESMWriter& writer, Loading::Listener& progress);
@@ -32,7 +34,7 @@ namespace MWInput
         int countSavedGameRecords() const;
 
     private:
-        std::map<std::string, bool> mSwitches;
+        std::map<std::string, bool, std::less<>> mSwitches;
     };
 }
 #endif

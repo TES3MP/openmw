@@ -1,15 +1,14 @@
 #ifndef CSM_DOC_SAVINGSTATE_H
 #define CSM_DOC_SAVINGSTATE_H
 
+#include <deque>
+#include <filesystem>
 #include <fstream>
 #include <map>
-#include <deque>
+#include <string>
 
-#include <boost/filesystem/path.hpp>
-#include <boost/filesystem/fstream.hpp>
-
-#include <components/esm/esmwriter.hpp>
-
+#include <components/esm3/esmwriter.hpp>
+#include <components/misc/algorithm.hpp>
 #include <components/to_utf8/to_utf8.hpp>
 
 namespace CSMDoc
@@ -19,40 +18,41 @@ namespace CSMDoc
 
     class SavingState
     {
-            Operation& mOperation;
-            boost::filesystem::path mPath;
-            boost::filesystem::path mTmpPath;
-            ToUTF8::Utf8Encoder mEncoder;
-            boost::filesystem::ofstream mStream;
-            ESM::ESMWriter mWriter;
-            boost::filesystem::path mProjectPath;
-            bool mProjectFile;
-            std::map<std::string, std::deque<int> > mSubRecords; // record ID, list of subrecords
+        Operation& mOperation;
+        std::filesystem::path mPath;
+        std::filesystem::path mTmpPath;
+        ToUTF8::Utf8Encoder mEncoder;
+        std::ofstream mStream;
+        ESM::ESMWriter mWriter;
+        std::filesystem::path mProjectPath;
+        bool mProjectFile;
+        std::map<ESM::RefId, std::deque<int>> mSubRecords; // record ID, list of subrecords
 
-        public:
+    public:
+        SavingState(Operation& operation, std::filesystem::path projectPath, ToUTF8::FromType encoding);
 
-            SavingState (Operation& operation, const boost::filesystem::path& projectPath,
-                ToUTF8::FromType encoding);
+        bool hasError() const;
 
-            bool hasError() const;
+        void start(Document& document, bool project);
+        ///< \param project Save project file instead of content file.
 
-            void start (Document& document, bool project);
-            ///< \param project Save project file instead of content file.
+        const std::filesystem::path& getPath() const;
 
-            const boost::filesystem::path& getPath() const;
+        const std::filesystem::path& getTmpPath() const;
 
-            const boost::filesystem::path& getTmpPath() const;
+        std::ofstream& getStream();
 
-            boost::filesystem::ofstream& getStream();
+        ESM::ESMWriter& getWriter();
 
-            ESM::ESMWriter& getWriter();
+        bool isProjectFile() const;
+        ///< Currently saving project file? (instead of content file)
 
-            bool isProjectFile() const;
-            ///< Currently saving project file? (instead of content file)
+        const std::deque<int>* findSubRecord(const ESM::RefId& refId) const;
 
-            std::map<std::string, std::deque<int> >& getSubRecords();
+        std::deque<int>& getOrInsertSubRecord(const ESM::RefId& refId);
+
+        void clearSubRecords();
     };
-
 
 }
 

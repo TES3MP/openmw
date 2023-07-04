@@ -14,7 +14,6 @@
 */
 
 #include "../mwbase/environment.hpp"
-#include "../mwbase/world.hpp"
 
 #include "../mwbase/soundmanager.hpp"
 #include "../mwbase/windowmanager.hpp"
@@ -31,14 +30,18 @@ void MWWorld::Action::setTarget(const MWWorld::Ptr& target)
     mTarget = target;
 }
 
-MWWorld::Action::Action (bool keepSound, const Ptr& target) : mKeepSound (keepSound), mSoundOffset(0), mTarget (target)
-{}
+MWWorld::Action::Action(bool keepSound, const Ptr& target)
+    : mKeepSound(keepSound)
+    , mSoundOffset(0)
+    , mTarget(target)
+{
+}
 
 MWWorld::Action::~Action() {}
 
-void MWWorld::Action::execute (const Ptr& actor, bool noSound)
+void MWWorld::Action::execute(const Ptr& actor, bool noSound)
 {
-    if(!mSoundId.empty() && !noSound)
+    if (!mSoundId.empty() && !noSound)
     {
         MWSound::PlayMode envType = MWSound::PlayMode::Normal;
 
@@ -49,6 +52,7 @@ void MWWorld::Action::execute (const Ptr& actor, bool noSound)
             envType = MWSound::PlayMode::NoEnv;
         }
 
+<<<<<<< HEAD
         if(mKeepSound && actor == MWMechanics::getPlayer())
         {
             MWBase::Environment::get().getSoundManager()->playSound(mSoundId, 1.0, 1.0,
@@ -119,18 +123,33 @@ void MWWorld::Action::execute (const Ptr& actor, bool noSound)
                     End of tes3mp addition
                 */
             }
+=======
+        if (mKeepSound && actor == MWMechanics::getPlayer())
+            MWBase::Environment::get().getSoundManager()->playSound(
+                mSoundId, 1.0, 1.0, MWSound::Type::Sfx, envType, mSoundOffset);
+        else
+        {
+            bool local = mTarget.isEmpty() || !mTarget.isInCell(); // no usable target
+            if (mKeepSound)
+                MWBase::Environment::get().getSoundManager()->playSound3D(
+                    (local ? actor : mTarget).getRefData().getPosition().asVec3(), mSoundId, 1.0, 1.0,
+                    MWSound::Type::Sfx, envType, mSoundOffset);
+            else
+                MWBase::Environment::get().getSoundManager()->playSound3D(
+                    local ? actor : mTarget, mSoundId, 1.0, 1.0, MWSound::Type::Sfx, envType, mSoundOffset);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         }
     }
 
-    executeImp (actor);
+    executeImp(actor);
 }
 
-void MWWorld::Action::setSound (const std::string& id)
+void MWWorld::Action::setSound(const ESM::RefId& id)
 {
     mSoundId = id;
 }
 
 void MWWorld::Action::setSoundOffset(float offset)
 {
-    mSoundOffset=offset;
+    mSoundOffset = offset;
 }

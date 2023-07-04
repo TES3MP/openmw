@@ -1,19 +1,21 @@
 #ifndef CSM_WOLRD_REF_H
 #define CSM_WOLRD_REF_H
 
+#include <string>
 #include <utility>
 
-#include <components/esm/cellref.hpp>
+#include <components/esm3/cellref.hpp>
 
 namespace CSMWorld
 {
     /// \brief Wrapper for CellRef sub record
     struct CellRef : public ESM::CellRef
     {
-        std::string mId;
-        std::string mCell;
-        std::string mOriginalCell;
+        ESM::RefId mId;
+        ESM::RefId mCell;
+        ESM::RefId mOriginalCell;
         bool mNew; // new reference, not counted yet, ref num not assigned yet
+        unsigned int mIdNum;
 
         CellRef();
 

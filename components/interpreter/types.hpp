@@ -1,44 +1,42 @@
 #ifndef INTERPRETER_TYPES_H_INCLUDED
 #define INTERPRETER_TYPES_H_INCLUDED
 
+#include <cstdint>
 #include <stdexcept>
 
 namespace Interpreter
 {
-    typedef unsigned int Type_Code; // 32 bit
+    typedef std::uint32_t Type_Code;
 
-    typedef unsigned int Type_Data; // 32 bit
-    
-    typedef short Type_Short; // 16 bit
-    
-    typedef int Type_Integer; // 32 bit
-    
-    typedef float Type_Float; // 32 bit
-    
+    typedef std::int16_t Type_Short;
+
+    typedef std::int32_t Type_Integer;
+
+    typedef float Type_Float;
+
     union Data
     {
         Type_Integer mInteger;
         Type_Float mFloat;
     };
-    
-    template<typename T>
-    T& getData (Data& data)
+
+    template <typename T>
+    T& getData(Data& data)
     {
-        throw std::runtime_error ("unsupported data type");
+        throw std::runtime_error("unsupported data type");
     }
-    
-    template<>
-    inline Type_Integer& getData (Data& data)
+
+    template <>
+    inline Type_Integer& getData(Data& data)
     {
         return data.mInteger;
     }
-    
-    template<>
-    inline Type_Float& getData (Data& data)
+
+    template <>
+    inline Type_Float& getData(Data& data)
     {
         return data.mFloat;
-    }    
+    }
 }
 
 #endif
-

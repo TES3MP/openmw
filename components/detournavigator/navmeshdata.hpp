@@ -3,17 +3,13 @@
 
 #include <DetourAlloc.h>
 
-#include <algorithm>
 #include <memory>
 
 namespace DetourNavigator
 {
     struct NavMeshDataValueDeleter
     {
-        void operator ()(unsigned char* value) const
-        {
-            dtFree(value);
-        }
+        void operator()(unsigned char* value) const { dtFree(value); }
     };
 
     using NavMeshDataValue = std::unique_ptr<unsigned char, NavMeshDataValueDeleter>;
@@ -21,14 +17,15 @@ namespace DetourNavigator
     struct NavMeshData
     {
         NavMeshDataValue mValue;
-        int mSize;
+        int mSize = 0;
 
         NavMeshData() = default;
 
         NavMeshData(unsigned char* value, int size)
             : mValue(value)
             , mSize(size)
-        {}
+        {
+        }
     };
 }
 

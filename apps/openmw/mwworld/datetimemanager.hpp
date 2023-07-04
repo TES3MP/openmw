@@ -1,7 +1,9 @@
 #ifndef GAME_MWWORLD_DATETIMEMANAGER_H
 #define GAME_MWWORLD_DATETIMEMANAGER_H
 
-#include <string>
+#include <string_view>
+
+#include "globalvariablename.hpp"
 
 namespace ESM
 {
@@ -27,7 +29,7 @@ namespace MWWorld
         void setMonth(int month);
 
     public:
-        std::string getMonthName(int month) const;
+        std::string_view getMonthName(int month) const;
         TimeStamp getTimeStamp() const;
         ESM::EpochTimeStamp getEpochTimeStamp() const;
         float getTimeScaleFactor() const;
@@ -35,8 +37,8 @@ namespace MWWorld
         void advanceTime(double hours, Globals& globalVariables);
 
         void setup(Globals& globalVariables);
-        bool updateGlobalInt(const std::string& name, int value);
-        bool updateGlobalFloat(const std::string& name, float value);
+        bool updateGlobalInt(GlobalVariableName name, int value);
+        bool updateGlobalFloat(GlobalVariableName name, float value);
     };
 }
 

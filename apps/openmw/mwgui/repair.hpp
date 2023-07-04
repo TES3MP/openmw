@@ -1,6 +1,8 @@
 #ifndef OPENMW_MWGUI_REPAIR_H
 #define OPENMW_MWGUI_REPAIR_H
 
+#include <memory>
+
 #include "windowbase.hpp"
 
 #include "../mwmechanics/repair.hpp"
@@ -8,46 +10,45 @@
 namespace MWGui
 {
 
-class ItemSelectionDialog;
-class ItemWidget;
-class ItemChargeView;
+    class ItemSelectionDialog;
+    class ItemWidget;
+    class ItemChargeView;
 
-class Repair : public WindowBase
-{
-public:
-    Repair();
+    class Repair : public WindowBase
+    {
+    public:
+        Repair();
 
-    void onOpen() override;
+        void onOpen() override;
 
-    void setPtr (const MWWorld::Ptr& item) override;
+        void setPtr(const MWWorld::Ptr& item) override;
 
-protected:
-    ItemChargeView* mRepairBox;
+    protected:
+        ItemChargeView* mRepairBox;
 
-    MyGUI::Widget* mToolBox;
+        MyGUI::Widget* mToolBox;
 
-    ItemWidget* mToolIcon;
+        ItemWidget* mToolIcon;
 
-    ItemSelectionDialog* mItemSelectionDialog;
+        std::unique_ptr<ItemSelectionDialog> mItemSelectionDialog;
 
-    MyGUI::TextBox* mUsesLabel;
-    MyGUI::TextBox* mQualityLabel;
+        MyGUI::TextBox* mUsesLabel;
+        MyGUI::TextBox* mQualityLabel;
 
-    MyGUI::Button* mCancelButton;
+        MyGUI::Button* mCancelButton;
 
-    MWMechanics::Repair mRepair;
+        MWMechanics::Repair mRepair;
 
-    void updateRepairView();
+        void updateRepairView();
 
-    void onSelectItem(MyGUI::Widget* sender);
+        void onSelectItem(MyGUI::Widget* sender);
 
-    void onItemSelected(MWWorld::Ptr item);
-    void onItemCancel();
+        void onItemSelected(MWWorld::Ptr item);
+        void onItemCancel();
 
-    void onRepairItem(MyGUI::Widget* sender, const MWWorld::Ptr& ptr);
-    void onCancel(MyGUI::Widget* sender);
-
-};
+        void onRepairItem(MyGUI::Widget* sender, const MWWorld::Ptr& ptr);
+        void onCancel(MyGUI::Widget* sender);
+    };
 
 }
 

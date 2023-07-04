@@ -17,17 +17,20 @@ namespace Shader
 
         RemovedAlphaFunc()
             : osg::AlphaFunc()
-        {}
+        {
+        }
 
         RemovedAlphaFunc(ComparisonFunction func, float ref)
             : osg::AlphaFunc(func, ref)
-        {}
+        {
+        }
 
         RemovedAlphaFunc(const RemovedAlphaFunc& raf, const osg::CopyOp& copyop = osg::CopyOp::SHALLOW_COPY)
             : osg::AlphaFunc(raf, copyop)
-        {}
+        {
+        }
 
-        META_StateAttribute(Shader, RemovedAlphaFunc, ALPHAFUNC);
+        META_StateAttribute(Shader, RemovedAlphaFunc, ALPHAFUNC)
 
         void apply(osg::State& state) const override {}
 
@@ -37,4 +40,4 @@ namespace Shader
         static std::array<osg::ref_ptr<RemovedAlphaFunc>, GL_ALWAYS - GL_NEVER + 1> sInstances;
     };
 }
-#endif //OPENMW_COMPONENTS_REMOVEDALPHAFUNC_H
+#endif // OPENMW_COMPONENTS_REMOVEDALPHAFUNC_H

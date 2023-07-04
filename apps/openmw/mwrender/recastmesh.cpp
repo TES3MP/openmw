@@ -1,10 +1,18 @@
 #include "recastmesh.hpp"
 
+#include <algorithm>
+
+#include <components/detournavigator/recastmesh.hpp>
+#include <components/detournavigator/settings.hpp>
+#include <components/resource/resourcesystem.hpp>
+#include <components/resource/scenemanager.hpp>
 #include <components/sceneutil/recastmesh.hpp>
 
 #include <osg/PositionAttitudeTransform>
 
 #include "vismask.hpp"
+
+#include "../mwbase/environment.hpp"
 
 namespace MWRender
 {
@@ -45,17 +53,15 @@ namespace MWRender
                 continue;
             }
 
-            if (it->second.mGeneration != tile->second->getGeneration()
-                || it->second.mRevision != tile->second->getRevision())
+            if (it->second.mVersion != tile->second->getVersion())
             {
-                const auto group = SceneUtil::createRecastMeshGroup(*tile->second, settings);
+                const auto group = SceneUtil::createRecastMeshGroup(*tile->second, settings.mRecast);
+                MWBase::Environment::get().getResourceSystem()->getSceneManager()->recreateShaders(group, "debug");
                 group->setNodeMask(Mask_Debug);
                 mRootNode->removeChild(it->second.mValue);
                 mRootNode->addChild(group);
                 it->second.mValue = group;
-                it->second.mGeneration = tile->second->getGeneration();
-                it->second.mRevision = tile->second->getRevision();
-                continue;
+                it->second.mVersion = tile->second->getVersion();
             }
 
             ++it;
@@ -65,28 +71,29 @@ namespace MWRender
         {
             if (mGroups.count(tile.first))
                 continue;
-            const auto group = SceneUtil::createRecastMeshGroup(*tile.second, settings);
+            const auto group = SceneUtil::createRecastMeshGroup(*tile.second, settings.mRecast);
+            MWBase::Environment::get().getResourceSystem()->getSceneManager()->recreateShaders(group, "debug");
             group->setNodeMask(Mask_Debug);
-            mGroups.emplace(tile.first, Group {tile.second->getGeneration(), tile.second->getRevision(), group});
+            mGroups.emplace(tile.first, Group{ tile.second->getVersion(), group });
             mRootNode->addChild(group);
         }
     }
 
     void RecastMesh::reset()
     {
-        std::for_each(mGroups.begin(), mGroups.end(), [&] (const auto& v) { mRootNode->removeChild(v.second.mValue); });
+        std::for_each(mGroups.begin(), mGroups.end(), [&](const auto& v) { mRootNode->removeChild(v.second.mValue); });
         mGroups.clear();
     }
 
     void RecastMesh::enable()
     {
-        std::for_each(mGroups.begin(), mGroups.end(), [&] (const auto& v) { mRootNode->addChild(v.second.mValue); });
+        std::for_each(mGroups.begin(), mGroups.end(), [&](const auto& v) { mRootNode->addChild(v.second.mValue); });
         mEnabled = true;
     }
 
     void RecastMesh::disable()
     {
-        std::for_each(mGroups.begin(), mGroups.end(), [&] (const auto& v) { mRootNode->removeChild(v.second.mValue); });
+        std::for_each(mGroups.begin(), mGroups.end(), [&](const auto& v) { mRootNode->removeChild(v.second.mValue); });
         mEnabled = false;
     }
 }

@@ -2,20 +2,18 @@
 #define UNSHIELDWORKER_HPP
 
 #include <QObject>
-#include <QThread>
-#include <QMutex>
-#include <QWaitCondition>
 #include <QReadWriteLock>
 #include <QStringList>
+#include <QWaitCondition>
 
 #include <libunshield.h>
 
 #include "../inisettings.hpp"
 
-
 namespace Wizard
 {
-    enum Component {
+    enum Component
+    {
         Component_Morrowind,
         Component_Tribunal,
         Component_Bloodmoon
@@ -26,27 +24,30 @@ namespace Wizard
         Q_OBJECT
 
     public:
-        UnshieldWorker(QObject *parent = nullptr);
-        ~UnshieldWorker();
+        UnshieldWorker(qint64 expectedMorrowindBsaSize, QObject* parent = nullptr);
+        ~UnshieldWorker() override = default;
 
         void stopWorker();
 
         void setInstallComponent(Wizard::Component component, bool install);
 
-        void setDiskPath(const QString &path);
+        void setDiskPath(const QString& path);
 
-        void setPath(const QString &path);
-        void setIniPath(const QString &path);
+        void setPath(const QString& path);
+        void setIniPath(const QString& path);
+
+        void wakeAll();
 
         QString getPath();
         QString getIniPath();
 
-        void setIniCodec(QTextCodec *codec);
+        void setIniEncoding(ToUTF8::FromType encoding);
 
         bool setupSettings();
 
-    private:
+        size_t getMorrowindBsaFileSize(const QString& cabFile);
 
+    private:
         bool writeSettings();
 
         bool getInstallComponent(Component component);
@@ -56,33 +57,33 @@ namespace Wizard
         void setComponentDone(Component component, bool done = true);
         bool getComponentDone(Component component);
 
-        bool removeDirectory(const QString &dirName);
+        bool removeDirectory(const QString& dirName);
 
-        bool copyFile(const QString &source, const QString &destination, bool keepSource = true);
-        bool copyDirectory(const QString &source, const QString &destination, bool keepSource = true);
+        bool copyFile(const QString& source, const QString& destination, bool keepSource = true);
+        bool copyDirectory(const QString& source, const QString& destination, bool keepSource = true);
 
-        bool extractCab(const QString &cabFile, const QString &destination);
-        bool extractFile(Unshield *unshield, const QString &destination, const QString &prefix, int index, int counter);
+        bool extractCab(const QString& cabFile, const QString& destination);
+        bool extractFile(Unshield* unshield, const QString& destination, const QString& prefix, int index, int counter);
 
-        bool findInCab(const QString &fileName, const QString &cabFile);
+        bool findInCab(const QString& fileName, const QString& cabFile);
 
-        QString findFile(const QString &fileName, const QString &path);
+        QString findFile(const QString& fileName, const QString& path);
 
-        QStringList findFiles(const QString &fileName, const QString &path, int depth = 0, bool recursive = true,
-                              bool directories = false, Qt::MatchFlags flags = Qt::MatchExactly);
+        QStringList findFiles(const QString& fileName, const QString& path, int depth = 0, bool recursive = true,
+            bool directories = false, Qt::MatchFlags flags = Qt::MatchExactly);
 
-        QStringList findDirectories(const QString &dirName, const QString &path, bool recursive = true);
+        QStringList findDirectories(const QString& dirName, const QString& path, bool recursive = true);
 
-        bool installFile(const QString &fileName, const QString &path, Qt::MatchFlags flags = Qt::MatchExactly,
-                         bool keepSource = false);
+        bool installFile(const QString& fileName, const QString& path, Qt::MatchFlags flags = Qt::MatchExactly,
+            bool keepSource = false);
 
-        bool installFiles(const QString &fileName, const QString &path, Qt::MatchFlags flags = Qt::MatchExactly,
-                          bool keepSource = false, bool single = false);
+        bool installFiles(const QString& fileName, const QString& path, Qt::MatchFlags flags = Qt::MatchExactly,
+            bool keepSource = false, bool single = false);
 
-        bool installDirectories(const QString &dirName, const QString &path,
-                                bool recursive = true, bool keepSource = false);
+        bool installDirectories(
+            const QString& dirName, const QString& path, bool recursive = true, bool keepSource = false);
 
-        bool installComponent(Component component, const QString &path);
+        bool installComponent(Component component, const QString& path);
         bool setupComponent(Component component);
 
         bool mInstallMorrowind;
@@ -95,13 +96,15 @@ namespace Wizard
 
         bool mStopped;
 
+        qint64 mExpectedMorrowindBsaSize;
+
         QString mPath;
         QString mIniPath;
         QString mDiskPath;
 
         IniSettings mIniSettings;
 
-        QTextCodec *mIniCodec;
+        ToUTF8::FromType mIniEncoding;
 
         QWaitCondition mWait;
 
@@ -113,12 +116,12 @@ namespace Wizard
     signals:
         void finished();
         void requestFileDialog(Wizard::Component component);
+        void requestOldVersionDialog();
 
-        void textChanged(const QString &text);
+        void textChanged(const QString& text);
 
-        void error(const QString &text, const QString &details);
+        void error(const QString& text, const QString& details);
         void progressChanged(int progress);
-
     };
 }
 

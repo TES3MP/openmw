@@ -1,14 +1,26 @@
 #include "pathgridselectionmode.hpp"
 
-#include <QMenu>
 #include <QAction>
+#include <QMenu>
 
-#include "../../model/world/idtable.hpp"
-#include "../../model/world/commands.hpp"
+#include <vector>
+
+#include <osg/ref_ptr>
+
 #include "../../model/world/commandmacro.hpp"
 
-#include "worldspacewidget.hpp"
+#include <apps/opencs/model/doc/document.hpp>
+#include <apps/opencs/view/render/mask.hpp>
+#include <apps/opencs/view/render/selectionmode.hpp>
+#include <apps/opencs/view/render/tagbase.hpp>
+
 #include "pathgrid.hpp"
+#include "worldspacewidget.hpp"
+
+namespace CSVWidget
+{
+    class SceneToolbar;
+}
 
 namespace CSVRender
 {
@@ -18,8 +30,8 @@ namespace CSVRender
         mRemoveSelectedNodes = new QAction("Remove selected nodes", this);
         mRemoveSelectedEdges = new QAction("Remove edges between selected nodes", this);
 
-        connect(mRemoveSelectedNodes, SIGNAL(triggered()), this, SLOT(removeSelectedNodes()));
-        connect(mRemoveSelectedEdges, SIGNAL(triggered()), this, SLOT(removeSelectedEdges()));
+        connect(mRemoveSelectedNodes, &QAction::triggered, this, &PathgridSelectionMode::removeSelectedNodes);
+        connect(mRemoveSelectedEdges, &QAction::triggered, this, &PathgridSelectionMode::removeSelectedEdges);
     }
 
     bool PathgridSelectionMode::createContextMenu(QMenu* menu)
@@ -37,9 +49,9 @@ namespace CSVRender
 
     void PathgridSelectionMode::removeSelectedNodes()
     {
-        std::vector<osg::ref_ptr<TagBase> > selection = getWorldspaceWidget().getSelection (Mask_Pathgrid);
+        std::vector<osg::ref_ptr<TagBase>> selection = getWorldspaceWidget().getSelection(Mask_Pathgrid);
 
-        for (std::vector<osg::ref_ptr<TagBase> >::iterator it = selection.begin(); it != selection.end(); ++it)
+        for (std::vector<osg::ref_ptr<TagBase>>::iterator it = selection.begin(); it != selection.end(); ++it)
         {
             if (PathgridTag* tag = dynamic_cast<PathgridTag*>(it->get()))
             {
@@ -54,9 +66,9 @@ namespace CSVRender
 
     void PathgridSelectionMode::removeSelectedEdges()
     {
-        std::vector<osg::ref_ptr<TagBase> > selection = getWorldspaceWidget().getSelection (Mask_Pathgrid);
+        std::vector<osg::ref_ptr<TagBase>> selection = getWorldspaceWidget().getSelection(Mask_Pathgrid);
 
-        for (std::vector<osg::ref_ptr<TagBase> >::iterator it = selection.begin(); it != selection.end(); ++it)
+        for (std::vector<osg::ref_ptr<TagBase>>::iterator it = selection.begin(); it != selection.end(); ++it)
         {
             if (PathgridTag* tag = dynamic_cast<PathgridTag*>(it->get()))
             {

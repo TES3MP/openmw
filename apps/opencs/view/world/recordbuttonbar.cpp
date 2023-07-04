@@ -3,156 +3,164 @@
 #include <QHBoxLayout>
 #include <QToolButton>
 
-#include "../../model/world/idtable.hpp"
+#include <memory>
+
 #include "../../model/world/commanddispatcher.hpp"
+#include "../../model/world/idtable.hpp"
 
 #include "../../model/prefs/state.hpp"
 
 #include "../world/tablebottombox.hpp"
 
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+#include <apps/opencs/model/world/columns.hpp>
+#include <apps/opencs/model/world/idtablebase.hpp>
+#include <apps/opencs/model/world/universalid.hpp>
+
 void CSVWorld::RecordButtonBar::updateModificationButtons()
 {
     bool createAndDeleteDisabled = !mBottom || !mBottom->canCreateAndDelete() || mLocked;
 
-    mCloneButton->setDisabled (createAndDeleteDisabled);
-    mAddButton->setDisabled (createAndDeleteDisabled);
+    mCloneButton->setDisabled(createAndDeleteDisabled);
+    mAddButton->setDisabled(createAndDeleteDisabled);
 
     bool commandDisabled = !mCommandDispatcher || mLocked;
 
-    mRevertButton->setDisabled (commandDisabled);
-    mDeleteButton->setDisabled (commandDisabled || createAndDeleteDisabled);
+    mRevertButton->setDisabled(commandDisabled);
+    mDeleteButton->setDisabled(commandDisabled || createAndDeleteDisabled);
 }
 
 void CSVWorld::RecordButtonBar::updatePrevNextButtons()
 {
     int rows = mTable.rowCount();
 
-    if (rows<=1)
+    if (rows <= 1)
     {
-        mPrevButton->setDisabled (true);
-        mNextButton->setDisabled (true);
+        mPrevButton->setDisabled(true);
+        mNextButton->setDisabled(true);
     }
     else if (CSMPrefs::get()["General Input"]["cycle"].isTrue())
     {
-        mPrevButton->setDisabled (false);
-        mNextButton->setDisabled (false);
+        mPrevButton->setDisabled(false);
+        mNextButton->setDisabled(false);
     }
     else
     {
-        int row = mTable.getModelIndex (mId.getId(), 0).row();
+        int row = mTable.getModelIndex(mId.getId(), 0).row();
 
-        mPrevButton->setDisabled (row<=0);
-        mNextButton->setDisabled (row>=rows-1);
+        mPrevButton->setDisabled(row <= 0);
+        mNextButton->setDisabled(row >= rows - 1);
     }
 }
 
-CSVWorld::RecordButtonBar::RecordButtonBar (const CSMWorld::UniversalId& id,
-    CSMWorld::IdTable& table, TableBottomBox *bottomBox,
-    CSMWorld::CommandDispatcher *commandDispatcher, QWidget *parent)
-: QWidget (parent), mId (id), mTable (table), mBottom (bottomBox),
-  mCommandDispatcher (commandDispatcher), mLocked (false)
+CSVWorld::RecordButtonBar::RecordButtonBar(const CSMWorld::UniversalId& id, CSMWorld::IdTable& table,
+    TableBottomBox* bottomBox, CSMWorld::CommandDispatcher* commandDispatcher, QWidget* parent)
+    : QWidget(parent)
+    , mId(id)
+    , mTable(table)
+    , mBottom(bottomBox)
+    , mCommandDispatcher(commandDispatcher)
+    , mLocked(false)
 {
-    QHBoxLayout *buttonsLayout = new QHBoxLayout;
-    buttonsLayout->setContentsMargins (0, 0, 0, 0);
+    QHBoxLayout* buttonsLayout = new QHBoxLayout;
+    buttonsLayout->setContentsMargins(0, 0, 0, 0);
 
     // left section
-    mPrevButton = new QToolButton (this);
+    mPrevButton = new QToolButton(this);
     mPrevButton->setIcon(QIcon(":record-previous"));
-    mPrevButton->setToolTip ("Switch to previous record");
-    buttonsLayout->addWidget (mPrevButton, 0);
+    mPrevButton->setToolTip("Switch to previous record");
+    buttonsLayout->addWidget(mPrevButton, 0);
 
-    mNextButton = new QToolButton (this);
+    mNextButton = new QToolButton(this);
     mNextButton->setIcon(QIcon(":/record-next"));
-    mNextButton->setToolTip ("Switch to next record");
-    buttonsLayout->addWidget (mNextButton, 1);
+    mNextButton->setToolTip("Switch to next record");
+    buttonsLayout->addWidget(mNextButton, 1);
 
     buttonsLayout->addStretch(2);
 
     // optional buttons of the right section
     if (mTable.getFeatures() & CSMWorld::IdTable::Feature_Preview)
     {
-        QToolButton* previewButton = new QToolButton (this);
+        QToolButton* previewButton = new QToolButton(this);
         previewButton->setIcon(QIcon(":edit-preview"));
-        previewButton->setToolTip ("Open a preview of this record");
+        previewButton->setToolTip("Open a preview of this record");
         buttonsLayout->addWidget(previewButton);
-        connect (previewButton, SIGNAL(clicked()), this, SIGNAL (showPreview()));
+        connect(previewButton, &QToolButton::clicked, this, &RecordButtonBar::showPreview);
     }
 
     if (mTable.getFeatures() & CSMWorld::IdTable::Feature_View)
     {
-        QToolButton* viewButton = new QToolButton (this);
+        QToolButton* viewButton = new QToolButton(this);
         viewButton->setIcon(QIcon(":/cell.png"));
-        viewButton->setToolTip ("Open a scene view of the cell this record is located in");
+        viewButton->setToolTip("Open a scene view of the cell this record is located in");
         buttonsLayout->addWidget(viewButton);
-        connect (viewButton, SIGNAL(clicked()), this, SIGNAL (viewRecord()));
+        connect(viewButton, &QToolButton::clicked, this, &RecordButtonBar::viewRecord);
     }
 
     // right section
-    mCloneButton = new QToolButton (this);
+    mCloneButton = new QToolButton(this);
     mCloneButton->setIcon(QIcon(":edit-clone"));
-    mCloneButton->setToolTip ("Clone record");
+    mCloneButton->setToolTip("Clone record");
     buttonsLayout->addWidget(mCloneButton);
 
-    mAddButton = new QToolButton (this);
+    mAddButton = new QToolButton(this);
     mAddButton->setIcon(QIcon(":edit-add"));
-    mAddButton->setToolTip ("Add new record");
+    mAddButton->setToolTip("Add new record");
     buttonsLayout->addWidget(mAddButton);
 
-    mDeleteButton = new QToolButton (this);
+    mDeleteButton = new QToolButton(this);
     mDeleteButton->setIcon(QIcon(":edit-delete"));
-    mDeleteButton->setToolTip ("Delete record");
+    mDeleteButton->setToolTip("Delete record");
     buttonsLayout->addWidget(mDeleteButton);
 
-    mRevertButton = new QToolButton (this);
+    mRevertButton = new QToolButton(this);
     mRevertButton->setIcon(QIcon(":edit-undo"));
-    mRevertButton->setToolTip ("Revert record");
+    mRevertButton->setToolTip("Revert record");
     buttonsLayout->addWidget(mRevertButton);
 
-    setLayout (buttonsLayout);
+    setLayout(buttonsLayout);
 
     // connections
-    if(mBottom && mBottom->canCreateAndDelete())
+    if (mBottom && mBottom->canCreateAndDelete())
     {
-        connect (mAddButton, SIGNAL (clicked()), mBottom, SLOT (createRequest()));
-        connect (mCloneButton, SIGNAL (clicked()), this, SLOT (cloneRequest()));
+        connect(mAddButton, &QToolButton::clicked, mBottom, &TableBottomBox::createRequest);
+        connect(mCloneButton, &QToolButton::clicked, this, &RecordButtonBar::cloneRequest);
     }
 
-    connect (mNextButton, SIGNAL (clicked()), this, SLOT (nextId()));
-    connect (mPrevButton, SIGNAL (clicked()), this, SLOT (prevId()));
+    connect(mNextButton, &QToolButton::clicked, this, &RecordButtonBar::nextId);
+    connect(mPrevButton, &QToolButton::clicked, this, &RecordButtonBar::prevId);
 
     if (mCommandDispatcher)
     {
-        connect (mRevertButton, SIGNAL (clicked()), mCommandDispatcher, SLOT (executeRevert()));
-        connect (mDeleteButton, SIGNAL (clicked()), mCommandDispatcher, SLOT (executeDelete()));
+        connect(mRevertButton, &QToolButton::clicked, mCommandDispatcher, &CSMWorld::CommandDispatcher::executeRevert);
+        connect(mDeleteButton, &QToolButton::clicked, mCommandDispatcher, &CSMWorld::CommandDispatcher::executeDelete);
     }
 
-    connect (&mTable, SIGNAL (rowsInserted (const QModelIndex&, int, int)),
-        this, SLOT (rowNumberChanged (const QModelIndex&, int, int)));
-    connect (&mTable, SIGNAL (rowsRemoved (const QModelIndex&, int, int)),
-        this, SLOT (rowNumberChanged (const QModelIndex&, int, int)));
+    connect(&mTable, &CSMWorld::IdTable::rowsInserted, this, &RecordButtonBar::rowNumberChanged);
+    connect(&mTable, &CSMWorld::IdTable::rowsRemoved, this, &RecordButtonBar::rowNumberChanged);
 
-    connect (&CSMPrefs::State::get(), SIGNAL (settingChanged (const CSMPrefs::Setting *)),
-        this, SLOT (settingChanged (const CSMPrefs::Setting *)));
+    connect(&CSMPrefs::State::get(), &CSMPrefs::State::settingChanged, this, &RecordButtonBar::settingChanged);
 
     updateModificationButtons();
     updatePrevNextButtons();
 }
 
-void CSVWorld::RecordButtonBar::setEditLock (bool locked)
+void CSVWorld::RecordButtonBar::setEditLock(bool locked)
 {
     mLocked = locked;
     updateModificationButtons();
 }
 
-void CSVWorld::RecordButtonBar::universalIdChanged (const CSMWorld::UniversalId& id)
+void CSVWorld::RecordButtonBar::universalIdChanged(const CSMWorld::UniversalId& id)
 {
     mId = id;
     updatePrevNextButtons();
 }
 
-void CSVWorld::RecordButtonBar::settingChanged (const CSMPrefs::Setting *setting)
+void CSVWorld::RecordButtonBar::settingChanged(const CSMPrefs::Setting* setting)
 {
-    if (*setting=="General Input/cycle")
+    if (*setting == "General Input/cycle")
         updatePrevNextButtons();
 }
 
@@ -160,19 +168,18 @@ void CSVWorld::RecordButtonBar::cloneRequest()
 {
     if (mBottom)
     {
-        int typeColumn = mTable.findColumnIndex (CSMWorld::Columns::ColumnId_RecordType);
+        int typeColumn = mTable.findColumnIndex(CSMWorld::Columns::ColumnId_RecordType);
 
-        QModelIndex typeIndex = mTable.getModelIndex (mId.getId(), typeColumn);
-        CSMWorld::UniversalId::Type type = static_cast<CSMWorld::UniversalId::Type> (
-            mTable.data (typeIndex).toInt());
+        QModelIndex typeIndex = mTable.getModelIndex(mId.getId(), typeColumn);
+        CSMWorld::UniversalId::Type type = static_cast<CSMWorld::UniversalId::Type>(mTable.data(typeIndex).toInt());
 
-        mBottom->cloneRequest (mId.getId(), type);
+        mBottom->cloneRequest(mId.getId(), type);
     }
 }
 
 void CSVWorld::RecordButtonBar::nextId()
 {
-    int newRow = mTable.getModelIndex (mId.getId(), 0).row() + 1;
+    int newRow = mTable.getModelIndex(mId.getId(), 0).row() + 1;
 
     if (newRow >= mTable.rowCount())
     {
@@ -182,25 +189,25 @@ void CSVWorld::RecordButtonBar::nextId()
             return;
     }
 
-    emit switchToRow (newRow);
+    emit switchToRow(newRow);
 }
 
 void CSVWorld::RecordButtonBar::prevId()
 {
-    int newRow = mTable.getModelIndex (mId.getId(), 0).row() - 1;
+    int newRow = mTable.getModelIndex(mId.getId(), 0).row() - 1;
 
     if (newRow < 0)
     {
         if (CSMPrefs::get()["General Input"]["cycle"].isTrue())
-            newRow = mTable.rowCount()-1;
+            newRow = mTable.rowCount() - 1;
         else
             return;
     }
 
-    emit switchToRow (newRow);
+    emit switchToRow(newRow);
 }
 
-void CSVWorld::RecordButtonBar::rowNumberChanged (const QModelIndex& parent, int start, int end)
+void CSVWorld::RecordButtonBar::rowNumberChanged(const QModelIndex& parent, int start, int end)
 {
     updatePrevNextButtons();
 }

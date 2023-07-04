@@ -5,7 +5,6 @@ set(ESSIMPORTER_FILES
     importnpcc.cpp
     importcrec.cpp
     importcellref.cpp
-    importacdt.cpp
     importinventory.cpp
     importklst.cpp
     importcntc.cpp
@@ -36,15 +35,24 @@ openmw_add_executable(openmw-essimporter
 
 target_link_libraries(openmw-essimporter
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
-    ${Boost_FILESYSTEM_LIBRARY}
     components
 )
 
 if (BUILD_WITH_CODE_COVERAGE)
-  add_definitions (--coverage)
-  target_link_libraries(openmw-essimporter gcov)
+    target_compile_options(openmw-essimporter PRIVATE --coverage)
+    target_link_libraries(openmw-essimporter gcov)
 endif()
 
 if (WIN32)
-  INSTALL(TARGETS openmw-essimporter RUNTIME DESTINATION ".")
+    INSTALL(TARGETS openmw-essimporter RUNTIME DESTINATION ".")
 endif(WIN32)
+
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.16 AND MSVC)
+    target_precompile_headers(openmw-essimporter PRIVATE
+        <algorithm>
+        <filesystem>
+        <fstream>
+        <string>
+        <vector>
+    )
+endif()

@@ -1,6 +1,9 @@
 #ifndef OPENMW_GAME_MWGUI_MAINMENU_H
 #define OPENMW_GAME_MWGUI_MAINMENU_H
 
+#include <memory>
+
+#include "savegamedialog.hpp"
 #include "windowbase.hpp"
 
 namespace Gui
@@ -17,51 +20,48 @@ namespace MWGui
 {
 
     class BackgroundImage;
-    class SaveGameDialog;
     class VideoWidget;
 
     class MainMenu : public WindowBase
     {
-            int mWidth;
-            int mHeight;
+        int mWidth;
+        int mHeight;
 
-            bool mHasAnimatedMenu;
+        bool mHasAnimatedMenu;
 
-        public:
+    public:
+        MainMenu(int w, int h, const VFS::Manager* vfs, const std::string& versionDescription);
 
-            MainMenu(int w, int h, const VFS::Manager* vfs, const std::string& versionDescription);
-            ~MainMenu();
+        void onResChange(int w, int h) override;
 
-            void onResChange(int w, int h) override;
+        void setVisible(bool visible) override;
 
-            void setVisible (bool visible) override;
+        void onFrame(float dt) override;
 
-            void onFrame(float dt) override;
+        bool exit() override;
 
-            bool exit() override;
+    private:
+        const VFS::Manager* mVFS;
 
-        private:
-            const VFS::Manager* mVFS;
+        MyGUI::Widget* mButtonBox;
+        MyGUI::TextBox* mVersionText;
 
-            MyGUI::Widget* mButtonBox;
-            MyGUI::TextBox* mVersionText;
+        BackgroundImage* mBackground;
 
-            BackgroundImage* mBackground;
+        MyGUI::ImageBox* mVideoBackground;
+        VideoWidget* mVideo; // For animated main menus
 
-            MyGUI::ImageBox* mVideoBackground;
-            VideoWidget* mVideo; // For animated main menus
+        std::map<std::string, Gui::ImageButton*, std::less<>> mButtons;
 
-            std::map<std::string, Gui::ImageButton*> mButtons;
+        void onButtonClicked(MyGUI::Widget* sender);
+        void onNewGameConfirmed();
+        void onExitConfirmed();
 
-            void onButtonClicked (MyGUI::Widget* sender);
-            void onNewGameConfirmed();
-            void onExitConfirmed();
+        void showBackground(bool show);
 
-            void showBackground(bool show);
+        void updateMenu();
 
-            void updateMenu();
-
-            SaveGameDialog* mSaveGameDialog;
+        std::unique_ptr<SaveGameDialog> mSaveGameDialog;
     };
 
 }

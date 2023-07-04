@@ -1,9 +1,19 @@
 #include "notnode.hpp"
 
-CSMFilter::NotNode::NotNode (std::shared_ptr<Node> child) : UnaryNode (child, "not") {}
+#include <apps/opencs/model/filter/node.hpp>
+#include <apps/opencs/model/filter/unarynode.hpp>
 
-bool CSMFilter::NotNode::test (const CSMWorld::IdTableBase& table, int row,
-    const std::map<int, int>& columns) const
+namespace CSMWorld
 {
-    return !getChild().test (table, row, columns);
+    class IdTableBase;
+}
+
+CSMFilter::NotNode::NotNode(std::shared_ptr<Node> child)
+    : UnaryNode(child, "not")
+{
+}
+
+bool CSMFilter::NotNode::test(const CSMWorld::IdTableBase& table, int row, const std::map<int, int>& columns) const
+{
+    return !getChild().test(table, row, columns);
 }

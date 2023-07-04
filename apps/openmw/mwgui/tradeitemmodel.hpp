@@ -13,32 +13,32 @@ namespace MWGui
     class TradeItemModel : public ProxyItemModel
     {
     public:
-        TradeItemModel (ItemModel* sourceModel, const MWWorld::Ptr& merchant);
+        TradeItemModel(std::unique_ptr<ItemModel> sourceModel, const MWWorld::Ptr& merchant);
 
         bool allowedToUseItems() const override;
 
-        ItemStack getItem (ModelIndex index) override;
+        ItemStack getItem(ModelIndex index) override;
         size_t getItemCount() override;
 
         void update() override;
 
-        void borrowItemFromUs (ModelIndex itemIndex, size_t count);
+        void borrowItemFromUs(ModelIndex itemIndex, size_t count);
 
-        void borrowItemToUs (ModelIndex itemIndex, ItemModel* source, size_t count);
+        void borrowItemToUs(ModelIndex itemIndex, ItemModel* source, size_t count);
         ///< @note itemIndex points to an item in \a source
 
-        void returnItemBorrowedToUs (ModelIndex itemIndex, size_t count);
+        void returnItemBorrowedToUs(ModelIndex itemIndex, size_t count);
 
-        void returnItemBorrowedFromUs (ModelIndex itemIndex, ItemModel* source, size_t count);
+        void returnItemBorrowedFromUs(ModelIndex itemIndex, ItemModel* source, size_t count);
 
         /// Permanently transfers items that were borrowed to us from another model to this model
-        void transferItems ();
+        void transferItems();
         /// Aborts trade
         void abort();
 
         /// Adjusts the given encumbrance by adding weight for items that have been lent to us,
         /// and removing weight for items we've lent to someone else.
-        void adjustEncumbrance (float& encumbrance);
+        void adjustEncumbrance(float& encumbrance);
 
         const std::vector<ItemStack> getItemsBorrowedToUs() const;
 

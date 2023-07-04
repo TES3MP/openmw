@@ -19,16 +19,14 @@ namespace Misc
         if (pthread_setschedparam(pthread_self(), SCHED_IDLE, &param) == 0)
             Log(Debug::Verbose) << "Using idle priority for thread=" << std::this_thread::get_id();
         else
-            Log(Debug::Warning) << "Failed to set idle priority for thread=" << std::this_thread::get_id() << ": " << std::strerror(errno);
+            Log(Debug::Warning) << "Failed to set idle priority for thread=" << std::this_thread::get_id() << ": "
+                                << std::generic_category().message(errno);
     }
 }
 
 #elif defined(WIN32)
 
-#undef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-
-#include <windows.h>
+#include <components/windows.hpp>
 
 namespace Misc
 {
@@ -37,14 +35,15 @@ namespace Misc
         if (SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_LOWEST))
             Log(Debug::Verbose) << "Using idle priority for thread=" << std::this_thread::get_id();
         else
-            Log(Debug::Warning) << "Failed to set idle priority for thread=" << std::this_thread::get_id() << ": " << GetLastError();
+            Log(Debug::Warning) << "Failed to set idle priority for thread=" << std::this_thread::get_id() << ": "
+                                << GetLastError();
     }
 }
 
 #elif defined(__FreeBSD__)
 
-#include <sys/types.h>
 #include <sys/rtprio.h>
+#include <sys/types.h>
 
 namespace Misc
 {
@@ -56,7 +55,8 @@ namespace Misc
         if (rtprio_thread(RTP_SET, 0, &prio) == 0)
             Log(Debug::Verbose) << "Using idle priority for thread=" << std::this_thread::get_id();
         else
-            Log(Debug::Warning) << "Failed to set idle priority for thread=" << std::this_thread::get_id() << ": " << std::strerror(errno);
+            Log(Debug::Warning) << "Failed to set idle priority for thread=" << std::this_thread::get_id() << ": "
+                                << std::generic_category().message(errno);
     }
 }
 

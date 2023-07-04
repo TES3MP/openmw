@@ -1,5 +1,6 @@
 #include "actionread.hpp"
 
+<<<<<<< HEAD
 /*
     Start of tes3mp addition
 
@@ -10,61 +11,66 @@
 /*
     End of tes3mp addition
 */
+=======
+#include <components/esm3/loadbook.hpp>
+#include <components/esm3/loadclas.hpp>
+#include <components/esm3/loadskil.hpp>
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/windowmanager.hpp"
 #include "../mwbase/world.hpp"
 
-#include "../mwmechanics/npcstats.hpp"
 #include "../mwmechanics/actorutil.hpp"
+#include "../mwmechanics/npcstats.hpp"
 
-#include "player.hpp"
 #include "class.hpp"
 #include "esmstore.hpp"
 
 namespace MWWorld
 {
-    ActionRead::ActionRead (const MWWorld::Ptr& object) : Action (false, object)
+    ActionRead::ActionRead(const MWWorld::Ptr& object)
+        : Action(false, object)
     {
     }
 
-    void ActionRead::executeImp (const MWWorld::Ptr& actor) {
+    void ActionRead::executeImp(const MWWorld::Ptr& actor)
+    {
 
         if (actor != MWMechanics::getPlayer())
             return;
 
-        //Ensure we're not in combat
-        if(MWMechanics::isPlayerInCombat()
-                // Reading in combat is still allowed if the scroll/book is not in the player inventory yet
-                // (since otherwise, there would be no way to pick it up)
-                && getTarget().getContainerStore() == &actor.getClass().getContainerStore(actor)
-                ) {
+        // Ensure we're not in combat
+        if (MWMechanics::isPlayerInCombat()
+            // Reading in combat is still allowed if the scroll/book is not in the player inventory yet
+            // (since otherwise, there would be no way to pick it up)
+            && getTarget().getContainerStore() == &actor.getClass().getContainerStore(actor))
+        {
             MWBase::Environment::get().getWindowManager()->messageBox("#{sInventoryMessage4}");
             return;
         }
 
-        LiveCellRef<ESM::Book> *ref = getTarget().get<ESM::Book>();
+        LiveCellRef<ESM::Book>* ref = getTarget().get<ESM::Book>();
 
         if (ref->mBase->mData.mIsScroll)
             MWBase::Environment::get().getWindowManager()->pushGuiMode(MWGui::GM_Scroll, getTarget());
         else
             MWBase::Environment::get().getWindowManager()->pushGuiMode(MWGui::GM_Book, getTarget());
 
-        MWMechanics::NpcStats& npcStats = actor.getClass().getNpcStats (actor);
+        MWMechanics::NpcStats& npcStats = actor.getClass().getNpcStats(actor);
 
         // Skill gain from books
-        if (ref->mBase->mData.mSkillId >= 0 && ref->mBase->mData.mSkillId < ESM::Skill::Length
-                && !npcStats.hasBeenUsed (ref->mBase->mId))
+        ESM::RefId skill = ESM::Skill::indexToRefId(ref->mBase->mData.mSkillId);
+        if (!skill.empty() && !npcStats.hasBeenUsed(ref->mBase->mId))
         {
-            MWWorld::LiveCellRef<ESM::NPC> *playerRef = actor.get<ESM::NPC>();
+            MWWorld::LiveCellRef<ESM::NPC>* playerRef = actor.get<ESM::NPC>();
 
-            const ESM::Class *class_ =
-                MWBase::Environment::get().getWorld()->getStore().get<ESM::Class>().find (
-                    playerRef->mBase->mClass
-                );
+            const ESM::Class* class_
+                = MWBase::Environment::get().getESMStore()->get<ESM::Class>().find(playerRef->mBase->mClass);
 
-            npcStats.increaseSkill (ref->mBase->mData.mSkillId, *class_, true, true);
+            npcStats.increaseSkill(skill, *class_, true, true);
 
+<<<<<<< HEAD
             npcStats.flagAsUsed (ref->mBase->mId);
 
             /*
@@ -76,7 +82,9 @@ namespace MWWorld
             /*
                 End of tes3mp addition
             */
+=======
+            npcStats.flagAsUsed(ref->mBase->mId);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         }
-
     }
 }

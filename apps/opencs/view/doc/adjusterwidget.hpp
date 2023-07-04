@@ -1,9 +1,9 @@
 #ifndef CSV_DOC_ADJUSTERWIDGET_H
 #define CSV_DOC_ADJUSTERWIDGET_H
 
-#include <boost/filesystem/path.hpp>
-
 #include <QWidget>
+
+#include <filesystem>
 
 class QLabel;
 
@@ -18,38 +18,36 @@ namespace CSVDoc
 
     class AdjusterWidget : public QWidget
     {
-            Q_OBJECT
+        Q_OBJECT
 
-        public:
+    public:
+        std::filesystem::path mLocalData;
+        QLabel* mMessage;
+        QLabel* mIcon;
+        bool mValid;
+        std::filesystem::path mResultPath;
+        ContentAction mAction;
+        bool mDoFilenameCheck;
 
-            boost::filesystem::path mLocalData;
-            QLabel *mMessage;
-            QLabel *mIcon;
-            bool mValid;
-            boost::filesystem::path mResultPath;
-            ContentAction mAction;
-            bool mDoFilenameCheck;
+    public:
+        AdjusterWidget(QWidget* parent = nullptr);
 
-        public:
+        void setLocalData(const std::filesystem::path& localData);
+        void setAction(ContentAction action);
 
-            AdjusterWidget (QWidget *parent = nullptr);
+        void setFilenameCheck(bool doCheck);
+        bool isValid() const;
 
-            void setLocalData (const boost::filesystem::path& localData);
-            void setAction (ContentAction action);
+        std::filesystem::path getPath() const;
+        ///< This function must not be called if there is no valid path.
 
-            void setFilenameCheck (bool doCheck);
-            bool isValid() const;
+    public slots:
 
-            boost::filesystem::path getPath() const;
-            ///< This function must not be called if there is no valid path.
+        void setName(const QString& name, bool addon);
 
-        public slots:
+    signals:
 
-            void setName (const QString& name, bool addon);
-
-        signals:
-
-            void stateChanged (bool valid);
+        void stateChanged(bool valid);
     };
 }
 

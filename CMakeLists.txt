@@ -1,17 +1,37 @@
-project(OpenMW)
 cmake_minimum_required(VERSION 3.1.0)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # for link time optimization, remove if cmake version is >= 3.9
 if(POLICY CMP0069) # LTO
-  cmake_policy(SET CMP0069 NEW)
+    cmake_policy(SET CMP0069 NEW)
 endif()
 
 # for position-independent executable, remove if cmake version is >= 3.14
 if(POLICY CMP0083)
-  cmake_policy(SET CMP0083 NEW)
+    cmake_policy(SET CMP0083 NEW)
 endif()
+
+# to link with freetype library
+if(POLICY CMP0079)
+    cmake_policy(SET CMP0079 NEW)
+endif()
+
+# don't add /W3 flag by default for MSVC
+if(POLICY CMP0092)
+    cmake_policy(SET CMP0092 NEW)
+endif()
+
+#  set the timestamps of extracted contents to the time of extraction
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
+project(OpenMW)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+include(GNUInstallDirs)
 
 option(OPENMW_GL4ES_MANUAL_INIT "Manually initialize gl4es. This is more reliable on platforms without a windowing system. Requires gl4es to be configured with -DNOEGL=ON -DNO_LOADER=ON -DNO_INIT_CONSTRUCTOR=ON." OFF)
 if(OPENMW_GL4ES_MANUAL_INIT)
@@ -32,6 +52,7 @@ option(BUILD_DOCS               "Build documentation." OFF )
 option(BUILD_WITH_CODE_COVERAGE "Enable code coverage with gconv" OFF)
 option(BUILD_UNITTESTS          "Enable Unittests with Google C++ Unittest" OFF)
 option(BUILD_BENCHMARKS         "Build benchmarks with Google Benchmark" OFF)
+<<<<<<< HEAD
 option(BUILD_OPENMW_MP          "Build OpenMW-MP" ON)
 option(BUILD_BROWSER            "Build tes3mp Server Browser" ON)
 option(BUILD_MASTER             "Build tes3mp Master Server" OFF)
@@ -40,8 +61,18 @@ set(OpenGL_GL_PREFERENCE LEGACY)  # Use LEGACY as we use GL2; GLNVD is for GL3 a
 
 if (NOT BUILD_LAUNCHER AND NOT BUILD_BROWSER AND NOT BUILD_OPENCS AND NOT BUILD_WIZARD)
    set(USE_QT FALSE)
+=======
+option(BUILD_NAVMESHTOOL        "Build navmesh tool" ON)
+option(BUILD_BULLETOBJECTTOOL   "Build Bullet object tool" ON)
+option(BUILD_OPENCS_TESTS       "Build OpenMW Construction Set tests" OFF)
+
+set(OpenGL_GL_PREFERENCE LEGACY)  # Use LEGACY as we use GL2; GLNVD is for GL3 and up.
+
+if (BUILD_LAUNCHER OR BUILD_OPENCS OR BUILD_WIZARD OR BUILD_OPENCS_TESTS)
+    set(USE_QT TRUE)
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 else()
-   set(USE_QT TRUE)
+    set(USE_QT FALSE)
 endif()
 
 # If the user doesn't supply a CMAKE_BUILD_TYPE via command line, choose one for them.
@@ -68,7 +99,7 @@ endif()
 message(STATUS "Configuring OpenMW...")
 
 set(OPENMW_VERSION_MAJOR 0)
-set(OPENMW_VERSION_MINOR 47)
+set(OPENMW_VERSION_MINOR 49)
 set(OPENMW_VERSION_RELEASE 0)
 
 set(OPENMW_VERSION_COMMITHASH "")
@@ -112,7 +143,7 @@ configure_file ("${OpenMW_SOURCE_DIR}/docs/mainpage.hpp.cmake" "${OpenMW_BINARY_
 
 option(BOOST_STATIC "Link static build of Boost into the binaries" FALSE)
 option(SDL2_STATIC "Link static build of SDL into the binaries" FALSE)
-option(QT_STATIC "Link static build of QT into the binaries" FALSE)
+option(QT_STATIC "Link static build of Qt into the binaries" FALSE)
 
 option(OPENMW_USE_SYSTEM_BULLET "Use system provided bullet physics library" ON)
 if(OPENMW_USE_SYSTEM_BULLET)
@@ -147,6 +178,11 @@ else()
 endif()
 option(RECASTNAVIGATION_STATIC "Build recastnavigation static libraries" ${_recastnavigation_static_default})
 
+option(OPENMW_USE_SYSTEM_SQLITE3 "Use system provided SQLite3 library" ON)
+
+option(OPENMW_USE_SYSTEM_BENCHMARK "Use system Google Benchmark library." OFF)
+option(OPENMW_USE_SYSTEM_GOOGLETEST "Use system Google Test library." OFF)
+
 option(OPENMW_UNITY_BUILD "Use fewer compilation units to speed up compile time" FALSE)
 option(OPENMW_LTO_BUILD "Build OpenMW with Link-Time Optimization (Needs ~2GB of RAM)" OFF)
 
@@ -162,18 +198,27 @@ option(OPENMW_OSX_DEPLOYMENT OFF)
 
 if (MSVC)
     option(OPENMW_MP_BUILD "Build OpenMW with /MP flag" OFF)
+    if (OPENMW_MP_BUILD)
+        add_compile_options(/MP)
+    endif()
+
+    # \bigobj is required:
+    #  1) for OPENMW_UNITY_BUILD;
+    #  2) to compile lua bindings in components, openmw and tests, because sol3 is heavily templated.
+    # there should be no relevant downsides to having it on:
+    # https://docs.microsoft.com/en-us/cpp/build/reference/bigobj-increase-number-of-sections-in-dot-obj-file
+    add_compile_options(/bigobj)
 endif()
 
 # Set up common paths
 if (APPLE)
-    set(MORROWIND_DATA_FILES "./data" CACHE PATH "location of Morrowind data files")
     set(OPENMW_RESOURCE_FILES "../Resources/resources" CACHE PATH "location of OpenMW resources files")
 elseif(UNIX)
     # Paths
     SET(BINDIR "${CMAKE_INSTALL_PREFIX}/bin" CACHE PATH "Where to install binaries")
     SET(LIBDIR "${CMAKE_INSTALL_PREFIX}/lib${LIB_SUFFIX}" CACHE PATH "Where to install libraries")
-    SET(DATAROOTDIR "${CMAKE_INSTALL_PREFIX}/share" CACHE PATH "Sets the root of data directories to a non-default location")
-    SET(GLOBAL_DATA_PATH "${DATAROOTDIR}/games/" CACHE PATH "Set data path prefix")
+    SET(DATAROOTDIR "${CMAKE_INSTALL_DATAROOTDIR}" CACHE PATH "Sets the root of data directories to a non-default location")
+    SET(GLOBAL_DATA_PATH "${CMAKE_INSTALL_PREFIX}/share/games/" CACHE PATH "Set data path prefix")
     SET(DATADIR "${GLOBAL_DATA_PATH}/openmw" CACHE PATH "Sets the openmw data directories to a non-default location")
     SET(ICONDIR "${DATAROOTDIR}/pixmaps" CACHE PATH "Set icon dir")
     SET(LICDIR "${DATAROOTDIR}/licenses/openmw" CACHE PATH "Sets the openmw license directory to a non-default location.")
@@ -184,10 +229,8 @@ elseif(UNIX)
     ENDIF()
     SET(SYSCONFDIR "${GLOBAL_CONFIG_PATH}/openmw" CACHE PATH "Set config dir")
 
-    set(MORROWIND_DATA_FILES "${DATADIR}/data" CACHE PATH "location of Morrowind data files")
     set(OPENMW_RESOURCE_FILES "${DATADIR}/resources" CACHE PATH "location of OpenMW resources files")
 else()
-    set(MORROWIND_DATA_FILES "data" CACHE PATH "location of Morrowind data files")
     set(OPENMW_RESOURCE_FILES "resources" CACHE PATH "location of OpenMW resources files")
 endif(APPLE)
 
@@ -195,8 +238,14 @@ if (WIN32)
     option(USE_DEBUG_CONSOLE "whether a debug console should be enabled for debug builds, if false debug output is redirected to Visual Studio output" ON)
 endif()
 
+<<<<<<< HEAD
 find_package(RakNet REQUIRED)
 include_directories(${RakNet_INCLUDES})
+=======
+if(MSVC)
+    add_compile_options("/utf-8")
+endif()
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
 # Dependencies
 find_package(OpenGL REQUIRED)
@@ -204,12 +253,22 @@ find_package(OpenGL REQUIRED)
 find_package(LZ4 REQUIRED)
 
 if (USE_QT)
+<<<<<<< HEAD
     find_package(Qt5Core 5.9 REQUIRED) # Temporary adjustment for TES3MP CI
     find_package(Qt5Widgets REQUIRED)
     find_package(Qt5Network REQUIRED)
     find_package(Qt5OpenGL REQUIRED)
     # Instruct CMake to run moc automatically when needed.
     #set(CMAKE_AUTOMOC ON)
+=======
+    find_package(QT REQUIRED COMPONENTS Core NAMES Qt6 Qt5)
+    if (QT_VERSION_MAJOR VERSION_EQUAL 5)
+        find_package(Qt5 5.15 COMPONENTS Core Widgets Network OpenGL REQUIRED)
+    else()
+        find_package(Qt6 COMPONENTS Core Widgets Network OpenGL OpenGLWidgets REQUIRED)
+    endif()
+    message(STATUS "Using Qt${QT_VERSION}")
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 endif()
 
 # Start of tes3mp addition
@@ -218,17 +277,20 @@ endif()
 IF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 set(USED_OSG_COMPONENTS
+    osgAnimation
     osgDB
-    osgViewer
-    osgText
     osgGA
-    osgParticle
-    osgUtil
     osgFX
+    osgParticle
+    osgText
+    osgUtil
     osgShadow
-    osgAnimation)
+    osgSim
+    osgViewer
+    )
 set(USED_OSG_PLUGINS
     osgdb_bmp
+    osgdb_dae
     osgdb_dds
     osgdb_freetype
     osgdb_jpeg
@@ -241,6 +303,37 @@ set(USED_OSG_PLUGINS
 # Don't require certain dependencies for the server
 ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
+
+if(NOT COLLADA_DOM_VERSION_MAJOR)
+    set(COLLADA_DOM_VERSION_MAJOR 2)
+endif()
+
+if(NOT COLLADA_DOM_VERSION_MINOR)
+    set(COLLADA_DOM_VERSION_MINOR 5)
+endif()
+
+find_package(collada_dom 2.5)
+
+option(OPENMW_USE_SYSTEM_ICU "Use system ICU library instead of internal. If disabled, requires autotools" ON)
+if(OPENMW_USE_SYSTEM_ICU)
+    find_package(ICU REQUIRED COMPONENTS uc i18n data)
+endif()
+
+option(OPENMW_USE_SYSTEM_YAML_CPP "Use system yaml-cpp library instead of internal." ON)
+if(OPENMW_USE_SYSTEM_YAML_CPP)
+    set(_yaml_cpp_static_default OFF)
+else()
+    set(_yaml_cpp_static_default ON)
+endif()
+option(YAML_CPP_STATIC "Link static build of yaml-cpp into the binaries" ${_yaml_cpp_static_default})
+if (OPENMW_USE_SYSTEM_YAML_CPP)
+    find_package(yaml-cpp REQUIRED)
+endif()
+
+if ((BUILD_UNITTESTS OR BUILD_OPENCS_TESTS) AND OPENMW_USE_SYSTEM_GOOGLETEST)
+    find_package(GTest 1.10 REQUIRED)
+    find_package(GMock 1.10 REQUIRED)
+endif()
 
 add_subdirectory(extern)
 
@@ -326,7 +419,12 @@ if (WIN32)
     add_definitions(-DSDL_MAIN_HANDLED)
 
     # Get rid of useless crud from windows.h
-    add_definitions(-DNOMINMAX -DWIN32_LEAN_AND_MEAN)
+    add_definitions(
+        -DNOMINMAX # name conflict with std::min, std::max
+        -DWIN32_LEAN_AND_MEAN
+        -DNOMB # name conflict with MWGui::MessageBox
+        -DNOGDI # name conflict with osgAnimation::MorphGeometry::RELATIVE
+    )
 endif()
 
 # Start of tes3mp addition
@@ -397,10 +495,7 @@ endif()
 IF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 if(OPENMW_USE_SYSTEM_OSG)
-    find_package(OpenSceneGraph 3.4.0 REQUIRED ${USED_OSG_COMPONENTS})
-    if (${OPENSCENEGRAPH_VERSION} VERSION_GREATER 3.6.2 AND ${OPENSCENEGRAPH_VERSION} VERSION_LESS 3.6.5)
-        message(FATAL_ERROR "OpenSceneGraph version ${OPENSCENEGRAPH_VERSION} has critical regressions which cause crashes. Please upgrade to 3.6.5 or later. We strongly recommend using the tip of the official 'OpenSceneGraph-3.6' branch or the tip of '3.6' OpenMW/osg (OSGoS).")
-    endif()
+    find_package(OpenSceneGraph 3.6.5 REQUIRED ${USED_OSG_COMPONENTS})  # Bump to 3.6.6 when released
 
     if(OSG_STATIC)
         find_package(OSGPlugins REQUIRED COMPONENTS ${USED_OSG_PLUGINS})
@@ -421,7 +516,12 @@ ELSE(BUILD_OPENMW OR BUILD_OPENCS)
 ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 
-set(BOOST_COMPONENTS system filesystem program_options iostreams)
+include(cmake/CheckOsgMultiview.cmake)
+if(HAVE_MULTIVIEW)
+    add_definitions(-DOSG_HAS_MULTIVIEW)
+endif(HAVE_MULTIVIEW)
+
+set(BOOST_COMPONENTS system program_options iostreams)
 if(WIN32)
     set(BOOST_COMPONENTS ${BOOST_COMPONENTS} locale)
     if(MSVC)
@@ -438,13 +538,21 @@ endif()
 set(Boost_NO_BOOST_CMAKE ON)
 
 find_package(Boost 1.6.2 REQUIRED COMPONENTS ${BOOST_COMPONENTS} OPTIONAL_COMPONENTS ${BOOST_OPTIONAL_COMPONENTS})
+<<<<<<< HEAD
 # Start of tes3mp addition
 #
 # Don't require certain dependencies for the server
 IF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
+=======
+
+if(Boost_VERSION_STRING VERSION_GREATER_EQUAL 1.77.0)
+    find_package(Boost 1.77.0 REQUIRED COMPONENTS atomic)
+endif()
+
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 if(OPENMW_USE_SYSTEM_MYGUI)
-    find_package(MyGUI 3.2.2 REQUIRED)
+    find_package(MyGUI 3.4.1 REQUIRED)
 endif()
 # End of tes3mp addition
 #
@@ -458,11 +566,32 @@ find_package(SDL2 2.0.9 REQUIRED)
 IF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 find_package(OpenAL REQUIRED)
+<<<<<<< HEAD
 # End of tes3mp addition
 #
 # Don't require certain dependencies for the server
 ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
+=======
+find_package(ZLIB REQUIRED)
+
+option(USE_LUAJIT "Switch Lua/LuaJit (TRUE is highly recommended)" TRUE)
+if(USE_LUAJIT)
+    find_package(LuaJit REQUIRED)
+    set(LUA_INCLUDE_DIR ${LuaJit_INCLUDE_DIR})
+    set(LUA_LIBRARIES ${LuaJit_LIBRARIES})
+else(USE_LUAJIT)
+    find_package(Lua REQUIRED)
+    add_compile_definitions(NO_LUAJIT)
+endif(USE_LUAJIT)
+if (NOT WIN32)
+    include(cmake/CheckLuaCustomAllocator.cmake)
+endif()
+
+# C++ library binding to Lua
+set(SOL_INCLUDE_DIR ${OpenMW_SOURCE_DIR}/extern/sol3)
+set(SOL_CONFIG_DIR ${OpenMW_SOURCE_DIR}/extern/sol_config)
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
 include_directories(
     BEFORE SYSTEM
@@ -473,12 +602,16 @@ include_directories(
     ${OPENAL_INCLUDE_DIR}
     ${OPENGL_INCLUDE_DIR}
     ${BULLET_INCLUDE_DIRS}
+    ${LUA_INCLUDE_DIR}
+    ${SOL_INCLUDE_DIR}
+    ${SOL_CONFIG_DIR}
+    ${ICU_INCLUDE_DIRS}
 )
 
-link_directories(${SDL2_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
+link_directories(${SDL2_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${COLLADA_DOM_LIBRARY_DIRS})
 
 if(MYGUI_STATIC)
-   add_definitions(-DMYGUI_STATIC)
+    add_definitions(-DMYGUI_STATIC)
 endif (MYGUI_STATIC)
 
 if (APPLE)
@@ -489,9 +622,8 @@ if (APPLE)
         "${APP_BUNDLE_DIR}/Contents/Resources/OpenMW.icns" COPYONLY)
 endif (APPLE)
 
-if (NOT APPLE)
-    set(OPENMW_MYGUI_FILES_ROOT ${OpenMW_BINARY_DIR})
-    set(OPENMW_SHADERS_ROOT ${OpenMW_BINARY_DIR})
+if (NOT APPLE)  # this is modified for macOS use later in "apps/open[mw|cs]/CMakeLists.txt"
+    set(OPENMW_RESOURCES_ROOT ${OpenMW_BINARY_DIR})
 endif ()
 
 add_subdirectory(files/)
@@ -575,7 +707,7 @@ endif()
 
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL GNU OR CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wundef -Wno-unused-parameter -pedantic -Wno-long-long")
+    set(OPENMW_CXX_FLAGS "-Wall -Wextra -Wundef -Wextra-semi -Wno-unused-parameter -pedantic -Wno-long-long -Wnon-virtual-dtor -Wunused ${OPENMW_CXX_FLAGS}")
     add_definitions( -DBOOST_NO_CXX11_SCOPED_ENUMS=ON )
 
     if (APPLE)
@@ -585,12 +717,12 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL GNU OR CMAKE_CXX_COMPILER_ID STREQUAL Clang)
 
     if (CMAKE_CXX_COMPILER_ID STREQUAL Clang AND NOT APPLE)
         if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 3.6 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 3.6)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-potentially-evaluated-expression")
+            set(OPENMW_CXX_FLAGS "${OPENMW_CXX_FLAGS} -Wno-potentially-evaluated-expression")
         endif ()
     endif()
 
-    if (CMAKE_CXX_COMPILER_ID STREQUAL GNU AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 4.6 OR CMAKE_CXX_COMPILER_VERSION VERSION_EQUAL 4.6)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-parameter")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL GNU)
+        set(OPENMW_CXX_FLAGS "${OPENMW_CXX_FLAGS} -Wno-unused-but-set-parameter -Wduplicated-branches -Wduplicated-cond -Wlogical-op")
     endif()
 endif (CMAKE_CXX_COMPILER_ID STREQUAL GNU OR CMAKE_CXX_COMPILER_ID STREQUAL Clang)
 
@@ -608,12 +740,16 @@ add_subdirectory (extern/oics)
 ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 add_subdirectory (extern/Base64)
+<<<<<<< HEAD
 # Start of tes3mp addition
 #
 # Don't require certain dependencies for the server
 IF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 if (BUILD_OPENCS)
+=======
+if (BUILD_OPENCS OR BUILD_OPENCS_TESTS)
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     add_subdirectory (extern/osgQt)
 endif()
 # Start of tes3mp addition
@@ -622,9 +758,12 @@ endif()
 ENDIF(BUILD_OPENMW OR BUILD_OPENCS)
 # End of tes3mp addition
 
+if (OPENMW_CXX_FLAGS)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OPENMW_CXX_FLAGS}")
+endif()
+
 # Components
 add_subdirectory (components)
-target_compile_definitions(components PRIVATE OPENMW_DOC_BASEURL="${OPENMW_DOC_BASEURL}")
 
 # Apps and tools
 if (BUILD_OPENMW_MP)
@@ -640,15 +779,15 @@ if (BUILD_OPENMW)
 endif()
 
 if (BUILD_BSATOOL)
-  add_subdirectory( apps/bsatool )
+    add_subdirectory( apps/bsatool )
 endif()
 
 if (BUILD_ESMTOOL)
-  add_subdirectory( apps/esmtool )
+    add_subdirectory( apps/esmtool )
 endif()
 
 if (BUILD_LAUNCHER)
-   add_subdirectory( apps/launcher )
+    add_subdirectory( apps/launcher )
 endif()
 
 if (BUILD_BROWSER)
@@ -656,19 +795,19 @@ if (BUILD_BROWSER)
 endif()
 
 if (BUILD_MWINIIMPORTER)
-   add_subdirectory( apps/mwiniimporter )
+    add_subdirectory( apps/mwiniimporter )
 endif()
 
 if (BUILD_ESSIMPORTER)
-   add_subdirectory (apps/essimporter )
+    add_subdirectory (apps/essimporter )
 endif()
 
-if (BUILD_OPENCS)
-   add_subdirectory (apps/opencs)
+if (BUILD_OPENCS OR BUILD_OPENCS_TESTS)
+    add_subdirectory (apps/opencs)
 endif()
 
 if (BUILD_WIZARD)
-   add_subdirectory(apps/wizard)
+    add_subdirectory(apps/wizard)
 endif()
 
 if (BUILD_NIFTEST)
@@ -677,19 +816,34 @@ endif(BUILD_NIFTEST)
 
 # UnitTests
 if (BUILD_UNITTESTS)
-  add_subdirectory( apps/openmw_test_suite )
+    add_subdirectory( apps/openmw_test_suite )
 endif()
 
 if (BUILD_BENCHMARKS)
-  add_subdirectory(apps/benchmarks)
+    add_subdirectory(apps/benchmarks)
+endif()
+
+if (BUILD_NAVMESHTOOL)
+    add_subdirectory(apps/navmeshtool)
+endif()
+
+if (BUILD_BULLETOBJECTTOOL)
+    add_subdirectory( apps/bulletobjecttool )
+endif()
+
+if (BUILD_OPENCS_TESTS)
+    add_subdirectory(apps/opencs_tests)
 endif()
 
 if (WIN32)
-  if (MSVC)
-    if (OPENMW_MP_BUILD)
-        set( MT_BUILD "/MP")
-    endif()
+    if (MSVC)
+        foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
+            string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
+            set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "$(SolutionDir)$(Configuration)" )
+            set( CMAKE_LIBRARY_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "$(ProjectDir)$(Configuration)" )
+        endforeach( OUTPUTCONFIG )
 
+<<<<<<< HEAD
     foreach( OUTPUTCONFIG ${CMAKE_CONFIGURATION_TYPES} )
         string( TOUPPER ${OUTPUTCONFIG} OUTPUTCONFIG )
         set( CMAKE_RUNTIME_OUTPUT_DIRECTORY_${OUTPUTCONFIG} "$(SolutionDir)$(Configuration)" )
@@ -781,41 +935,154 @@ if (WIN32)
             set_target_properties(tes3mp PROPERTIES COMPILE_FLAGS "${WARNINGS} ${MT_BUILD} /bigobj")
         else()
             set_target_properties(tes3mp PROPERTIES COMPILE_FLAGS "${WARNINGS} ${MT_BUILD}")
+=======
+        if (USE_DEBUG_CONSOLE AND BUILD_OPENMW)
+            set_target_properties(openmw PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:CONSOLE")
+            set_target_properties(openmw PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:CONSOLE")
+            set_target_properties(openmw PROPERTIES COMPILE_DEFINITIONS $<$<CONFIG:Debug>:_CONSOLE>)
+        elseif (BUILD_OPENMW)
+            # Turn off debug console, debug output will be written to visual studio output instead
+            set_target_properties(openmw PROPERTIES LINK_FLAGS_DEBUG "/SUBSYSTEM:WINDOWS")
+            set_target_properties(openmw PROPERTIES LINK_FLAGS_RELWITHDEBINFO "/SUBSYSTEM:WINDOWS")
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         endif()
-    endif()
 
-    if (BUILD_WIZARD)
-        set_target_properties(openmw-wizard PROPERTIES COMPILE_FLAGS "${WARNINGS} ${MT_BUILD}")
-    endif()
+        if (BUILD_OPENMW)
+            # Release builds don't use the debug console
+            set_target_properties(openmw PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
+            set_target_properties(openmw PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS")
+        endif()
 
-    if (BUILD_BENCHMARKS)
-        set_target_properties(openmw_detournavigator_navmeshtilescache_benchmark PROPERTIES COMPILE_FLAGS "${WARNINGS} ${MT_BUILD}")
-    endif()
-  endif(MSVC)
+        # Play a bit with the warning levels
 
+<<<<<<< HEAD
   # TODO: At some point release builds should not use the console but rather write to a log file
   #set_target_properties(tes3mp PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
   #set_target_properties(tes3mp PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS")
+=======
+        set(WARNINGS "/W4")
+
+        set(WARNINGS_DISABLE
+            4100 # Unreferenced formal parameter (-Wunused-parameter)
+            4127 # Conditional expression is constant
+            4996 # Function was declared deprecated
+            5054 # Deprecated operations between enumerations of different types caused by Qt headers
+            )
+
+        if( "${MyGUI_VERSION}" VERSION_LESS_EQUAL "3.4.0" )
+            set(WARNINGS_DISABLE ${WARNINGS_DISABLE}
+            4866 # compiler may not enforce left-to-right evaluation order for call
+            )
+        endif()
+
+        if( "${MyGUI_VERSION}" VERSION_LESS_EQUAL "3.4.1" )
+            set(WARNINGS_DISABLE ${WARNINGS_DISABLE}
+            4275 # non dll-interface class 'MyGUI::delegates::IDelegateUnlink' used as base for dll-interface class 'MyGUI::Widget'
+            )
+        endif()
+
+        foreach(d ${WARNINGS_DISABLE})
+            set(WARNINGS "${WARNINGS} /wd${d}")
+        endforeach(d)
+
+        if(OPENMW_MSVC_WERROR)
+            set(WARNINGS "${WARNINGS} /WX")
+        endif()
+
+        set_target_properties(components PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        set_target_properties(osg-ffmpeg-videoplayer PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+
+        if (MSVC_VERSION GREATER_EQUAL 1915 AND MSVC_VERSION LESS 1920)
+            target_compile_definitions(components INTERFACE _ENABLE_EXTENDED_ALIGNED_STORAGE)
+        endif()
+
+        if (BUILD_BSATOOL)
+            set_target_properties(bsatool PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_ESMTOOL)
+            set_target_properties(esmtool PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_ESSIMPORTER)
+            set_target_properties(openmw-essimporter PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_LAUNCHER)
+            set_target_properties(openmw-launcher PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_MWINIIMPORTER)
+            set_target_properties(openmw-iniimporter PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_OPENCS)
+            set_target_properties(openmw-cs PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_OPENMW)
+            set_target_properties(openmw PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_WIZARD)
+            set_target_properties(openmw-wizard PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_UNITTESTS)
+            set_target_properties(openmw_test_suite PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_BENCHMARKS)
+            set_target_properties(openmw_detournavigator_navmeshtilescache_benchmark PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_NAVMESHTOOL)
+            set_target_properties(openmw-navmeshtool PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+
+        if (BUILD_BULLETOBJECTTOOL)
+            set(WARNINGS "${WARNINGS} ${MT_BUILD}")
+            set_target_properties(openmw-bulletobjecttool PROPERTIES COMPILE_FLAGS "${WARNINGS}")
+        endif()
+    endif(MSVC)
+
+    # TODO: At some point release builds should not use the console but rather write to a log file
+    #set_target_properties(openmw PROPERTIES LINK_FLAGS_RELEASE "/SUBSYSTEM:WINDOWS")
+    #set_target_properties(openmw PROPERTIES LINK_FLAGS_MINSIZEREL "/SUBSYSTEM:WINDOWS")
+endif()
+
+if (BUILD_OPENMW AND APPLE)
+    target_compile_definitions(components PRIVATE GL_SILENCE_DEPRECATION=1)
+    target_compile_definitions(openmw PRIVATE GL_SILENCE_DEPRECATION=1)
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 endif()
 
 # Apple bundling
 if (OPENMW_OSX_DEPLOYMENT AND APPLE)
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.13 AND CMAKE_VERSION VERSION_LESS 3.13.4)
-        message(FATAL_ERROR "macOS packaging is broken in early CMake 3.13 releases, see https://gitlab.com/OpenMW/openmw/issues/4767. Please use at least 3.13.4 or an older version like 3.12.4")
+    if (CMAKE_VERSION VERSION_LESS 3.19)
+        message(FATAL_ERROR "macOS packaging requires CMake 3.19 or higher to sign macOS app bundles.")
     endif ()
 
-    get_property(QT_COCOA_PLUGIN_PATH TARGET Qt5::QCocoaIntegrationPlugin PROPERTY LOCATION_RELEASE)
+    get_property(QT_COCOA_PLUGIN_PATH TARGET Qt${QT_VERSION_MAJOR}::QCocoaIntegrationPlugin PROPERTY LOCATION_RELEASE)
     get_filename_component(QT_COCOA_PLUGIN_DIR "${QT_COCOA_PLUGIN_PATH}" DIRECTORY)
     get_filename_component(QT_COCOA_PLUGIN_GROUP "${QT_COCOA_PLUGIN_DIR}" NAME)
     get_filename_component(QT_COCOA_PLUGIN_NAME "${QT_COCOA_PLUGIN_PATH}" NAME)
     configure_file("${QT_COCOA_PLUGIN_PATH}" "${APP_BUNDLE_DIR}/Contents/PlugIns/${QT_COCOA_PLUGIN_GROUP}/${QT_COCOA_PLUGIN_NAME}" COPYONLY)
+
+    get_property(QT_QMACSTYLE_PLUGIN_PATH TARGET Qt${QT_VERSION_MAJOR}::QMacStylePlugin PROPERTY LOCATION_RELEASE)
+    get_filename_component(QT_QMACSTYLE_PLUGIN_DIR "${QT_QMACSTYLE_PLUGIN_PATH}" DIRECTORY)
+    get_filename_component(QT_QMACSTYLE_PLUGIN_GROUP "${QT_QMACSTYLE_PLUGIN_DIR}" NAME)
+    get_filename_component(QT_QMACSTYLE_PLUGIN_NAME "${QT_QMACSTYLE_PLUGIN_PATH}" NAME)
+    configure_file("${QT_QMACSTYLE_PLUGIN_PATH}" "${APP_BUNDLE_DIR}/Contents/PlugIns/${QT_QMACSTYLE_PLUGIN_GROUP}/${QT_QMACSTYLE_PLUGIN_NAME}" COPYONLY)
+
     configure_file("${OpenMW_SOURCE_DIR}/files/mac/qt.conf" "${APP_BUNDLE_DIR}/Contents/Resources/qt.conf" COPYONLY)
 
     if (BUILD_OPENCS)
-      get_property(OPENCS_BUNDLE_NAME_TMP TARGET openmw-cs PROPERTY OUTPUT_NAME)
-      set(OPENCS_BUNDLE_NAME "${OPENCS_BUNDLE_NAME_TMP}.app")
-      configure_file("${QT_COCOA_PLUGIN_PATH}" "${OPENCS_BUNDLE_NAME}/Contents/PlugIns/${QT_COCOA_PLUGIN_GROUP}/${QT_COCOA_PLUGIN_NAME}" COPYONLY)
-      configure_file("${OpenMW_SOURCE_DIR}/files/mac/qt.conf" "${OPENCS_BUNDLE_NAME}/Contents/Resources/qt.conf" COPYONLY)
+        get_property(OPENCS_BUNDLE_NAME_TMP TARGET openmw-cs PROPERTY OUTPUT_NAME)
+        set(OPENCS_BUNDLE_NAME "${OPENCS_BUNDLE_NAME_TMP}.app")
+        configure_file("${QT_COCOA_PLUGIN_PATH}" "${OPENCS_BUNDLE_NAME}/Contents/PlugIns/${QT_COCOA_PLUGIN_GROUP}/${QT_COCOA_PLUGIN_NAME}" COPYONLY)
+        configure_file("${QT_QMACSTYLE_PLUGIN_PATH}" "${OPENCS_BUNDLE_NAME}/Contents/PlugIns/${QT_QMACSTYLE_PLUGIN_GROUP}/${QT_QMACSTYLE_PLUGIN_NAME}" COPYONLY)
+        configure_file("${OpenMW_SOURCE_DIR}/files/mac/qt.conf" "${OPENCS_BUNDLE_NAME}/Contents/Resources/qt.conf" COPYONLY)
     endif ()
 
     install(DIRECTORY "${APP_BUNDLE_DIR}" USE_SOURCE_PERMISSIONS DESTINATION "." COMPONENT Runtime)
@@ -884,7 +1151,9 @@ if (OPENMW_OSX_DEPLOYMENT AND APPLE)
     install_plugins_for_bundle("${OPENCS_BUNDLE_NAME}" OPENCS_PLUGINS)
 
     set(PLUGINS ${PLUGINS} "${INSTALLED_OPENMW_APP}/Contents/PlugIns/${QT_COCOA_PLUGIN_GROUP}/${QT_COCOA_PLUGIN_NAME}")
+    set(PLUGINS ${PLUGINS} "${INSTALLED_OPENMW_APP}/Contents/PlugIns/${QT_QMACSTYLE_PLUGIN_GROUP}/${QT_QMACSTYLE_PLUGIN_NAME}")
     set(OPENCS_PLUGINS ${OPENCS_PLUGINS} "${INSTALLED_OPENCS_APP}/Contents/PlugIns/${QT_COCOA_PLUGIN_GROUP}/${QT_COCOA_PLUGIN_NAME}")
+    set(OPENCS_PLUGINS ${OPENCS_PLUGINS} "${INSTALLED_OPENCS_APP}/Contents/PlugIns/${QT_QMACSTYLE_PLUGIN_GROUP}/${QT_QMACSTYLE_PLUGIN_NAME}")
 
     install(CODE "
         function(gp_item_default_embedded_path_override item  default_embedded_path_var)
@@ -897,6 +1166,9 @@ if (OPENMW_OSX_DEPLOYMENT AND APPLE)
         fixup_bundle(\"${INSTALLED_OPENMW_APP}\" \"${PLUGINS}\" \"\")
         fixup_bundle(\"${INSTALLED_OPENCS_APP}\" \"${OPENCS_PLUGINS}\" \"\")
         " COMPONENT Runtime)
+
+    set(CPACK_PRE_BUILD_SCRIPTS ${CMAKE_SOURCE_DIR}/cmake/SignMacApplications.cmake)
+
     include(CPack)
 elseif(NOT APPLE)
     get_generator_is_multi_config(multi_config)
@@ -929,7 +1201,6 @@ elseif(NOT APPLE)
         INSTALL(FILES "${OpenMW_SOURCE_DIR}/CHANGELOG.md" DESTINATION "." RENAME "CHANGELOG.txt")
         INSTALL(FILES "${OpenMW_SOURCE_DIR}/README.md" DESTINATION "." RENAME "README.txt")
         INSTALL(FILES "${OpenMW_SOURCE_DIR}/LICENSE" DESTINATION "." RENAME "LICENSE.txt")
-        INSTALL(FILES "${OpenMW_SOURCE_DIR}/files/mygui/DejaVuFontLicense.txt" DESTINATION ".")
         INSTALL(FILES "${INSTALL_SOURCE}/defaults.bin" DESTINATION ".")
         # Start of tes3mp addition
         INSTALL(FILES "${INSTALL_SOURCE}/tes3mp-client-default.cfg" DESTINATION ".")
@@ -1053,9 +1324,12 @@ elseif(NOT APPLE)
         IF(BUILD_WIZARD)
             INSTALL(PROGRAMS "${INSTALL_SOURCE}/openmw-wizard" DESTINATION "${BINDIR}" )
         ENDIF(BUILD_WIZARD)
-
-        # Install licenses
-        INSTALL(FILES "files/mygui/DejaVuFontLicense.txt" DESTINATION "${LICDIR}" )
+        if(BUILD_NAVMESHTOOL)
+            install(PROGRAMS "${INSTALL_SOURCE}/openmw-navmeshtool" DESTINATION "${BINDIR}" )
+        endif()
+        IF(BUILD_BULLETOBJECTTOOL)
+            INSTALL(PROGRAMS "${INSTALL_SOURCE}/openmw-bulletobjecttool" DESTINATION "${BINDIR}" )
+        ENDIF(BUILD_BULLETOBJECTTOOL)
 
         # Install icon and desktop file
         INSTALL(FILES "${OpenMW_BINARY_DIR}/org.openmw.launcher.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "openmw")

@@ -1,18 +1,24 @@
 #include "ornode.hpp"
 
-#include <sstream>
+#include <apps/opencs/model/filter/narynode.hpp>
+#include <apps/opencs/model/filter/node.hpp>
 
-CSMFilter::OrNode::OrNode (const std::vector<std::shared_ptr<Node> >& nodes)
-: NAryNode (nodes, "or")
-{}
+namespace CSMWorld
+{
+    class IdTableBase;
+}
 
-bool CSMFilter::OrNode::test (const CSMWorld::IdTableBase& table, int row,
-    const std::map<int, int>& columns) const
+CSMFilter::OrNode::OrNode(const std::vector<std::shared_ptr<Node>>& nodes)
+    : NAryNode(nodes, "or")
+{
+}
+
+bool CSMFilter::OrNode::test(const CSMWorld::IdTableBase& table, int row, const std::map<int, int>& columns) const
 {
     int size = getSize();
 
-    for (int i=0; i<size; ++i)
-        if ((*this)[i].test (table, row, columns))
+    for (int i = 0; i < size; ++i)
+        if ((*this)[i].test(table, row, columns))
             return true;
 
     return false;

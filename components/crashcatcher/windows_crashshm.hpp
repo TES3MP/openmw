@@ -1,9 +1,7 @@
 #ifndef WINDOWS_CRASHSHM_HPP
 #define WINDOWS_CRASHSHM_HPP
 
-#undef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#include <Windows.h>
+#include <components/windows.hpp>
 
 namespace Crash
 {
@@ -26,6 +24,7 @@ namespace Crash
         struct Startup
         {
             HANDLE mAppProcessHandle;
+            DWORD mAppMainThreadId;
             HANDLE mSignalApp;
             HANDLE mSignalMonitor;
             HANDLE mShmMutex;

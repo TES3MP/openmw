@@ -3,8 +3,6 @@
 
 #include <string>
 
-#include <components/esm/cellref.hpp>
-
 #include "importscri.hpp"
 
 namespace ESM
@@ -40,7 +38,8 @@ namespace ESSImport
         float mDynamic[3][2];
         unsigned char mUnknown3[16];
         float mAttributes[8][2];
-        float mMagicEffects[27]; // Effect attributes: https://wiki.openmw.org/index.php?title=Research:Magic#Effect_attributes
+        float mMagicEffects[27]; // Effect attributes:
+                                 // https://wiki.openmw.org/index.php?title=Research:Magic#Effect_attributes
         unsigned char mUnknown4[4];
         unsigned int mGoldPool;
         unsigned char mCountDown; // seen the same value as in ACSC.mCorpseClearCountdown, maybe
@@ -63,7 +62,7 @@ namespace ESSImport
     };
 #pragma pack(pop)
 
-    struct ActorData : public ESM::CellRef
+    struct ActorData
     {
         bool mHasACDT;
         ACDT mACDT;
@@ -85,10 +84,6 @@ namespace ESSImport
 
         bool mHasANIS;
         ANIS mANIS; // scripted animation state
-
-        virtual void load(ESM::ESMReader& esm);
-
-        virtual ~ActorData() = default;
     };
 
 }

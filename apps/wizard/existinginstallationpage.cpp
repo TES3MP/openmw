@@ -1,26 +1,24 @@
 #include "existinginstallationpage.hpp"
 
-#include <QDebug>
-#include <QMessageBox>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QFile>
+#include <QMessageBox>
 
 #include "mainwizard.hpp"
 
-Wizard::ExistingInstallationPage::ExistingInstallationPage(QWidget *parent) :
-    QWizardPage(parent)
+Wizard::ExistingInstallationPage::ExistingInstallationPage(QWidget* parent)
+    : QWizardPage(parent)
 {
     mWizard = qobject_cast<MainWizard*>(parent);
 
     setupUi(this);
 
     // Add a placeholder item to the list of installations
-    QListWidgetItem *emptyItem = new QListWidgetItem(tr("No existing installations detected"));
+    QListWidgetItem* emptyItem = new QListWidgetItem(tr("No existing installations detected"));
     emptyItem->setFlags(Qt::NoItemFlags);
 
     installationsList->insertItem(0, emptyItem);
-
 }
 
 void Wizard::ExistingInstallationPage::initializePage()
@@ -31,20 +29,18 @@ void Wizard::ExistingInstallationPage::initializePage()
     // Hide the default item if there are installations to choose from
     installationsList->item(0)->setHidden(!paths.isEmpty());
 
-    for (const QString &path : paths)
+    for (const QString& path : paths)
     {
         if (installationsList->findItems(path, Qt::MatchExactly).isEmpty())
         {
-            QListWidgetItem *item = new QListWidgetItem(path);
+            QListWidgetItem* item = new QListWidgetItem(path);
             installationsList->addItem(item);
         }
     }
 
-    connect(installationsList, SIGNAL(currentTextChanged(QString)),
-            this, SLOT(textChanged(QString)));
+    connect(installationsList, &QListWidget::currentTextChanged, this, &ExistingInstallationPage::textChanged);
 
-    connect(installationsList,SIGNAL(itemSelectionChanged()),
-            this, SIGNAL(completeChanged()));
+    connect(installationsList, &QListWidget::itemSelectionChanged, this, &ExistingInstallationPage::completeChanged);
 }
 
 bool Wizard::ExistingInstallationPage::validatePage()
@@ -54,32 +50,31 @@ bool Wizard::ExistingInstallationPage::validatePage()
     // Or failed to be detected due to the target being a symlink
 
     QString path(field(QLatin1String("installation.path")).toString());
-    QFile file(mWizard->mInstallations[path].iniPath);
 
-    if (!file.exists()) {
+    if (!QFile::exists(mWizard->mInstallations[path].iniPath))
+    {
         QMessageBox msgBox;
         msgBox.setWindowTitle(tr("Error detecting Morrowind configuration"));
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setStandardButtons(QMessageBox::Cancel);
-        msgBox.setText(QObject::tr("<br><b>Could not find Morrowind.ini</b><br><br> \
+        msgBox.setText(
+            QObject::tr("<br><b>Could not find Morrowind.ini</b><br><br> \
                                    The Wizard needs to update settings in this file.<br><br> \
                                    Press \"Browse...\" to specify the location manually.<br>"));
 
-        QAbstractButton *browseButton2 =
-                msgBox.addButton(QObject::tr("B&rowse..."), QMessageBox::ActionRole);
+        QAbstractButton* browseButton2 = msgBox.addButton(QObject::tr("B&rowse..."), QMessageBox::ActionRole);
 
         msgBox.exec();
 
         QString iniFile;
-        if (msgBox.clickedButton() == browseButton2) {
-            iniFile = QFileDialog::getOpenFileName(
-                        this,
-                        QObject::tr("Select configuration file"),
-                        QDir::currentPath(),
-                        QString(tr("Morrowind configuration file (*.ini)")));
+        if (msgBox.clickedButton() == browseButton2)
+        {
+            iniFile = QFileDialog::getOpenFileName(this, QObject::tr("Select configuration file"), QDir::currentPath(),
+                QString(tr("Morrowind configuration file (*.ini)")));
         }
 
-        if (iniFile.isEmpty()) {
+        if (iniFile.isEmpty())
+        {
             return false; // Cancel was clicked;
         }
 
@@ -93,13 +88,9 @@ bool Wizard::ExistingInstallationPage::validatePage()
 
 void Wizard::ExistingInstallationPage::on_browseButton_clicked()
 {
-    QString selectedFile = QFileDialog::getOpenFileName(
-                this,
-                tr("Select Morrowind.esm (located in Data Files)"),
-                QDir::currentPath(),
-                QString(tr("Morrowind master file (Morrowind.esm)")),
-                nullptr,
-                QFileDialog::DontResolveSymlinks);
+    QString selectedFile
+        = QFileDialog::getOpenFileName(this, tr("Select Morrowind.esm (located in Data Files)"), QDir::currentPath(),
+            QString(tr("Morrowind master file (Morrowind.esm)")), nullptr, QFileDialog::DontResolveSymlinks);
 
     if (selectedFile.isEmpty())
         return;
@@ -115,28 +106,35 @@ void Wizard::ExistingInstallationPage::on_browseButton_clicked()
         msgBox.setWindowTitle(tr("Error detecting Morrowind files"));
         msgBox.setIcon(QMessageBox::Warning);
         msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.setText(QObject::tr(
-            "<b>Morrowind.bsa</b> is missing!<br>\
-            Make sure your Morrowind installation is complete."
-        ));
+        msgBox.setText(
+            QObject::tr("<b>Morrowind.bsa</b> is missing!<br>\
+            Make sure your Morrowind installation is complete."));
         msgBox.exec();
+        return;
+    }
+
+    if (!versionIsOK(info.absolutePath()))
+    {
         return;
     }
 
     QString path(QDir::toNativeSeparators(info.absolutePath()));
     QList<QListWidgetItem*> items = installationsList->findItems(path, Qt::MatchExactly);
 
-    if (items.isEmpty()) {
+    if (items.isEmpty())
+    {
         // Path is not yet in the list, add it
         mWizard->addInstallation(path);
 
         // Hide the default item
         installationsList->item(0)->setHidden(true);
 
-        QListWidgetItem *item = new QListWidgetItem(path);
+        QListWidgetItem* item = new QListWidgetItem(path);
         installationsList->addItem(item);
         installationsList->setCurrentItem(item); // Select it too
-    } else {
+    }
+    else
+    {
         installationsList->setCurrentItem(items.first());
     }
 
@@ -144,7 +142,7 @@ void Wizard::ExistingInstallationPage::on_browseButton_clicked()
     emit completeChanged();
 }
 
-void Wizard::ExistingInstallationPage::textChanged(const QString &text)
+void Wizard::ExistingInstallationPage::textChanged(const QString& text)
 {
     // Set the installation path manually, as registerField doesn't work
     // Because it doesn't accept two widgets operating on a single field
@@ -154,9 +152,12 @@ void Wizard::ExistingInstallationPage::textChanged(const QString &text)
 
 bool Wizard::ExistingInstallationPage::isComplete() const
 {
-    if (installationsList->selectionModel()->hasSelection()) {
+    if (installationsList->selectionModel()->hasSelection())
+    {
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 }
@@ -164,4 +165,38 @@ bool Wizard::ExistingInstallationPage::isComplete() const
 int Wizard::ExistingInstallationPage::nextId() const
 {
     return MainWizard::Page_LanguageSelection;
+}
+
+bool Wizard::ExistingInstallationPage::versionIsOK(QString directory_name)
+{
+    QDir directory = QDir(directory_name);
+    QFileInfoList infoList = directory.entryInfoList(QStringList(QString("Morrowind.bsa")));
+    if (infoList.size() == 1)
+    {
+        qint64 actualFileSize = infoList.at(0).size();
+        const qint64 expectedFileSize = 310459500; // Size of Morrowind.bsa in Steam and GOG editions.
+
+        if (actualFileSize == expectedFileSize)
+        {
+            return true;
+        }
+
+        QMessageBox msgBox;
+        msgBox.setWindowTitle(QObject::tr("Most recent Morrowind not detected"));
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+        msgBox.setDefaultButton(QMessageBox::No);
+        msgBox.setText(
+            QObject::tr("<br><b>There may be a more recent version of Morrowind available.</b><br><br>\
+                              Do you wish to continue anyway?<br>"));
+        int ret = msgBox.exec();
+        if (ret == QMessageBox::Yes)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    return false;
 }

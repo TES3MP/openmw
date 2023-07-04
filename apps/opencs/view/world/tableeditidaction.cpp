@@ -2,7 +2,13 @@
 
 #include <QTableView>
 
+#include <memory>
+#include <type_traits>
+
 #include "../../model/world/tablemimedata.hpp"
+
+#include <apps/opencs/model/world/columnbase.hpp>
+#include <apps/opencs/model/world/universalid.hpp>
 
 CSVWorld::TableEditIdAction::CellData CSVWorld::TableEditIdAction::getCellData(int row, int column) const
 {
@@ -16,11 +22,12 @@ CSVWorld::TableEditIdAction::CellData CSVWorld::TableEditIdAction::getCellData(i
     return std::make_pair(CSMWorld::ColumnBase::Display_None, "");
 }
 
-CSVWorld::TableEditIdAction::TableEditIdAction(const QTableView &table, QWidget *parent)
-    : QAction(parent),
-      mTable(table),
-      mCurrentId(CSMWorld::UniversalId::Type_None)
-{}
+CSVWorld::TableEditIdAction::TableEditIdAction(const QTableView& table, QWidget* parent)
+    : QAction(parent)
+    , mTable(table)
+    , mCurrentId(CSMWorld::UniversalId::Type_None)
+{
+}
 
 void CSVWorld::TableEditIdAction::setCell(int row, int column)
 {
@@ -43,7 +50,6 @@ bool CSVWorld::TableEditIdAction::isValidIdCell(int row, int column) const
 {
     CellData data = getCellData(row, column);
     CSMWorld::UniversalId::Type idType = CSMWorld::TableMimeData::convertEnums(data.first);
-    return CSMWorld::ColumnBase::isId(data.first) && 
-           idType != CSMWorld::UniversalId::Type_None &&
-           !data.second.isEmpty();
+    return CSMWorld::ColumnBase::isId(data.first) && idType != CSMWorld::UniversalId::Type_None
+        && !data.second.isEmpty();
 }

@@ -5,26 +5,28 @@ namespace CSMWorld
 {
     struct NestedTableWrapperBase
     {
-        virtual ~NestedTableWrapperBase();
-        
+        virtual ~NestedTableWrapperBase() = default;
+
         virtual int size() const;
-        
-        NestedTableWrapperBase();
+
+        NestedTableWrapperBase() = default;
     };
-    
-    template<typename NestedTable>
+
+    template <typename NestedTable>
     struct NestedTableWrapper : public NestedTableWrapperBase
     {
         NestedTable mNestedTable;
 
         NestedTableWrapper(const NestedTable& nestedTable)
-            : mNestedTable(nestedTable) {}
+            : mNestedTable(nestedTable)
+        {
+        }
 
-        virtual ~NestedTableWrapper() {}
+        ~NestedTableWrapper() override = default;
 
         int size() const override
         {
-            return mNestedTable.size(); //i hope that this will be enough
+            return mNestedTable.size(); // i hope that this will be enough
         }
     };
 }

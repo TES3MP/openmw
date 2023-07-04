@@ -1,89 +1,70 @@
 #include "spellicons.hpp"
 
-#include <sstream>
 #include <iomanip>
+#include <sstream>
 
 #include <MyGUI_ImageBox.h>
 
-#include <components/esm/loadmgef.hpp>
-#include <components/settings/settings.hpp>
+#include <components/esm3/loadmgef.hpp>
+#include <components/misc/resourcehelpers.hpp>
+#include <components/resource/resourcesystem.hpp>
+#include <components/settings/values.hpp>
 
-#include "../mwbase/world.hpp"
 #include "../mwbase/environment.hpp"
 #include "../mwbase/windowmanager.hpp"
 
 #include "../mwworld/class.hpp"
 #include "../mwworld/esmstore.hpp"
-#include "../mwworld/inventorystore.hpp"
 
-#include "../mwmechanics/creaturestats.hpp"
 #include "../mwmechanics/actorutil.hpp"
+#include "../mwmechanics/creaturestats.hpp"
 
 #include "tooltips.hpp"
 
-
 namespace MWGui
 {
-
-    void EffectSourceVisitor::visit (MWMechanics::EffectKey key, int effectIndex,
-                                     const std::string& sourceName, const std::string& sourceId, int casterActorId,
-                                     float magnitude, float remainingTime, float totalTime)
+    void SpellIcons::updateWidgets(MyGUI::Widget* parent, bool adjustSize)
     {
-        MagicEffectInfo newEffectSource;
-        newEffectSource.mKey = key;
-        newEffectSource.mMagnitude = static_cast<int>(magnitude);
-        newEffectSource.mPermanent = mIsPermanent;
-        newEffectSource.mRemainingTime = remainingTime;
-        newEffectSource.mSource = sourceName;
-        newEffectSource.mTotalTime = totalTime;
-
-        mEffectSources[key.mId].push_back(newEffectSource);
-    }
-
-
-    void SpellIcons::updateWidgets(MyGUI::Widget *parent, bool adjustSize)
-    {
-        // TODO: Tracking add/remove/expire would be better than force updating every frame
-
         MWWorld::Ptr player = MWMechanics::getPlayer();
         const MWMechanics::CreatureStats& stats = player.getClass().getCreatureStats(player);
 
-
-        EffectSourceVisitor visitor;
-
-        // permanent item enchantments & permanent spells
-        visitor.mIsPermanent = true;
-        MWWorld::InventoryStore& store = player.getClass().getInventoryStore(player);
-        store.visitEffectSources(visitor);
-        stats.getSpells().visitEffectSources(visitor);
-
-        // now add lasting effects
-        visitor.mIsPermanent = false;
-        stats.getActiveSpells().visitEffectSources(visitor);
-
-        std::map <int, std::vector<MagicEffectInfo> >& effects = visitor.mEffectSources;
-
-        int w=2;
-
-        for (auto& effectInfoPair : effects)
+        std::map<int, std::vector<MagicEffectInfo>> effects;
+        for (const auto& params : stats.getActiveSpells())
         {
-            const int effectId = effectInfoPair.first;
-            const ESM::MagicEffect* effect =
-                MWBase::Environment::get().getWorld ()->getStore ().get<ESM::MagicEffect>().find(effectId);
+            for (const auto& effect : params.getEffects())
+            {
+                if (!(effect.mFlags & ESM::ActiveEffect::Flag_Applied))
+                    continue;
+                MagicEffectInfo newEffectSource;
+                newEffectSource.mKey = MWMechanics::EffectKey(effect.mEffectId, effect.mArg);
+                newEffectSource.mMagnitude = static_cast<int>(effect.mMagnitude);
+                newEffectSource.mPermanent = effect.mDuration == -1.f;
+                newEffectSource.mRemainingTime = effect.mTimeLeft;
+                newEffectSource.mSource = params.getDisplayName();
+                newEffectSource.mTotalTime = effect.mDuration;
+                effects[effect.mEffectId].push_back(newEffectSource);
+            }
+        }
+
+        int w = 2;
+        const auto& store = MWBase::Environment::get().getESMStore();
+        for (const auto& [effectId, effectInfos] : effects)
+        {
+            const ESM::MagicEffect* effect = store->get<ESM::MagicEffect>().find(effectId);
 
             float remainingDuration = 0;
             float totalDuration = 0;
 
             std::string sourcesDescription;
 
-            static const float fadeTime = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("fMagicStartIconBlink")->mValue.getFloat();
+            static const float fadeTime
+                = store->get<ESM::GameSetting>().find("fMagicStartIconBlink")->mValue.getFloat();
 
-            std::vector<MagicEffectInfo>& effectInfos = effectInfoPair.second;
             bool addNewLine = false;
             for (const MagicEffectInfo& effectInfo : effectInfos)
             {
                 if (addNewLine)
-                    sourcesDescription += "\n";
+                    sourcesDescription += '\n';
 
                 // if at least one of the effect sources is permanent, the effect will never wear off
                 if (effectInfo.mPermanent)
@@ -100,45 +81,63 @@ namespace MWGui
                 sourcesDescription += effectInfo.mSource;
 
                 if (effect->mData.mFlags & ESM::MagicEffect::TargetSkill)
-                    sourcesDescription += " (" +
-                            MWBase::Environment::get().getWindowManager()->getGameSettingString(
-                                ESM::Skill::sSkillNameIds[effectInfo.mKey.mArg], "") + ")";
+                {
+                    const ESM::Skill* skill
+                        = store->get<ESM::Skill>().find(ESM::Skill::indexToRefId(effectInfo.mKey.mArg));
+                    sourcesDescription += " (" + skill->mName + ')';
+                }
                 if (effect->mData.mFlags & ESM::MagicEffect::TargetAttribute)
-                    sourcesDescription += " (" +
-                            MWBase::Environment::get().getWindowManager()->getGameSettingString(
-                                ESM::Attribute::sGmstAttributeIds[effectInfo.mKey.mArg], "") + ")";
-
+                {
+                    const ESM::Attribute* attribute = store->get<ESM::Attribute>().find(effectInfo.mKey.mArg);
+                    sourcesDescription += " (" + attribute->mName + ')';
+                }
                 ESM::MagicEffect::MagnitudeDisplayType displayType = effect->getMagnitudeDisplayType();
                 if (displayType == ESM::MagicEffect::MDT_TimesInt)
                 {
-                    std::string timesInt =  MWBase::Environment::get().getWindowManager()->getGameSettingString("sXTimesINT", "");
+                    std::string_view timesInt
+                        = MWBase::Environment::get().getWindowManager()->getGameSettingString("sXTimesINT", {});
                     std::stringstream formatter;
-                    formatter << std::fixed << std::setprecision(1) << " " << (effectInfo.mMagnitude / 10.0f) << timesInt;
+                    formatter << std::fixed << std::setprecision(1) << " " << (effectInfo.mMagnitude / 10.0f)
+                              << timesInt;
                     sourcesDescription += formatter.str();
                 }
-                else if ( displayType != ESM::MagicEffect::MDT_None )
+                else if (displayType != ESM::MagicEffect::MDT_None)
                 {
                     sourcesDescription += ": " + MyGUI::utility::toString(effectInfo.mMagnitude);
 
-                    if ( displayType == ESM::MagicEffect::MDT_Percentage )
-                        sourcesDescription += MWBase::Environment::get().getWindowManager()->getGameSettingString("spercent", "");
-                    else if ( displayType == ESM::MagicEffect::MDT_Feet )
-                        sourcesDescription += " " + MWBase::Environment::get().getWindowManager()->getGameSettingString("sfeet", "");
-                    else if ( displayType == ESM::MagicEffect::MDT_Level )
+                    if (displayType == ESM::MagicEffect::MDT_Percentage)
+                        sourcesDescription
+                            += MWBase::Environment::get().getWindowManager()->getGameSettingString("spercent", {});
+                    else if (displayType == ESM::MagicEffect::MDT_Feet)
                     {
-                        sourcesDescription += " " + ((effectInfo.mMagnitude > 1) ?
-                            MWBase::Environment::get().getWindowManager()->getGameSettingString("sLevels", "") :
-                            MWBase::Environment::get().getWindowManager()->getGameSettingString("sLevel", "") );
+                        sourcesDescription += ' ';
+                        sourcesDescription
+                            += MWBase::Environment::get().getWindowManager()->getGameSettingString("sfeet", {});
+                    }
+                    else if (displayType == ESM::MagicEffect::MDT_Level)
+                    {
+                        sourcesDescription += ' ';
+                        if (effectInfo.mMagnitude > 1)
+                            sourcesDescription
+                                += MWBase::Environment::get().getWindowManager()->getGameSettingString("sLevels", {});
+                        else
+                            sourcesDescription
+                                += MWBase::Environment::get().getWindowManager()->getGameSettingString("sLevel", {});
                     }
                     else // ESM::MagicEffect::MDT_Points
                     {
-                        sourcesDescription += " " + ((effectInfo.mMagnitude > 1) ?
-                            MWBase::Environment::get().getWindowManager()->getGameSettingString("spoints", "") :
-                            MWBase::Environment::get().getWindowManager()->getGameSettingString("spoint", "") );
+                        sourcesDescription += ' ';
+                        if (effectInfo.mMagnitude > 1)
+                            sourcesDescription
+                                += MWBase::Environment::get().getWindowManager()->getGameSettingString("spoints", {});
+                        else
+                            sourcesDescription
+                                += MWBase::Environment::get().getWindowManager()->getGameSettingString("spoint", {});
                     }
                 }
-                if (effectInfo.mRemainingTime > -1 && Settings::Manager::getBool("show effect duration","Game"))
-                    sourcesDescription += MWGui::ToolTips::getDurationString(effectInfo.mRemainingTime, " #{sDuration}");
+                if (effectInfo.mRemainingTime > -1 && Settings::game().mShowEffectDuration)
+                    sourcesDescription
+                        += MWGui::ToolTips::getDurationString(effectInfo.mRemainingTime, " #{sDuration}");
 
                 addNewLine = true;
             }
@@ -148,13 +147,14 @@ namespace MWGui
                 MyGUI::ImageBox* image;
                 if (mWidgetMap.find(effectId) == mWidgetMap.end())
                 {
-                    image = parent->createWidget<MyGUI::ImageBox>
-                        ("ImageBox", MyGUI::IntCoord(w,2,16,16), MyGUI::Align::Default);
+                    image = parent->createWidget<MyGUI::ImageBox>(
+                        "ImageBox", MyGUI::IntCoord(w, 2, 16, 16), MyGUI::Align::Default);
                     mWidgetMap[effectId] = image;
 
-                    image->setImageTexture(MWBase::Environment::get().getWindowManager()->correctIconPath(effect->mIcon));
+                    image->setImageTexture(Misc::ResourceHelpers::correctIconPath(
+                        effect->mIcon, MWBase::Environment::get().getResourceSystem()->getVFS()));
 
-                    std::string name = ESM::MagicEffect::effectIdToString (effectId);
+                    const std::string& name = ESM::MagicEffect::indexToGmstString(effectId);
 
                     ToolTipInfo tooltipInfo;
                     tooltipInfo.caption = "#{" + name + "}";
@@ -168,7 +168,7 @@ namespace MWGui
                 else
                     image = mWidgetMap[effectId];
 
-                image->setPosition(w,2);
+                image->setPosition(w, 2);
                 image->setVisible(true);
                 w += 16;
 
@@ -177,7 +177,7 @@ namespace MWGui
 
                 // Fade out
                 if (totalDuration >= fadeTime && fadeTime > 0.f)
-                    image->setAlpha(std::min(remainingDuration/fadeTime, 1.f));
+                    image->setAlpha(std::min(remainingDuration / fadeTime, 1.f));
             }
             else if (mWidgetMap.find(effectId) != mWidgetMap.end())
             {
@@ -194,7 +194,7 @@ namespace MWGui
                 s = 0;
             int diff = parent->getWidth() - s;
             parent->setSize(s, parent->getHeight());
-            parent->setPosition(parent->getLeft()+diff, parent->getTop());
+            parent->setPosition(parent->getLeft() + diff, parent->getTop());
         }
 
         // hide inactive effects

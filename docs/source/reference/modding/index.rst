@@ -25,6 +25,11 @@ about creating new content for OpenMW, please refer to
 	texture-modding/index
 	custom-models/index
 	font
+	sound-effects
+	music
 	sky-system
+	doors-and-teleports
+	custom-shader-effects
 	extended
 	paths
+	localisation

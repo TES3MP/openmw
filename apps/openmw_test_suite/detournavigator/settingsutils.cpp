@@ -1,4 +1,3 @@
-#include "operators.hpp"
 
 #include <components/detournavigator/settingsutils.hpp>
 
@@ -11,7 +10,7 @@ namespace
 
     struct DetourNavigatorGetTilePositionTest : Test
     {
-        Settings mSettings;
+        RecastSettings mSettings;
 
         DetourNavigatorGetTilePositionTest()
         {
@@ -47,7 +46,7 @@ namespace
 
     struct DetourNavigatorMakeTileBoundsTest : Test
     {
-        Settings mSettings;
+        RecastSettings mSettings;
 
         DetourNavigatorMakeTileBoundsTest()
         {
@@ -58,11 +57,12 @@ namespace
 
     TEST_F(DetourNavigatorMakeTileBoundsTest, tile_bounds_depend_on_tile_size_and_cell_size)
     {
-        EXPECT_EQ(makeTileBounds(mSettings, TilePosition(0, 0)), (TileBounds {osg::Vec2f(0, 0), osg::Vec2f(32, 32)}));
+        EXPECT_EQ(makeTileBounds(mSettings, TilePosition(0, 0)), (TileBounds{ osg::Vec2f(0, 0), osg::Vec2f(32, 32) }));
     }
 
     TEST_F(DetourNavigatorMakeTileBoundsTest, tile_bounds_are_multiplied_by_tile_position)
     {
-        EXPECT_EQ(makeTileBounds(mSettings, TilePosition(1, 2)), (TileBounds {osg::Vec2f(32, 64), osg::Vec2f(64, 96)}));
+        EXPECT_EQ(
+            makeTileBounds(mSettings, TilePosition(1, 2)), (TileBounds{ osg::Vec2f(32, 64), osg::Vec2f(64, 96) }));
     }
 }

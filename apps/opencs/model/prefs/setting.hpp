@@ -10,70 +10,60 @@ class QWidget;
 class QColor;
 class QMutex;
 
-namespace Settings
-{
-    class Manager;
-}
-
 namespace CSMPrefs
 {
     class Category;
 
     class Setting : public QObject
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            Category *mParent;
-            Settings::Manager *mValues;
-            QMutex *mMutex;
-            std::string mKey;
-            std::string mLabel;
+        Category* mParent;
+        QMutex* mMutex;
+        std::string mKey;
+        std::string mLabel;
 
-        protected:
+    protected:
+        QMutex* getMutex();
 
-            Settings::Manager& getValues();
+    public:
+        Setting(Category* parent, QMutex* mutex, const std::string& key, const std::string& label);
 
-            QMutex *getMutex();
+        ~Setting() override = default;
 
-        public:
+        /// Return label, input widget.
+        ///
+        /// \note first can be a 0-pointer, which means that the label is part of the input
+        /// widget.
+        virtual std::pair<QWidget*, QWidget*> makeWidgets(QWidget* parent);
 
-            Setting (Category *parent, Settings::Manager *values, QMutex *mutex, const std::string& key, const std::string& label);
+        /// Updates the widget returned by makeWidgets() to the current setting.
+        ///
+        /// \note If make_widgets() has not been called yet then nothing happens.
+        virtual void updateWidget();
 
-            virtual ~Setting();
+        const Category* getParent() const;
 
-            /// Return label, input widget.
-            ///
-            /// \note first can be a 0-pointer, which means that the label is part of the input
-            /// widget.
-            virtual std::pair<QWidget *, QWidget *> makeWidgets (QWidget *parent);
+        const std::string& getKey() const;
 
-            /// Updates the widget returned by makeWidgets() to the current setting.
-            ///
-            /// \note If make_widgets() has not been called yet then nothing happens.
-            virtual void updateWidget();
+        const std::string& getLabel() const;
 
-            const Category *getParent() const;
+        int toInt() const;
 
-            const std::string& getKey() const;
+        double toDouble() const;
 
-            const std::string& getLabel() const;
+        std::string toString() const;
 
-            int toInt() const;
+        bool isTrue() const;
 
-            double toDouble() const;
-
-            std::string toString() const;
-
-            bool isTrue() const;
-
-            QColor toColor() const;
+        QColor toColor() const;
     };
 
     // note: fullKeys have the format categoryKey/settingKey
-    bool operator== (const Setting& setting, const std::string& fullKey);
-    bool operator== (const std::string& fullKey, const Setting& setting);
-    bool operator!= (const Setting& setting, const std::string& fullKey);
-    bool operator!= (const std::string& fullKey, const Setting& setting);
+    bool operator==(const Setting& setting, const std::string& fullKey);
+    bool operator==(const std::string& fullKey, const Setting& setting);
+    bool operator!=(const Setting& setting, const std::string& fullKey);
+    bool operator!=(const std::string& fullKey, const Setting& setting);
 }
 
 #endif

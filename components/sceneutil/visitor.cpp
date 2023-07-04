@@ -6,13 +6,15 @@
 #include <osgParticle/ParticleSystem>
 
 #include <components/debug/debuglog.hpp>
+#include <components/misc/strings/algorithm.hpp>
 
-#include <components/misc/stringops.hpp>
+#include <cstring>
+#include <string_view>
 
 namespace SceneUtil
 {
 
-    bool FindByNameVisitor::checkGroup(osg::Group &group)
+    bool FindByNameVisitor::checkGroup(osg::Group& group)
     {
         if (Misc::StringUtils::ciEqual(group.getName(), mNameToFind))
         {
@@ -22,7 +24,7 @@ namespace SceneUtil
         return false;
     }
 
-    void FindByClassVisitor::apply(osg::Node &node)
+    void FindByClassVisitor::apply(osg::Node& node)
     {
         if (Misc::StringUtils::ciEqual(node.className(), mNameToFind))
             mFoundNodes.push_back(&node);
@@ -30,51 +32,34 @@ namespace SceneUtil
         traverse(node);
     }
 
-    void FindByNameVisitor::apply(osg::Group &group)
+    void FindByNameVisitor::apply(osg::Group& group)
     {
-        if (!checkGroup(group))
+        if (!mFoundNode && !checkGroup(group))
             traverse(group);
     }
 
-    void FindByNameVisitor::apply(osg::MatrixTransform &node)
+    void FindByNameVisitor::apply(osg::MatrixTransform& node)
     {
-        if (!checkGroup(node))
+        if (!mFoundNode && !checkGroup(node))
             traverse(node);
     }
 
-    void FindByNameVisitor::apply(osg::Geometry&)
-    {
-    }
-
-    void DisableFreezeOnCullVisitor::apply(osg::MatrixTransform &node)
-    {
-        traverse(node);
-    }
-
-    void DisableFreezeOnCullVisitor::apply(osg::Drawable& drw)
-    {
-        if (osgParticle::ParticleSystem* partsys = dynamic_cast<osgParticle::ParticleSystem*>(&drw))
-            partsys->setFreezeOnCull(false);
-    }
+    void FindByNameVisitor::apply(osg::Geometry&) {}
 
     void NodeMapVisitor::apply(osg::MatrixTransform& trans)
     {
-        // Take transformation for first found node in file
-        std::string originalNodeName = Misc::StringUtils::lowerCase(trans.getName());
+        // Choose first found node in file
 
-        if (trans.libraryName() == std::string("osgAnimation"))
+        if (trans.libraryName() == std::string_view("osgAnimation"))
         {
-            // Convert underscores to whitespaces as a workaround for Collada (OpenMW's animation system uses whitespace-separated names)
-            std::string underscore = "_";
-            std::size_t foundUnderscore = originalNodeName.find(underscore);
-
-            if (foundUnderscore != std::string::npos)
-                std::replace(originalNodeName.begin(), originalNodeName.end(), '_', ' ');
+            std::string nodeName = trans.getName();
+            // Convert underscores to whitespaces as a workaround for Collada (OpenMW's animation system uses
+            // whitespace-separated names)
+            std::replace(nodeName.begin(), nodeName.end(), '_', ' ');
+            mMap.emplace(nodeName, &trans);
         }
-
-        const std::string nodeName = originalNodeName;
-
-        mMap.emplace(nodeName, &trans);
+        else
+            mMap.emplace(trans.getName(), &trans);
 
         traverse(trans);
     }
@@ -121,7 +106,7 @@ namespace SceneUtil
 
     void CleanObjectRootVisitor::applyDrawable(osg::Node& node)
     {
-        osg::NodePath::iterator parent = getNodePath().end()-2;
+        osg::NodePath::iterator parent = getNodePath().end() - 2;
         // We know that the parent is a Group because only Groups can have children.
         osg::Group* parentGroup = static_cast<osg::Group*>(*parent);
 
@@ -158,10 +143,9 @@ namespace SceneUtil
 
     void RemoveTriBipVisitor::applyImpl(osg::Node& node)
     {
-        const std::string toFind = "tri bip";
-        if (Misc::StringUtils::ciCompareLen(node.getName(), toFind, toFind.size()) == 0)
+        if (Misc::StringUtils::ciStartsWith(node.getName(), "tri bip"))
         {
-            osg::Group* parent = static_cast<osg::Group*>(*(getNodePath().end()-2));
+            osg::Group* parent = static_cast<osg::Group*>(*(getNodePath().end() - 2));
             // Not safe to remove in apply(), since the visitor is still iterating the child list
             mToRemove.emplace_back(&node, parent);
         }

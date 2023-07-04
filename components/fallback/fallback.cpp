@@ -1,85 +1,101 @@
 #include "fallback.hpp"
 
-#include <sstream>
+#include <string>
+#include <vector>
 
 #include <components/debug/debuglog.hpp>
+#include <components/misc/strings/algorithm.hpp>
+#include <components/misc/strings/conversion.hpp>
+
+#include "validate.hpp"
 
 namespace Fallback
 {
-    std::map<std::string,std::string> Map::mFallbackMap;
+    std::map<std::string, int, std::less<>> Map::mIntFallbackMap;
+    std::map<std::string, float, std::less<>> Map::mFloatFallbackMap;
+    std::map<std::string, std::string, std::less<>> Map::mNonNumericFallbackMap;
 
-    void Map::init(const std::map<std::string,std::string>& fallback)
+    void Map::init(const std::map<std::string, std::string>& fallback)
     {
-        mFallbackMap = fallback;
+        for (const auto& [key, value] : fallback)
+        {
+            if (isAllowedIntFallbackKey(key))
+                mIntFallbackMap.emplace(key, Misc::StringUtils::toNumeric<int>(value, 0));
+            else if (isAllowedFloatFallbackKey(key))
+                mFloatFallbackMap.emplace(key, Misc::StringUtils::toNumeric<float>(value, 0.0f));
+            else if (isAllowedNonNumericFallbackKey(key))
+                mNonNumericFallbackMap.emplace(key, value);
+            else if (!isAllowedUnusedFallbackKey(key))
+                Log(Debug::Error) << "Ignoring unknown fallback: " << key;
+        }
     }
 
-    std::string Map::getString(const std::string& fall)
+    std::string_view Map::getString(std::string_view fall)
     {
-        std::map<std::string,std::string>::const_iterator it;
-        if ((it = mFallbackMap.find(fall)) == mFallbackMap.end())
+        const auto it = mNonNumericFallbackMap.find(fall);
+        if (it == mNonNumericFallbackMap.end())
         {
-            return std::string();
+            if (!isAllowedNonNumericFallbackKey(fall))
+                throw std::logic_error("Requested invalid string fallback: " + std::string(fall));
+            return {};
         }
         return it->second;
     }
 
-    float Map::getFloat(const std::string& fall)
+    float Map::getFloat(std::string_view fall)
     {
-        const std::string& fallback = getString(fall);
-        if (!fallback.empty())
+        const auto it = mFloatFallbackMap.find(fall);
+        if (it == mFloatFallbackMap.end())
         {
-            std::stringstream stream(fallback);
-            float number = 0.f;
-            stream >> number;
-            return number;
+            if (!isAllowedFloatFallbackKey(fall))
+                throw std::logic_error("Requested invalid float fallback: " + std::string(fall));
+            return {};
         }
-
-        return 0;
+        return it->second;
     }
 
-    int Map::getInt(const std::string& fall)
+    int Map::getInt(std::string_view fall)
     {
-        const std::string& fallback = getString(fall);
-        if (!fallback.empty())
+        const auto it = mIntFallbackMap.find(fall);
+        if (it == mIntFallbackMap.end())
         {
-            std::stringstream stream(fallback);
-            int number = 0;
-            stream >> number;
-            return number;
+            if (!isAllowedIntFallbackKey(fall))
+                throw std::logic_error("Requested invalid int fallback: " + std::string(fall));
+            return {};
         }
-
-        return 0;
+        return it->second;
     }
 
-    bool Map::getBool(const std::string& fall)
+    bool Map::getBool(std::string_view fall)
     {
-        const std::string& fallback = getString(fall);
-        return !fallback.empty() && fallback != "0";
+        return getInt(fall) != 0;
     }
 
-    osg::Vec4f Map::getColour(const std::string& fall)
+    osg::Vec4f Map::getColour(std::string_view fall)
     {
-        const std::string& sum = getString(fall);
+        const std::string_view sum = getString(fall);
+
         if (!sum.empty())
         {
-            try
+            std::vector<std::string> ret;
+            Misc::StringUtils::split(sum, ret, ",");
+
+            if (ret.size() == 3)
             {
-                std::string ret[3];
-                unsigned int j = 0;
-                for (unsigned int i = 0; i < sum.length(); ++i)
+                const auto r = Misc::StringUtils::toNumeric<float>(ret[0]);
+                const auto g = Misc::StringUtils::toNumeric<float>(ret[1]);
+                const auto b = Misc::StringUtils::toNumeric<float>(ret[2]);
+
+                if (r.has_value() && g.has_value() && b.has_value())
                 {
-                    if(sum[i]==',') j++;
-                    else if (sum[i] != ' ') ret[j]+=sum[i];
+                    return osg::Vec4f(*r / 255.0f, *g / 255.0f, *b / 255.0f, 1.0f);
                 }
-                return osg::Vec4f(std::stoi(ret[0])/255.f,std::stoi(ret[1])/255.f,std::stoi(ret[2])/255.f, 1.f);    
             }
-            catch (const std::invalid_argument&)
-            {
-                Log(Debug::Error) << "Error: '" << fall << "' setting value (" << sum << ") is not a valid color, using middle gray as a fallback";
-            }
+
+            Log(Debug::Error) << "Error: '" << fall << "' setting value (" << sum
+                              << ") is not a valid color, using middle gray as a fallback";
         }
 
-        return osg::Vec4f(0.5f,0.5f,0.5f,1.f);
+        return osg::Vec4f(0.5f, 0.5f, 0.5f, 1.f);
     }
-
 }

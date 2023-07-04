@@ -1,78 +1,83 @@
 #include "filesystemarchive.hpp"
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
+
+#include "pathutil.hpp"
 
 #include <components/debug/debuglog.hpp>
+#include <components/files/constrainedfilestream.hpp>
+#include <components/files/conversion.hpp>
 
 namespace VFS
 {
 
-    FileSystemArchive::FileSystemArchive(const std::string &path)
+    FileSystemArchive::FileSystemArchive(const std::filesystem::path& path)
         : mBuiltIndex(false)
         , mPath(path)
     {
-
     }
 
-    void FileSystemArchive::listResources(std::map<std::string, File *> &out, char (*normalize_function)(char))
+    void FileSystemArchive::listResources(std::map<std::string, File*>& out)
     {
         if (!mBuiltIndex)
         {
-            typedef boost::filesystem::recursive_directory_iterator directory_iterator;
+            const auto str = mPath.u8string();
+            size_t prefix = str.size();
 
-            directory_iterator end;
-
-            size_t prefix = mPath.size ();
-
-            if (mPath.size () > 0 && mPath [prefix - 1] != '\\' && mPath [prefix - 1] != '/')
+            if (!mPath.empty() && str[prefix - 1] != '\\' && str[prefix - 1] != '/')
                 ++prefix;
 
-            for (directory_iterator i (mPath); i != end; ++i)
+            for (const auto& i : std::filesystem::recursive_directory_iterator(mPath))
             {
-                if(boost::filesystem::is_directory (*i))
+                if (std::filesystem::is_directory(i))
                     continue;
 
-                std::string proper = i->path ().string ();
+                const auto& path = i.path();
+                const std::string proper = Files::pathToUnicodeString(path);
 
-                FileSystemArchiveFile file(proper);
+                FileSystemArchiveFile file(path);
 
-                std::string searchable;
+                std::string searchable = Path::normalizeFilename(std::string_view{ proper }.substr(prefix));
 
-                std::transform(proper.begin() + prefix, proper.end(), std::back_inserter(searchable), normalize_function);
-
-                if (!mIndex.insert (std::make_pair (searchable, file)).second)
-                    Log(Debug::Warning) << "Warning: found duplicate file for '" << proper << "', please check your file system for two files with the same name in different cases.";
+                const auto inserted = mIndex.emplace(searchable, file);
+                if (!inserted.second)
+                    Log(Debug::Warning)
+                        << "Warning: found duplicate file for '" << proper
+                        << "', please check your file system for two files with the same name in different cases.";
+                else
+                    out[inserted.first->first] = &inserted.first->second;
             }
-
             mBuiltIndex = true;
         }
-
-        for (index::iterator it = mIndex.begin(); it != mIndex.end(); ++it)
+        else
         {
-            out[it->first] = &it->second;
+            for (index::iterator it = mIndex.begin(); it != mIndex.end(); ++it)
+            {
+                out[it->first] = &it->second;
+            }
         }
     }
 
-    bool FileSystemArchive::contains(const std::string& file, char (*normalize_function)(char)) const
+    bool FileSystemArchive::contains(const std::string& file) const
     {
         return mIndex.find(file) != mIndex.end();
     }
 
     std::string FileSystemArchive::getDescription() const
     {
-        return std::string{"DIR: "} + mPath;
+        return "DIR: " + Files::pathToUnicodeString(mPath);
     }
 
     // ----------------------------------------------------------------------------------
 
-    FileSystemArchiveFile::FileSystemArchiveFile(const std::string &path)
+    FileSystemArchiveFile::FileSystemArchiveFile(const std::filesystem::path& path)
         : mPath(path)
     {
     }
 
     Files::IStreamPtr FileSystemArchiveFile::open()
     {
-        return Files::openConstrainedFileStream(mPath.c_str());
+        return Files::openConstrainedFileStream(mPath);
     }
 
 }

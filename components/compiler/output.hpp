@@ -5,6 +5,7 @@
 
 #include <vector>
 
+#include <components/interpreter/program.hpp>
 #include <components/interpreter/types.hpp>
 
 namespace Compiler
@@ -13,32 +14,29 @@ namespace Compiler
 
     class Output
     {
-            Literals mLiterals;
-            std::vector<Interpreter::Type_Code> mCode;            
-            Locals& mLocals;
-                
-        public:
-        
-            Output (Locals& locals);
-    
-            void getCode (std::vector<Interpreter::Type_Code>& code) const;
-            ///< store generated code in \a code.
+        Literals mLiterals;
+        std::vector<Interpreter::Type_Code> mCode;
+        Locals& mLocals;
 
-            const Literals& getLiterals() const;
+    public:
+        Output(Locals& locals);
 
-            const Locals& getLocals() const;
-            
-            const std::vector<Interpreter::Type_Code>& getCode() const;
-            
-            Literals& getLiterals();
+        Interpreter::Program getProgram() const;
 
-            std::vector<Interpreter::Type_Code>& getCode();
-            
-            Locals& getLocals();
-            
-            void clear();
+        const Literals& getLiterals() const;
+
+        const Locals& getLocals() const;
+
+        const std::vector<Interpreter::Type_Code>& getCode() const;
+
+        Literals& getLiterals();
+
+        std::vector<Interpreter::Type_Code>& getCode();
+
+        Locals& getLocals();
+
+        void clear();
     };
 }
 
 #endif
-

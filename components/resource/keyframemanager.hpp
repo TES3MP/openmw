@@ -11,26 +11,30 @@
 
 namespace Resource
 {
-    /// @brief extract animations to OpenMW's animation system
+    /// @brief extract animations from OSG formats to OpenMW's animation system
     class RetrieveAnimationsVisitor : public osg::NodeVisitor
     {
-        public:
-            RetrieveAnimationsVisitor(SceneUtil::KeyframeHolder& target, osg::ref_ptr<osgAnimation::BasicAnimationManager> animationManager,
-                const std::string& normalized, const VFS::Manager* vfs);
+    public:
+        RetrieveAnimationsVisitor(SceneUtil::KeyframeHolder& target,
+            osg::ref_ptr<osgAnimation::BasicAnimationManager> animationManager, const std::string& normalized,
+            const VFS::Manager* vfs);
 
-            virtual void apply(osg::Node& node) override;
+        bool belongsToLeftUpperExtremity(const std::string& name);
+        bool belongsToRightUpperExtremity(const std::string& name);
+        bool belongsToTorso(const std::string& name);
 
-        private:
+        void addKeyframeController(const std::string& name, const osg::Node& node);
+        virtual void apply(osg::Node& node) override;
 
-            std::string changeFileExtension(const std::string file, const std::string ext);
-            std::string parseTextKey(const std::string& line);
-            double parseTimeSignature(const std::string& line);
+    private:
+        std::string changeFileExtension(const std::string& file, const std::string& ext);
+        std::string parseTextKey(const std::string& line);
+        double parseTimeSignature(const std::string& line);
 
-            SceneUtil::KeyframeHolder& mTarget;
-            osg::ref_ptr<osgAnimation::BasicAnimationManager> mAnimationManager;
-            std::string mNormalized;
-            const VFS::Manager* mVFS;
-
+        SceneUtil::KeyframeHolder& mTarget;
+        osg::ref_ptr<osgAnimation::BasicAnimationManager> mAnimationManager;
+        std::string mNormalized;
+        const VFS::Manager* mVFS;
     };
 }
 
@@ -45,13 +49,14 @@ namespace Resource
     {
     public:
         KeyframeManager(const VFS::Manager* vfs, SceneManager* sceneManager);
-        ~KeyframeManager();
+        ~KeyframeManager() = default;
 
         /// Retrieve a read-only keyframe resource by name (case-insensitive).
         /// @note Throws an exception if the resource is not found.
         osg::ref_ptr<const SceneUtil::KeyframeHolder> get(const std::string& name);
 
         void reportStats(unsigned int frameNumber, osg::Stats* stats) const override;
+
     private:
         SceneManager* mSceneManager;
     };

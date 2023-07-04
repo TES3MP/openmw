@@ -1,11 +1,17 @@
 #include "cellborder.hpp"
 
+#include <osg/Array>
+#include <osg/GL>
+#include <osg/Geometry>
 #include <osg/Group>
 #include <osg/PositionAttitudeTransform>
-#include <osg/Geometry>
 #include <osg/PrimitiveSet>
+#include <osg/StateAttribute>
+#include <osg/StateSet>
+#include <osg/Vec3f>
+#include <osg/Vec4f>
 
-#include <components/esm/loadland.hpp>
+#include <components/esm3/loadland.hpp>
 
 #include "mask.hpp"
 
@@ -19,12 +25,11 @@ const int CSVRender::CellBorder::CellSize = ESM::Land::REAL_SIZE;
 */
 const int CSVRender::CellBorder::VertexCount = (ESM::Land::LAND_SIZE * 4) - 4;
 
-
 CSVRender::CellBorder::CellBorder(osg::Group* cellNode, const CSMWorld::CellCoordinates& coords)
     : mParentNode(cellNode)
 {
     mBorderGeometry = new osg::Geometry();
-    
+
     mBaseNode = new osg::PositionAttitudeTransform();
     mBaseNode->setNodeMask(Mask_CellBorder);
     mBaseNode->setPosition(osg::Vec3f(coords.getX() * CellSize, coords.getY() * CellSize, 10));
@@ -79,8 +84,8 @@ void CSVRender::CellBorder::buildShape(const ESM::Land& esmLand)
 
     mBorderGeometry->setColorArray(colors, osg::Array::BIND_PER_PRIMITIVE_SET);
 
-    osg::ref_ptr<osg::DrawElementsUShort> primitives =
-        new osg::DrawElementsUShort(osg::PrimitiveSet::LINE_STRIP, VertexCount + 1);
+    osg::ref_ptr<osg::DrawElementsUShort> primitives
+        = new osg::DrawElementsUShort(osg::PrimitiveSet::LINE_STRIP, VertexCount + 1);
 
     // Assign one primitive to each vertex.
     for (size_t i = 0; i < VertexCount; ++i)

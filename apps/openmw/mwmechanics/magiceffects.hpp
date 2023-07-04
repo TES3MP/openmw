@@ -2,14 +2,17 @@
 #define GAME_MWMECHANICS_MAGICEFFECTS_H
 
 #include <map>
+#include <optional>
 #include <string>
 
 namespace ESM
 {
+    struct Attribute;
     struct ENAMstruct;
     struct EffectList;
-
+    struct MagicEffect;
     struct MagicEffects;
+    struct Skill;
 }
 
 namespace MWMechanics
@@ -21,12 +24,18 @@ namespace MWMechanics
 
         EffectKey();
 
-        EffectKey (int id, int arg = -1) : mId (id), mArg (arg) {}
+        EffectKey(int id, int arg = -1)
+            : mId(id)
+            , mArg(arg)
+        {
+        }
 
-        EffectKey (const ESM::ENAMstruct& effect);
+        EffectKey(const ESM::ENAMstruct& effect);
+
+        std::string toString() const;
     };
 
-    bool operator< (const EffectKey& left, const EffectKey& right);
+    bool operator<(const EffectKey& left, const EffectKey& right);
 
     struct EffectParam
     {
@@ -50,71 +59,64 @@ namespace MWMechanics
 
         EffectParam();
 
-        EffectParam(float magnitude) : mModifier(magnitude), mBase(0) {}
+        EffectParam(float magnitude)
+            : mModifier(magnitude)
+            , mBase(0)
+        {
+        }
 
-        EffectParam& operator+= (const EffectParam& param);
+        EffectParam& operator+=(const EffectParam& param);
 
-        EffectParam& operator-= (const EffectParam& param);
+        EffectParam& operator-=(const EffectParam& param);
     };
 
-    inline EffectParam operator+ (const EffectParam& left, const EffectParam& right)
+    inline EffectParam operator+(const EffectParam& left, const EffectParam& right)
     {
-        EffectParam param (left);
+        EffectParam param(left);
         return param += right;
     }
 
-    inline EffectParam operator- (const EffectParam& left, const EffectParam& right)
+    inline EffectParam operator-(const EffectParam& left, const EffectParam& right)
     {
-        EffectParam param (left);
+        EffectParam param(left);
         return param -= right;
     }
-
-    // Used by effect management classes (ActiveSpells, InventoryStore, Spells) to list active effect sources for GUI display
-    struct EffectSourceVisitor
-    {
-        virtual ~EffectSourceVisitor() { }
-
-        virtual void visit (EffectKey key, int effectIndex,
-                            const std::string& sourceName, const std::string& sourceId, int casterActorId,
-                            float magnitude, float remainingTime = -1, float totalTime = -1) = 0;
-    };
 
     /// \brief Effects currently affecting a NPC or creature
     class MagicEffects
     {
-        public:
+    public:
+        typedef std::map<EffectKey, EffectParam> Collection;
 
-            typedef std::map<EffectKey, EffectParam> Collection;
+    private:
+        Collection mCollection;
 
-        private:
+    public:
+        Collection::const_iterator begin() const { return mCollection.begin(); }
 
-            Collection mCollection;
+        Collection::const_iterator end() const { return mCollection.end(); }
 
-        public:
+        void readState(const ESM::MagicEffects& state);
+        void writeState(ESM::MagicEffects& state) const;
 
-            Collection::const_iterator begin() const { return mCollection.begin(); }
+        void add(const EffectKey& key, const EffectParam& param);
+        void remove(const EffectKey& key);
 
-            Collection::const_iterator end() const { return mCollection.end(); }
+        void modifyBase(const EffectKey& key, int diff);
 
-            void readState (const ESM::MagicEffects& state);
-            void writeState (ESM::MagicEffects& state) const;
+        /// Copy Modifier values from \a effects, but keep original mBase values.
+        void setModifiers(const MagicEffects& effects);
 
-            void add (const EffectKey& key, const EffectParam& param);
-            void remove (const EffectKey& key);
+        EffectParam getOrDefault(const EffectKey& key) const;
+        std::optional<EffectParam> get(const EffectKey& key) const;
+        ///< This function can safely be used for keys that are not present.
 
-            void modifyBase (const EffectKey& key, int diff);
-
-            /// Copy Modifier values from \a effects, but keep original mBase values.
-            void setModifiers(const MagicEffects& effects);
-
-            MagicEffects& operator+= (const MagicEffects& effects);
-
-            EffectParam get (const EffectKey& key) const;
-            ///< This function can safely be used for keys that are not present.
-
-            static MagicEffects diff (const MagicEffects& prev, const MagicEffects& now);
-            ///< Return changes from \a prev to \a now.
+        static MagicEffects diff(const MagicEffects& prev, const MagicEffects& now);
+        ///< Return changes from \a prev to \a now.
     };
+
+    std::string getMagicEffectString(
+        const ESM::MagicEffect& effect, const ESM::Attribute* attribute, const ESM::Skill* skill);
 }
 
 #endif

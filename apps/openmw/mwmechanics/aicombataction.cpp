@@ -1,30 +1,39 @@
 #include "aicombataction.hpp"
 
-#include <components/esm/loadench.hpp>
-#include <components/esm/loadmgef.hpp>
+#include <components/esm3/loadench.hpp>
+#include <components/esm3/loadmgef.hpp>
 
 #include "../mwbase/environment.hpp"
-#include "../mwbase/world.hpp"
 #include "../mwbase/mechanicsmanager.hpp"
+#include "../mwbase/world.hpp"
 
+#include "../mwworld/actionequip.hpp"
+#include "../mwworld/cellstore.hpp"
 #include "../mwworld/class.hpp"
 #include "../mwworld/esmstore.hpp"
 #include "../mwworld/inventorystore.hpp"
-#include "../mwworld/actionequip.hpp"
-#include "../mwworld/cellstore.hpp"
 
-#include "npcstats.hpp"
+#include "actorutil.hpp"
 #include "combat.hpp"
-#include "weaponpriority.hpp"
+#include "npcstats.hpp"
 #include "spellpriority.hpp"
+#include "weaponpriority.hpp"
 #include "weapontype.hpp"
 
 namespace MWMechanics
 {
     float suggestCombatRange(int rangeTypes)
     {
-        static const float fCombatDistance = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("fCombatDistance")->mValue.getFloat();
-        static float fHandToHandReach = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("fHandToHandReach")->mValue.getFloat();
+        static const float fCombatDistance = MWBase::Environment::get()
+                                                 .getESMStore()
+                                                 ->get<ESM::GameSetting>()
+                                                 .find("fCombatDistance")
+                                                 ->mValue.getFloat();
+        static float fHandToHandReach = MWBase::Environment::get()
+                                            .getESMStore()
+                                            ->get<ESM::GameSetting>()
+                                            .find("fHandToHandReach")
+                                            ->mValue.getFloat();
 
         // This distance is a possible distance of melee attack
         static float distance = fCombatDistance * std::max(2.f, fHandToHandReach);
@@ -37,39 +46,40 @@ namespace MWMechanics
         return distance * 4;
     }
 
-    void ActionSpell::prepare(const MWWorld::Ptr &actor)
+    void ActionSpell::prepare(const MWWorld::Ptr& actor)
     {
         actor.getClass().getCreatureStats(actor).getSpells().setSelectedSpell(mSpellId);
-        actor.getClass().getCreatureStats(actor).setDrawState(DrawState_Spell);
+        actor.getClass().getCreatureStats(actor).setDrawState(DrawState::Spell);
         if (actor.getClass().hasInventoryStore(actor))
         {
             MWWorld::InventoryStore& inv = actor.getClass().getInventoryStore(actor);
             inv.setSelectedEnchantItem(inv.end());
         }
 
-        const ESM::Spell* spell = MWBase::Environment::get().getWorld()->getStore().get<ESM::Spell>().find(mSpellId);
+        const ESM::Spell* spell = MWBase::Environment::get().getESMStore()->get<ESM::Spell>().find(mSpellId);
         MWBase::Environment::get().getWorld()->preloadEffects(&spell->mEffects);
     }
 
-    float ActionSpell::getCombatRange (bool& isRanged) const
+    float ActionSpell::getCombatRange(bool& isRanged) const
     {
-        const ESM::Spell* spell = MWBase::Environment::get().getWorld()->getStore().get<ESM::Spell>().find(mSpellId);
+        const ESM::Spell* spell = MWBase::Environment::get().getESMStore()->get<ESM::Spell>().find(mSpellId);
         int types = getRangeTypes(spell->mEffects);
 
         isRanged = (types & RangeTypes::Target) | (types & RangeTypes::Self);
         return suggestCombatRange(types);
     }
 
-    void ActionEnchantedItem::prepare(const MWWorld::Ptr &actor)
+    void ActionEnchantedItem::prepare(const MWWorld::Ptr& actor)
     {
-        actor.getClass().getCreatureStats(actor).getSpells().setSelectedSpell(std::string());
+        actor.getClass().getCreatureStats(actor).getSpells().setSelectedSpell(ESM::RefId());
         actor.getClass().getInventoryStore(actor).setSelectedEnchantItem(mItem);
-        actor.getClass().getCreatureStats(actor).setDrawState(DrawState_Spell);
+        actor.getClass().getCreatureStats(actor).setDrawState(DrawState::Spell);
     }
 
     float ActionEnchantedItem::getCombatRange(bool& isRanged) const
     {
-        const ESM::Enchantment* enchantment = MWBase::Environment::get().getWorld()->getStore().get<ESM::Enchantment>().find(mItem->getClass().getEnchantment(*mItem));
+        const ESM::Enchantment* enchantment = MWBase::Environment::get().getESMStore()->get<ESM::Enchantment>().find(
+            mItem->getClass().getEnchantment(*mItem));
         int types = getRangeTypes(enchantment->mEffects);
 
         isRanged = (types & RangeTypes::Target) | (types & RangeTypes::Self);
@@ -83,18 +93,17 @@ namespace MWMechanics
         return 600.f;
     }
 
-    void ActionPotion::prepare(const MWWorld::Ptr &actor)
+    void ActionPotion::prepare(const MWWorld::Ptr& actor)
     {
-        actor.getClass().apply(actor, mPotion.getCellRef().getRefId(), actor);
-        actor.getClass().getContainerStore(actor).remove(mPotion, 1, actor);
+        actor.getClass().consume(mPotion, actor);
     }
 
-    void ActionWeapon::prepare(const MWWorld::Ptr &actor)
+    void ActionWeapon::prepare(const MWWorld::Ptr& actor)
     {
         if (actor.getClass().hasInventoryStore(actor))
         {
             if (mWeapon.isEmpty())
-                actor.getClass().getInventoryStore(actor).unequipSlot(MWWorld::InventoryStore::Slot_CarriedRight, actor);
+                actor.getClass().getInventoryStore(actor).unequipSlot(MWWorld::InventoryStore::Slot_CarriedRight);
             else
             {
                 MWWorld::ActionEquip equip(mWeapon);
@@ -107,20 +116,31 @@ namespace MWMechanics
                 equip.execute(actor);
             }
         }
-        actor.getClass().getCreatureStats(actor).setDrawState(DrawState_Weapon);
+        actor.getClass().getCreatureStats(actor).setDrawState(DrawState::Weapon);
     }
 
     float ActionWeapon::getCombatRange(bool& isRanged) const
     {
         isRanged = false;
 
-        static const float fCombatDistance = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("fCombatDistance")->mValue.getFloat();
-        static const float fProjectileMaxSpeed = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("fProjectileMaxSpeed")->mValue.getFloat();
+        static const float fCombatDistance = MWBase::Environment::get()
+                                                 .getESMStore()
+                                                 ->get<ESM::GameSetting>()
+                                                 .find("fCombatDistance")
+                                                 ->mValue.getFloat();
+        static const float fProjectileMaxSpeed = MWBase::Environment::get()
+                                                     .getESMStore()
+                                                     ->get<ESM::GameSetting>()
+                                                     .find("fProjectileMaxSpeed")
+                                                     ->mValue.getFloat();
 
         if (mWeapon.isEmpty())
         {
-            static float fHandToHandReach =
-                MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("fHandToHandReach")->mValue.getFloat();
+            static float fHandToHandReach = MWBase::Environment::get()
+                                                .getESMStore()
+                                                ->get<ESM::GameSetting>()
+                                                .find("fHandToHandReach")
+                                                ->mValue.getFloat();
             return fHandToHandReach * fCombatDistance;
         }
 
@@ -141,14 +161,14 @@ namespace MWMechanics
         return mWeapon.get<ESM::Weapon>()->mBase;
     }
 
-    std::shared_ptr<Action> prepareNextAction(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy)
+    std::unique_ptr<Action> prepareNextAction(const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy)
     {
         Spells& spells = actor.getClass().getCreatureStats(actor).getSpells();
 
         float bestActionRating = 0.f;
         float antiFleeRating = 0.f;
         // Default to hand-to-hand combat
-        std::shared_ptr<Action> bestAction (new ActionWeapon(MWWorld::Ptr()));
+        std::unique_ptr<Action> bestAction = std::make_unique<ActionWeapon>(MWWorld::Ptr());
         if (actor.getClass().isNpc() && actor.getClass().getNpcStats(actor).isWerewolf())
         {
             bestAction->prepare(actor);
@@ -165,7 +185,7 @@ namespace MWMechanics
                 if (rating > bestActionRating)
                 {
                     bestActionRating = rating;
-                    bestAction.reset(new ActionPotion(*it));
+                    bestAction = std::make_unique<ActionPotion>(*it);
                     antiFleeRating = std::numeric_limits<float>::max();
                 }
             }
@@ -176,7 +196,7 @@ namespace MWMechanics
                 if (rating > bestActionRating)
                 {
                     bestActionRating = rating;
-                    bestAction.reset(new ActionEnchantedItem(it));
+                    bestAction = std::make_unique<ActionEnchantedItem>(it);
                     antiFleeRating = std::numeric_limits<float>::max();
                 }
             }
@@ -202,25 +222,25 @@ namespace MWMechanics
                         ammo = bestBolt;
 
                     bestActionRating = rating;
-                    bestAction.reset(new ActionWeapon(*it, ammo));
+                    bestAction = std::make_unique<ActionWeapon>(*it, ammo);
                     antiFleeRating = vanillaRateWeaponAndAmmo(*it, ammo, actor, enemy);
                 }
             }
         }
 
-        for (Spells::TIterator it = spells.begin(); it != spells.end(); ++it)
+        for (const ESM::Spell* spell : spells)
         {
-            float rating = rateSpell(it->first, actor, enemy);
+            float rating = rateSpell(spell, actor, enemy);
             if (rating > bestActionRating)
             {
                 bestActionRating = rating;
-                bestAction.reset(new ActionSpell(it->first->mId));
-                antiFleeRating = vanillaRateSpell(it->first, actor, enemy);
+                bestAction = std::make_unique<ActionSpell>(spell->mId);
+                antiFleeRating = vanillaRateSpell(spell, actor, enemy);
             }
         }
 
         if (makeFleeDecision(actor, enemy, antiFleeRating))
-            bestAction.reset(new ActionFlee());
+            bestAction = std::make_unique<ActionFlee>();
 
         if (bestAction.get())
             bestAction->prepare(actor);
@@ -228,7 +248,7 @@ namespace MWMechanics
         return bestAction;
     }
 
-    float getBestActionRating(const MWWorld::Ptr &actor, const MWWorld::Ptr &enemy)
+    float getBestActionRating(const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy)
     {
         Spells& spells = actor.getClass().getCreatureStats(actor).getSpells();
 
@@ -266,9 +286,9 @@ namespace MWMechanics
             }
         }
 
-        for (Spells::TIterator it = spells.begin(); it != spells.end(); ++it)
+        for (const ESM::Spell* spell : spells)
         {
-            float rating = rateSpell(it->first, actor, enemy);
+            float rating = rateSpell(spell, actor, enemy);
             if (rating > bestActionRating)
             {
                 bestActionRating = rating;
@@ -277,7 +297,6 @@ namespace MWMechanics
 
         return bestActionRating;
     }
-
 
     float getDistanceMinusHalfExtents(const MWWorld::Ptr& actor1, const MWWorld::Ptr& actor2, bool minusZDist)
     {
@@ -289,17 +308,17 @@ namespace MWMechanics
         if (minusZDist)
             dist -= std::abs(actor1Pos.z() - actor2Pos.z());
 
-        return (dist
-                - MWBase::Environment::get().getWorld()->getHalfExtents(actor1).y()
-                - MWBase::Environment::get().getWorld()->getHalfExtents(actor2).y());
+        return (dist - MWBase::Environment::get().getWorld()->getHalfExtents(actor1).y()
+            - MWBase::Environment::get().getWorld()->getHalfExtents(actor2).y());
     }
 
     float getMaxAttackDistance(const MWWorld::Ptr& actor)
     {
         const CreatureStats& stats = actor.getClass().getCreatureStats(actor);
-        const MWWorld::Store<ESM::GameSetting>& gmst = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+        const MWWorld::Store<ESM::GameSetting>& gmst
+            = MWBase::Environment::get().getESMStore()->get<ESM::GameSetting>();
 
-        std::string selectedSpellId = stats.getSpells().getSelectedSpell();
+        const ESM::RefId& selectedSpellId = stats.getSpells().getSelectedSpell();
         MWWorld::Ptr selectedEnchItem;
 
         MWWorld::Ptr activeWeapon, activeAmmo;
@@ -325,18 +344,21 @@ namespace MWMechanics
             static const float fHandToHandReach = gmst.find("fHandToHandReach")->mValue.getFloat();
             dist = fHandToHandReach;
         }
-        else if (stats.getDrawState() == MWMechanics::DrawState_Spell)
+        else if (stats.getDrawState() == MWMechanics::DrawState::Spell)
         {
             dist = 1.0f;
             if (!selectedSpellId.empty())
             {
-                const ESM::Spell* spell = MWBase::Environment::get().getWorld()->getStore().get<ESM::Spell>().find(selectedSpellId);
-                for (std::vector<ESM::ENAMstruct>::const_iterator effectIt =
-                     spell->mEffects.mList.begin(); effectIt != spell->mEffects.mList.end(); ++effectIt)
+                const ESM::Spell* spell
+                    = MWBase::Environment::get().getESMStore()->get<ESM::Spell>().find(selectedSpellId);
+                for (std::vector<ESM::ENAMstruct>::const_iterator effectIt = spell->mEffects.mList.begin();
+                     effectIt != spell->mEffects.mList.end(); ++effectIt)
                 {
                     if (effectIt->mRange == ESM::RT_Target)
                     {
-                        const ESM::MagicEffect* effect = MWBase::Environment::get().getWorld()->getStore().get<ESM::MagicEffect>().find(effectIt->mEffectID);
+                        const ESM::MagicEffect* effect
+                            = MWBase::Environment::get().getESMStore()->get<ESM::MagicEffect>().find(
+                                effectIt->mEffectID);
                         dist = effect->mData.mSpeed;
                         break;
                     }
@@ -344,16 +366,19 @@ namespace MWMechanics
             }
             else if (!selectedEnchItem.isEmpty())
             {
-                std::string enchId = selectedEnchItem.getClass().getEnchantment(selectedEnchItem);
+                const ESM::RefId& enchId = selectedEnchItem.getClass().getEnchantment(selectedEnchItem);
                 if (!enchId.empty())
                 {
-                    const ESM::Enchantment* ench = MWBase::Environment::get().getWorld()->getStore().get<ESM::Enchantment>().find(enchId);
-                    for (std::vector<ESM::ENAMstruct>::const_iterator effectIt =
-                         ench->mEffects.mList.begin(); effectIt != ench->mEffects.mList.end(); ++effectIt)
+                    const ESM::Enchantment* ench
+                        = MWBase::Environment::get().getESMStore()->get<ESM::Enchantment>().find(enchId);
+                    for (std::vector<ESM::ENAMstruct>::const_iterator effectIt = ench->mEffects.mList.begin();
+                         effectIt != ench->mEffects.mList.end(); ++effectIt)
                     {
                         if (effectIt->mRange == ESM::RT_Target)
                         {
-                            const ESM::MagicEffect* effect = MWBase::Environment::get().getWorld()->getStore().get<ESM::MagicEffect>().find(effectIt->mEffectID);
+                            const ESM::MagicEffect* effect
+                                = MWBase::Environment::get().getESMStore()->get<ESM::MagicEffect>().find(
+                                    effectIt->mEffectID);
                             dist = effect->mData.mSpeed;
                             break;
                         }
@@ -403,7 +428,8 @@ namespace MWMechanics
         ESM::Position actorPos = actor.getRefData().getPosition();
         ESM::Position enemyPos = enemy.getRefData().getPosition();
 
-        if (isTargetMagicallyHidden(enemy) && !MWBase::Environment::get().getMechanicsManager()->awarenessCheck(enemy, actor))
+        if (isTargetMagicallyHidden(enemy)
+            && !MWBase::Environment::get().getMechanicsManager()->awarenessCheck(enemy, actor))
         {
             return false;
         }
@@ -415,14 +441,14 @@ namespace MWMechanics
         }
 
         float atDist = getMaxAttackDistance(actor);
-        if (atDist > getDistanceMinusHalfExtents(actor, enemy)
-                && atDist > std::abs(actorPos.pos[2] - enemyPos.pos[2]))
+        if (atDist > getDistanceMinusHalfExtents(actor, enemy) && atDist > std::abs(actorPos.pos[2] - enemyPos.pos[2]))
         {
             if (MWBase::Environment::get().getWorld()->getLOS(actor, enemy))
                 return true;
         }
 
-        if (actor.getClass().isPureLandCreature(actor) && MWBase::Environment::get().getWorld()->isWalkingOnWater(enemy))
+        if (actor.getClass().isPureLandCreature(actor)
+            && MWBase::Environment::get().getWorld()->isWalkingOnWater(enemy))
         {
             return false;
         }
@@ -435,14 +461,21 @@ namespace MWMechanics
 
         if (actor.getClass().isBipedal(actor) || !actor.getClass().canFly(actor))
         {
-            if (enemy.getClass().getCreatureStats(enemy).getMagicEffects().get(ESM::MagicEffect::Levitate).getMagnitude() > 0)
+            if (enemy.getClass()
+                    .getCreatureStats(enemy)
+                    .getMagicEffects()
+                    .getOrDefault(ESM::MagicEffect::Levitate)
+                    .getMagnitude()
+                > 0)
             {
                 float attackDistance = getMaxAttackDistance(actor);
                 if ((attackDistance + actorPos.pos[2]) < enemyPos.pos[2])
                 {
                     if (enemy.getCell()->isExterior())
                     {
-                        if (attackDistance < (enemyPos.pos[2] - MWBase::Environment::get().getWorld()->getTerrainHeightAt(enemyPos.asVec3())))
+                        if (attackDistance < (enemyPos.pos[2]
+                                - MWBase::Environment::get().getWorld()->getTerrainHeightAt(
+                                    enemyPos.asVec3(), enemy.getCell()->getCell()->getWorldSpace())))
                             return false;
                     }
                 }
@@ -452,7 +485,12 @@ namespace MWMechanics
         if (!actor.getClass().canWalk(actor) && !actor.getClass().isBipedal(actor))
             return true;
 
-        if (actor.getClass().getCreatureStats(actor).getMagicEffects().get(ESM::MagicEffect::Levitate).getMagnitude() > 0)
+        if (actor.getClass()
+                .getCreatureStats(actor)
+                .getMagicEffects()
+                .getOrDefault(ESM::MagicEffect::Levitate)
+                .getMagnitude()
+            > 0)
             return true;
 
         if (MWBase::Environment::get().getWorld()->isSwimming(actor))
@@ -467,17 +505,17 @@ namespace MWMechanics
     float vanillaRateFlee(const MWWorld::Ptr& actor, const MWWorld::Ptr& enemy)
     {
         const CreatureStats& stats = actor.getClass().getCreatureStats(actor);
-        const MWWorld::Store<ESM::GameSetting>& gmst = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+        const MWWorld::Store<ESM::GameSetting>& gmst
+            = MWBase::Environment::get().getESMStore()->get<ESM::GameSetting>();
 
-        int flee = stats.getAiSetting(CreatureStats::AI_Flee).getModified();
+        const int flee = stats.getAiSetting(AiSetting::Flee).getModified();
         if (flee >= 100)
             return flee;
 
         static const float fAIFleeHealthMult = gmst.find("fAIFleeHealthMult")->mValue.getFloat();
         static const float fAIFleeFleeMult = gmst.find("fAIFleeFleeMult")->mValue.getFloat();
 
-        float healthPercentage = (stats.getHealth().getModified() == 0.0f)
-                                    ? 1.0f : stats.getHealth().getCurrent() / stats.getHealth().getModified();
+        float healthPercentage = stats.getHealth().getRatio(false);
         float rating = (1.0f - healthPercentage) * fAIFleeHealthMult + flee * fAIFleeFleeMult;
 
         static const int iWereWolfLevelToAttack = gmst.find("iWereWolfLevelToAttack")->mValue.getInteger();

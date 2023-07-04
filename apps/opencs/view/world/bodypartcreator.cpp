@@ -5,6 +5,8 @@
 #include "../../model/world/data.hpp"
 #include "../../model/world/universalid.hpp"
 
+#include <apps/opencs/view/world/genericcreator.hpp>
+
 std::string CSVWorld::BodyPartCreator::getId() const
 {
     std::string id = CSVWorld::GenericCreator::getId();
@@ -17,16 +19,13 @@ std::string CSVWorld::BodyPartCreator::getId() const
     return id;
 }
 
-CSVWorld::BodyPartCreator::BodyPartCreator(
-    CSMWorld::Data& data,
-    QUndoStack& undoStack,
-    const CSMWorld::UniversalId& id
-) : GenericCreator(data, undoStack, id)
+CSVWorld::BodyPartCreator::BodyPartCreator(CSMWorld::Data& data, QUndoStack& undoStack, const CSMWorld::UniversalId& id)
+    : GenericCreator(data, undoStack, id)
 {
     mFirstPerson = new QCheckBox("First Person", this);
     insertBeforeButtons(mFirstPerson, false);
 
-    connect(mFirstPerson, SIGNAL(clicked(bool)), this, SLOT(checkboxClicked()));
+    connect(mFirstPerson, &QCheckBox::clicked, this, &BodyPartCreator::checkboxClicked);
 }
 
 std::string CSVWorld::BodyPartCreator::getErrors() const

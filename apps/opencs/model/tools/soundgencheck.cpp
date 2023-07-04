@@ -1,16 +1,27 @@
 #include "soundgencheck.hpp"
 
+#include <string>
+
 #include "../prefs/state.hpp"
 
 #include "../world/refiddata.hpp"
 #include "../world/universalid.hpp"
 
-CSMTools::SoundGenCheckStage::SoundGenCheckStage(const CSMWorld::IdCollection<ESM::SoundGenerator> &soundGens,
-                                                 const CSMWorld::IdCollection<ESM::Sound> &sounds,
-                                                 const CSMWorld::RefIdCollection &objects)
-    : mSoundGens(soundGens),
-      mSounds(sounds),
-      mObjects(objects)
+#include <apps/opencs/model/doc/messages.hpp>
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/model/world/record.hpp>
+#include <apps/opencs/model/world/refidcollection.hpp>
+
+#include <components/esm3/loadsndg.hpp>
+#include <components/esm3/loadsoun.hpp>
+
+CSMTools::SoundGenCheckStage::SoundGenCheckStage(const CSMWorld::IdCollection<ESM::SoundGenerator>& soundGens,
+    const CSMWorld::IdCollection<ESM::Sound>& sounds, const CSMWorld::RefIdCollection& objects)
+    : mSoundGens(soundGens)
+    , mSounds(sounds)
+    , mObjects(objects)
 {
     mIgnoreBaseRecords = false;
 }
@@ -22,10 +33,10 @@ int CSMTools::SoundGenCheckStage::setup()
     return mSoundGens.getSize();
 }
 
-void CSMTools::SoundGenCheckStage::perform(int stage, CSMDoc::Messages &messages)
+void CSMTools::SoundGenCheckStage::perform(int stage, CSMDoc::Messages& messages)
 {
-    const CSMWorld::Record<ESM::SoundGenerator> &record = mSoundGens.getRecord(stage);
-    
+    const CSMWorld::Record<ESM::SoundGenerator>& record = mSoundGens.getRecord(stage);
+
     // Skip "Base" records (setting!) and "Deleted" records
     if ((mIgnoreBaseRecords && record.mState == CSMWorld::RecordBase::State_BaseOnly) || record.isDeleted())
         return;
@@ -38,11 +49,13 @@ void CSMTools::SoundGenCheckStage::perform(int stage, CSMDoc::Messages &messages
         CSMWorld::RefIdData::LocalIndex creatureIndex = mObjects.getDataSet().searchId(soundGen.mCreature);
         if (creatureIndex.first == -1)
         {
-            messages.add(id, "Creature '" + soundGen.mCreature + "' doesn't exist", "", CSMDoc::Message::Severity_Error);
+            messages.add(id, "Creature '" + soundGen.mCreature.getRefIdString() + "' doesn't exist", "",
+                CSMDoc::Message::Severity_Error);
         }
         else if (creatureIndex.second != CSMWorld::UniversalId::Type_Creature)
         {
-            messages.add(id, "'" + soundGen.mCreature + "' is not a creature", "", CSMDoc::Message::Severity_Error);
+            messages.add(id, "'" + soundGen.mCreature.getRefIdString() + "' is not a creature", "",
+                CSMDoc::Message::Severity_Error);
         }
     }
 
@@ -52,6 +65,7 @@ void CSMTools::SoundGenCheckStage::perform(int stage, CSMDoc::Messages &messages
     }
     else if (mSounds.searchId(soundGen.mSound) == -1)
     {
-        messages.add(id, "Sound '" + soundGen.mSound + "' doesn't exist", "", CSMDoc::Message::Severity_Error);
+        messages.add(
+            id, "Sound '" + soundGen.mSound.getRefIdString() + "' doesn't exist", "", CSMDoc::Message::Severity_Error);
     }
 }

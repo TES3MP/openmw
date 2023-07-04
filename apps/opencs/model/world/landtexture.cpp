@@ -3,11 +3,12 @@
 #include <sstream>
 #include <stdexcept>
 
-#include <components/esm/esmreader.hpp>
+#include <components/esm3/esmreader.hpp>
+#include <components/misc/strings/conversion.hpp>
 
 namespace CSMWorld
 {
-    void LandTexture::load(ESM::ESMReader &esm, bool &isDeleted)
+    void LandTexture::load(ESM::ESMReader& esm, bool& isDeleted)
     {
         ESM::LandTexture::load(esm, isDeleted);
 
@@ -28,7 +29,7 @@ namespace CSMWorld
         if (middle == std::string::npos || id[0] != 'L')
             throw std::runtime_error("Invalid LandTexture ID");
 
-        plugin = std::stoi(id.substr(1,middle-1));
-        index = std::stoi(id.substr(middle+1));
+        plugin = Misc::StringUtils::toNumeric<int>(id.substr(1, middle - 1), 0);
+        index = Misc::StringUtils::toNumeric<int>(id.substr(middle + 1), 0);
     }
 }

@@ -1,8 +1,10 @@
 #include "list.hpp"
 
-#include <MyGUI_Gui.h>
 #include <MyGUI_Button.h>
+#include <MyGUI_Gui.h>
 #include <MyGUI_ImageBox.h>
+
+#include <components/misc/strings/algorithm.hpp>
 
 namespace Gui
 {
@@ -22,19 +24,19 @@ namespace Gui
         if (mClient == nullptr)
             mClient = this;
 
-        mScrollView = mClient->createWidgetReal<MyGUI::ScrollView>(
-            "MW_ScrollView", MyGUI::FloatCoord(0.0, 0.0, 1.0, 1.0),
-            MyGUI::Align::Top | MyGUI::Align::Left | MyGUI::Align::Stretch, getName() + "_ScrollView");
+        mScrollView
+            = mClient->createWidgetReal<MyGUI::ScrollView>("MW_ScrollView", MyGUI::FloatCoord(0.0, 0.0, 1.0, 1.0),
+                MyGUI::Align::Top | MyGUI::Align::Left | MyGUI::Align::Stretch, getName() + "_ScrollView");
     }
 
-    void MWList::addItem(const std::string& name)
+    void MWList::addItem(std::string_view name)
     {
-        mItems.push_back(name);
+        mItems.emplace_back(name);
     }
 
     void MWList::addSeparator()
     {
-        mItems.emplace_back("");
+        mItems.emplace_back(std::string{});
     }
 
     void MWList::adjustSize()
@@ -44,9 +46,9 @@ namespace Gui
 
     void MWList::redraw(bool scrollbarShown)
     {
-        const int _scrollBarWidth = 20; // fetch this from skin?
+        constexpr int _scrollBarWidth = 20; // fetch this from skin?
         const int scrollBarWidth = scrollbarShown ? _scrollBarWidth : 0;
-        const int spacing = 3;
+        constexpr int spacing = 3;
         int viewPosition = -mScrollView->getViewOffset().top;
 
         while (mScrollView->getChildCount())
@@ -55,18 +57,17 @@ namespace Gui
         }
 
         mItemHeight = 0;
-        int i=0;
-        for (std::vector<std::string>::const_iterator it=mItems.begin();
-            it!=mItems.end(); ++it)
+        int i = 0;
+        for (const auto& item : mItems)
         {
-            if (*it != "")
+            if (!item.empty())
             {
                 if (mListItemSkin.empty())
                     return;
-                MyGUI::Button* button = mScrollView->createWidget<MyGUI::Button>(
-                    mListItemSkin, MyGUI::IntCoord(0, mItemHeight, mScrollView->getSize().width - scrollBarWidth - 2, 24),
-                    MyGUI::Align::Left | MyGUI::Align::Top, getName() + "_item_" + (*it));
-                button->setCaption((*it));
+                MyGUI::Button* button = mScrollView->createWidget<MyGUI::Button>(mListItemSkin,
+                    MyGUI::IntCoord(0, mItemHeight, mScrollView->getSize().width - scrollBarWidth - 2, 24),
+                    MyGUI::Align::Left | MyGUI::Align::Top, getName() + "_item_" + item);
+                button->setCaption(item);
                 button->getSubWidgetText()->setWordWrap(true);
                 button->getSubWidgetText()->setTextAlign(MyGUI::Align::Left);
                 button->eventMouseWheel += MyGUI::newDelegate(this, &MWList::onMouseWheelMoved);
@@ -91,7 +92,8 @@ namespace Gui
             ++i;
         }
 
-        // Canvas size must be expressed with VScroll disabled, otherwise MyGUI would expand the scroll area when the scrollbar is hidden
+        // Canvas size must be expressed with VScroll disabled, otherwise MyGUI would expand the scroll area when the
+        // scrollbar is hidden
         mScrollView->setVisibleVScroll(false);
         mScrollView->setCanvasSize(mClient->getSize().width, std::max(mItemHeight, mClient->getSize().height));
         mScrollView->setVisibleVScroll(true);
@@ -100,12 +102,12 @@ namespace Gui
             redraw(true);
 
         int viewRange = mScrollView->getCanvasSize().height;
-        if(viewPosition > viewRange)
+        if (viewPosition > viewRange)
             viewPosition = viewRange;
         mScrollView->setViewOffset(MyGUI::IntPoint(0, -viewPosition));
     }
 
-    void MWList::setPropertyOverride(const std::string &_key, const std::string &_value)
+    void MWList::setPropertyOverride(const std::string& _key, const std::string& _value)
     {
         if (_key == "ListItemSkin")
             mListItemSkin = _value;
@@ -113,21 +115,28 @@ namespace Gui
             Base::setPropertyOverride(_key, _value);
     }
 
-    unsigned int MWList::getItemCount()
+    size_t MWList::getItemCount()
     {
-        return static_cast<unsigned int>(mItems.size());
+        return mItems.size();
     }
 
-    std::string MWList::getItemNameAt(unsigned int at)
+    const std::string& MWList::getItemNameAt(size_t at)
     {
         assert(at < mItems.size() && "List item out of bounds");
         return mItems[at];
     }
 
+    void MWList::sort()
+    {
+        // A special case for separators is not needed for now
+        std::sort(mItems.begin(), mItems.end(), Misc::StringUtils::ciLess);
+    }
+
     void MWList::removeItem(const std::string& name)
     {
-        assert( std::find(mItems.begin(), mItems.end(), name) != mItems.end() );
-        mItems.erase( std::find(mItems.begin(), mItems.end(), name) );
+        auto it = std::find(mItems.begin(), mItems.end(), name);
+        assert(it != mItems.end());
+        mItems.erase(it);
     }
 
     void MWList::clear()
@@ -137,11 +146,12 @@ namespace Gui
 
     void MWList::onMouseWheelMoved(MyGUI::Widget* _sender, int _rel)
     {
-        //NB view offset is negative
-        if (mScrollView->getViewOffset().top + _rel*0.3f > 0)
+        // NB view offset is negative
+        if (mScrollView->getViewOffset().top + _rel * 0.3f > 0)
             mScrollView->setViewOffset(MyGUI::IntPoint(0, 0));
         else
-            mScrollView->setViewOffset(MyGUI::IntPoint(0, static_cast<int>(mScrollView->getViewOffset().top + _rel*0.3)));
+            mScrollView->setViewOffset(
+                MyGUI::IntPoint(0, static_cast<int>(mScrollView->getViewOffset().top + _rel * 0.3)));
     }
 
     void MWList::onItemSelected(MyGUI::Widget* _sender)
@@ -152,9 +162,11 @@ namespace Gui
         eventWidgetSelected(_sender);
     }
 
-    MyGUI::Button *MWList::getItemWidget(const std::string& name)
+    MyGUI::Button* MWList::getItemWidget(std::string_view name)
     {
-        return mScrollView->findWidget (getName() + "_item_" + name)->castType<MyGUI::Button>();
+        std::string search = getName() + "_item_";
+        search += name;
+        return mScrollView->findWidget(search)->castType<MyGUI::Button>();
     }
 
     void MWList::scrollToTop()

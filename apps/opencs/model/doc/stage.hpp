@@ -1,28 +1,19 @@
 #ifndef CSM_DOC_STAGE_H
 #define CSM_DOC_STAGE_H
 
-#include <vector>
-#include <string>
-
-#include "../world/universalid.hpp"
-
-#include "messages.hpp"
-
-class QString;
-
 namespace CSMDoc
 {
+    class Messages;
     class Stage
     {
-        public:
+    public:
+        virtual ~Stage() = default;
 
-            virtual ~Stage();
+        virtual int setup() = 0;
+        ///< \return number of steps
 
-            virtual int setup() = 0;
-            ///< \return number of steps
-
-            virtual void perform (int stage, Messages& messages) = 0;
-            ///< Messages resulting from this stage will be appended to \a messages.
+        virtual void perform(int stage, Messages& messages) = 0;
+        ///< Messages resulting from this stage will be appended to \a messages.
     };
 }
 

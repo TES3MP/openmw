@@ -1,17 +1,18 @@
 #ifndef GAME_MWWORLD_WEATHER_H
 #define GAME_MWWORLD_WEATHER_H
 
-#include <stdint.h>
-#include <string>
+#include <cstdint>
 #include <map>
+#include <string>
 
 #include <osg/Vec4f>
 
+#include <components/esm/refid.hpp>
 #include <components/fallback/fallback.hpp>
 
 #include "../mwbase/soundmanager.hpp"
 
-#include "../mwrender/sky.hpp"
+#include "../mwrender/skyutil.hpp"
 
 namespace ESM
 {
@@ -83,12 +84,10 @@ namespace MWWorld
 
         void addSetting(const std::string& type)
         {
-            WeatherSetting setting = {
-                Fallback::Map::getFloat("Weather_" + type + "_Pre-Sunrise_Time"),
+            WeatherSetting setting = { Fallback::Map::getFloat("Weather_" + type + "_Pre-Sunrise_Time"),
                 Fallback::Map::getFloat("Weather_" + type + "_Post-Sunrise_Time"),
                 Fallback::Map::getFloat("Weather_" + type + "_Pre-Sunset_Time"),
-                Fallback::Map::getFloat("Weather_" + type + "_Post-Sunset_Time")
-            };
+                Fallback::Map::getFloat("Weather_" + type + "_Post-Sunset_Time") };
 
             mSunriseTransitions[type] = setting;
         }
@@ -101,11 +100,14 @@ namespace MWWorld
     {
     public:
         TimeOfDayInterpolator(const T& sunrise, const T& day, const T& sunset, const T& night)
-            : mSunriseValue(sunrise), mDayValue(day), mSunsetValue(sunset), mNightValue(night)
+            : mSunriseValue(sunrise)
+            , mDayValue(day)
+            , mSunsetValue(sunset)
+            , mNightValue(night)
         {
         }
 
-        T getValue (const float gameHour, const TimeOfDaySettings& timeSettings, const std::string& prefix) const;
+        T getValue(const float gameHour, const TimeOfDaySettings& timeSettings, const std::string& prefix) const;
 
     private:
         T mSunriseValue, mDayValue, mSunsetValue, mNightValue;
@@ -115,12 +117,10 @@ namespace MWWorld
     class Weather
     {
     public:
-        Weather(const std::string& name,
-                float stormWindSpeed,
-                float rainSpeed,
-                float dlFactor,
-                float dlOffset,
-                const std::string& particleEffect);
+        static osg::Vec3f defaultDirection();
+
+        Weather(const std::string& name, float stormWindSpeed, float rainSpeed, float dlFactor, float dlOffset,
+            const std::string& particleEffect);
 
         std::string mCloudTexture;
 
@@ -150,18 +150,20 @@ namespace MWWorld
         float mGlareView;
 
         // Fog factor and offset used with distant land rendering.
-        struct {
+        struct
+        {
             float FogFactor;
             float FogOffset;
         } mDL;
 
         // Sound effect
         // This is used for Blight, Ashstorm and Blizzard (Bloodmoon)
-        std::string mAmbientLoopSoundID;
+        ESM::RefId mAmbientLoopSoundID;
 
         // Is this an ash storm / blight storm? If so, the following will happen:
         // - The particles and clouds will be oriented so they appear to come from the Red Mountain.
-        // - Characters will animate their hand to protect eyes from the storm when looking in its direction (idlestorm animation)
+        // - Characters will animate their hand to protect eyes from the storm when looking in its direction (idlestorm
+        // animation)
         // - Slower movement when walking against the storm (fStromWalkMult)
         bool mIsStorm;
 
@@ -189,6 +191,10 @@ namespace MWWorld
 
         std::string mRainEffect;
 
+        osg::Vec3f mStormDirection;
+
+        float mCloudsMaximumPercent;
+
         // Note: For Weather Blight, there is a "Disease Chance" (=0.1) setting. But according to MWSFD this feature
         // is broken in the vanilla game and was disabled.
 
@@ -199,14 +205,13 @@ namespace MWWorld
 
     private:
         float mTransitionDelta;
-        float mCloudsMaximumPercent;
 
         // Note: In MW, only thunderstorms support these attributes, but in the interest of making weather more
         // flexible, these settings are imported for all weather types. Only thunderstorms will normally have any
         // non-zero values.
         float mThunderFrequency;
         float mThunderThreshold;
-        std::string mThunderSoundID[4];
+        ESM::RefId mThunderSoundID[4];
         float mFlashDecrement;
 
         float mFlashBrightness;
@@ -280,9 +285,9 @@ namespace MWWorld
          * @param region that should be changed
          * @param ID of the weather setting to shift to
          */
-        void changeWeather(const std::string& regionID, const unsigned int weatherID);
-        void modRegion(const std::string& regionID, const std::vector<char>& chances);
-        void playerTeleported(const std::string& playerRegion, bool isExterior);
+        void changeWeather(const ESM::RefId& regionID, const unsigned int weatherID);
+        void modRegion(const ESM::RefId& regionID, const std::vector<char>& chances);
+        void playerTeleported(const ESM::RefId& playerRegion, bool isExterior);
 
         /*
             Start of tes3mp addition
@@ -315,9 +320,17 @@ namespace MWWorld
 
         void advanceTime(double hours, bool incremental);
 
-        unsigned int getWeatherID() const;
+        int getWeatherID() const { return mCurrentWeather; }
+
+        int getNextWeatherID() const { return mNextWeather; }
+
+        float getTransitionFactor() const { return mTransitionFactor; }
 
         bool useTorches(float hour) const;
+
+        float getSunPercentage(float hour) const;
+
+        float getSunVisibility() const;
 
         void write(ESM::ESMWriter& writer, Loading::Listener& progress);
 
@@ -389,7 +402,7 @@ namespace MWWorld
         bool mPrecipitation;
         osg::Vec3f mStormDirection;
 
-        std::string mCurrentRegion;
+        ESM::RefId mCurrentRegion;
         float mTimePassed;
         bool mFastForward;
         float mWeatherUpdateTime;
@@ -398,12 +411,13 @@ namespace MWWorld
         int mCurrentWeather;
         int mNextWeather;
         int mQueuedWeather;
-        std::map<std::string, RegionWeather> mRegions;
+        std::map<ESM::RefId, RegionWeather> mRegions;
         MWRender::WeatherResult mResult;
 
-        MWBase::Sound *mAmbientSound;
-        std::string mPlayingSoundID;
+        MWBase::Sound* mAmbientSound;
+        ESM::RefId mPlayingSoundID;
 
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -418,16 +432,20 @@ namespace MWWorld
         void addWeather(const std::string& name,
                         float dlFactor, float dlOffset,
                         const std::string& particleEffect = "");
+=======
+        void addWeather(
+            const std::string& name, float dlFactor, float dlOffset, const std::string& particleEffect = "");
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
         void importRegions();
 
-        void regionalWeatherChanged(const std::string& regionID, RegionWeather& region);
+        void regionalWeatherChanged(const ESM::RefId& regionID, RegionWeather& region);
         bool updateWeatherTime();
-        bool updateWeatherRegion(const std::string& playerRegion);
+        bool updateWeatherRegion(const ESM::RefId& playerRegion);
         void updateWeatherTransitions(const float elapsedRealSeconds);
         void forceWeather(const int weatherID);
 
-        bool inTransition();
+        bool inTransition() const;
         void addWeatherTransition(const int weatherID);
 
         void calculateWeatherResult(const float gameHour, const float elapsedSeconds, const bool isPaused);

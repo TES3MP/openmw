@@ -3,12 +3,14 @@
 
 #include "../mwmechanics/stat.hpp"
 
-#include <components/esm/effectlist.hpp>
-#include <components/esm/loadskil.hpp>
+#include <MyGUI_Delegate.h>
+#include <MyGUI_TextBox.h>
+#include <MyGUI_Widget.h>
 
-#include <MyGUI_Button.h>
-#include <MyGUI_EditBox.h>
-#include <MyGUI_ScrollBar.h>
+#include <components/esm/attr.hpp>
+#include <components/esm/refid.hpp>
+#include <components/esm3/effectlist.hpp>
+#include <components/esm3/loadskil.hpp>
 
 namespace MyGUI
 {
@@ -30,8 +32,6 @@ namespace MWGui
     namespace Widgets
     {
         class MWEffectList;
-
-        void fixTexturePath(std::string &path);
 
         struct SpellEffectParams
         {
@@ -71,20 +71,21 @@ namespace MWGui
 
             bool operator==(const SpellEffectParams& other) const
             {
-                if (mEffectID !=  other.mEffectID)
+                if (mEffectID != other.mEffectID)
                     return false;
 
                 bool involvesAttribute = (mEffectID == 74 // restore attribute
-                                        || mEffectID == 85 // absorb attribute
-                                        || mEffectID == 17 // drain attribute
-                                        || mEffectID == 79 // fortify attribute
-                                        || mEffectID == 22); // damage attribute
+                    || mEffectID == 85 // absorb attribute
+                    || mEffectID == 17 // drain attribute
+                    || mEffectID == 79 // fortify attribute
+                    || mEffectID == 22); // damage attribute
                 bool involvesSkill = (mEffectID == 78 // restore skill
-                                        || mEffectID == 89 // absorb skill
-                                        || mEffectID == 21 // drain skill
-                                        || mEffectID == 83 // fortify skill
-                                        || mEffectID == 26); // damage skill
-                return ((other.mSkill == mSkill) || !involvesSkill) && ((other.mAttribute == mAttribute) && !involvesAttribute) && (other.mArea == mArea);
+                    || mEffectID == 89 // absorb skill
+                    || mEffectID == 21 // drain skill
+                    || mEffectID == 83 // fortify skill
+                    || mEffectID == 26); // damage skill
+                return ((other.mSkill == mSkill) || !involvesSkill)
+                    && ((other.mAttribute == mAttribute) && !involvesAttribute) && (other.mArea == mArea);
             }
         };
 
@@ -92,17 +93,16 @@ namespace MWGui
 
         class MWSkill final : public MyGUI::Widget
         {
-            MYGUI_RTTI_DERIVED( MWSkill )
+            MYGUI_RTTI_DERIVED(MWSkill)
         public:
             MWSkill();
 
             typedef MWMechanics::Stat<float> SkillValue;
 
-            void setSkillId(ESM::Skill::SkillEnum skillId);
-            void setSkillNumber(int skillId);
+            void setSkillId(ESM::RefId skillId);
             void setSkillValue(const SkillValue& value);
 
-            ESM::Skill::SkillEnum getSkillId() const { return mSkillId; }
+            ESM::RefId getSkillId() const { return mSkillId; }
             const SkillValue& getSkillValue() const { return mValue; }
 
             // Events
@@ -121,10 +121,9 @@ namespace MWGui
             void onClicked(MyGUI::Widget* _sender);
 
         private:
-
             void updateWidgets();
 
-            ESM::Skill::SkillEnum mSkillId;
+            ESM::RefId mSkillId;
             SkillValue mValue;
             MyGUI::TextBox* mSkillNameWidget;
             MyGUI::TextBox* mSkillValueWidget;
@@ -133,16 +132,16 @@ namespace MWGui
 
         class MWAttribute final : public MyGUI::Widget
         {
-            MYGUI_RTTI_DERIVED( MWAttribute )
+            MYGUI_RTTI_DERIVED(MWAttribute)
         public:
             MWAttribute();
 
             typedef MWMechanics::AttributeValue AttributeValue;
 
-            void setAttributeId(int attributeId);
+            void setAttributeId(ESM::Attribute::AttributeID attributeId);
             void setAttributeValue(const AttributeValue& value);
 
-            int getAttributeId() const { return mId; }
+            ESM::Attribute::AttributeID getAttributeId() const { return mId; }
             const AttributeValue& getAttributeValue() const { return mValue; }
 
             // Events
@@ -154,17 +153,16 @@ namespace MWGui
             EventHandle_AttributeVoid eventClicked;
 
         protected:
-            virtual ~MWAttribute();
+            ~MWAttribute() override = default;
 
             void initialiseOverride() override;
 
             void onClicked(MyGUI::Widget* _sender);
 
         private:
-
             void updateWidgets();
 
-            int mId;
+            ESM::Attribute::AttributeID mId;
             AttributeValue mValue;
             MyGUI::TextBox* mAttributeNameWidget;
             MyGUI::TextBox* mAttributeValueWidget;
@@ -177,24 +175,24 @@ namespace MWGui
         class MWSpellEffect;
         class MWSpell final : public MyGUI::Widget
         {
-            MYGUI_RTTI_DERIVED( MWSpell )
+            MYGUI_RTTI_DERIVED(MWSpell)
         public:
             MWSpell();
 
-            typedef MWMechanics::Stat<int> SpellValue;
-
-            void setSpellId(const std::string &id);
+            void setSpellId(const ESM::RefId& id);
 
             /**
              * @param vector to store the created effect widgets
              * @param parent widget
              * @param coordinates to use, will be expanded if more space is needed
-             * @param spell category, if this is 0, this means the spell effects are permanent and won't display e.g. duration
+             * @param spell category, if this is 0, this means the spell effects are permanent and won't display e.g.
+             * duration
              * @param various flags, see MWEffectList::EffectFlags
              */
-            void createEffectWidgets(std::vector<MyGUI::Widget*> &effects, MyGUI::Widget* creator, MyGUI::IntCoord &coord, int flags);
+            void createEffectWidgets(
+                std::vector<MyGUI::Widget*>& effects, MyGUI::Widget* creator, MyGUI::IntCoord& coord, int flags);
 
-            const std::string &getSpellId() const { return mId; }
+            const ESM::RefId& getSpellId() const { return mId; }
 
         protected:
             virtual ~MWSpell();
@@ -204,18 +202,16 @@ namespace MWGui
         private:
             void updateWidgets();
 
-            std::string mId;
+            ESM::RefId mId;
             MyGUI::TextBox* mSpellNameWidget;
         };
         typedef MWSpell* MWSpellPtr;
 
         class MWEffectList final : public MyGUI::Widget
         {
-            MYGUI_RTTI_DERIVED( MWEffectList )
+            MYGUI_RTTI_DERIVED(MWEffectList)
         public:
             MWEffectList();
-
-            typedef MWMechanics::Stat<int> EnchantmentValue;
 
             enum EffectFlags
             {
@@ -236,7 +232,8 @@ namespace MWGui
              * @param center the effect widgets horizontally
              * @param various flags, see MWEffectList::EffectFlags
              */
-            void createEffectWidgets(std::vector<MyGUI::Widget*> &effects, MyGUI::Widget* creator, MyGUI::IntCoord &coord, bool center, int flags);
+            void createEffectWidgets(std::vector<MyGUI::Widget*>& effects, MyGUI::Widget* creator,
+                MyGUI::IntCoord& coord, bool center, int flags);
 
         protected:
             virtual ~MWEffectList();
@@ -252,7 +249,7 @@ namespace MWGui
 
         class MWSpellEffect final : public MyGUI::Widget
         {
-            MYGUI_RTTI_DERIVED( MWSpellEffect )
+            MYGUI_RTTI_DERIVED(MWSpellEffect)
         public:
             MWSpellEffect();
 
@@ -269,7 +266,7 @@ namespace MWGui
 
         private:
             static constexpr int sIconOffset = 24;
-            
+
             void updateWidgets();
 
             SpellEffectParams mEffectParams;
@@ -281,12 +278,12 @@ namespace MWGui
 
         class MWDynamicStat final : public MyGUI::Widget
         {
-            MYGUI_RTTI_DERIVED( MWDynamicStat )
+            MYGUI_RTTI_DERIVED(MWDynamicStat)
         public:
             MWDynamicStat();
 
             void setValue(int value, int max);
-            void setTitle(const std::string& text);
+            void setTitle(std::string_view text);
 
             int getValue() const { return mValue; }
             int getMax() const { return mMax; }
@@ -297,7 +294,6 @@ namespace MWGui
             void initialiseOverride() override;
 
         private:
-
             int mValue, mMax;
             MyGUI::TextBox* mTextWidget;
             MyGUI::ProgressBar* mBarWidget;

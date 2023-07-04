@@ -5,31 +5,29 @@
 
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
 
-#include "../mwworld/class.hpp"
-
-#include "ptrholder.hpp"
+#include "collisiontype.hpp"
 
 namespace MWPhysics
 {
-    ClosestNotMeRayResultCallback::ClosestNotMeRayResultCallback(const btCollisionObject* me, std::vector<const btCollisionObject*>  targets, const btVector3& from, const btVector3& to)
-    : btCollisionWorld::ClosestRayResultCallback(from, to)
-    , mMe(me), mTargets(std::move(targets))
+    ClosestNotMeRayResultCallback::ClosestNotMeRayResultCallback(const btCollisionObject* me,
+        std::vector<const btCollisionObject*> targets, const btVector3& from, const btVector3& to)
+        : btCollisionWorld::ClosestRayResultCallback(from, to)
+        , mMe(me)
+        , mTargets(std::move(targets))
     {
     }
 
-    btScalar ClosestNotMeRayResultCallback::addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace)
+    btScalar ClosestNotMeRayResultCallback::addSingleResult(
+        btCollisionWorld::LocalRayResult& rayResult, bool normalInWorldSpace)
     {
-        if (rayResult.m_collisionObject == mMe)
+        const auto* hitObject = rayResult.m_collisionObject;
+        if (hitObject == mMe)
             return 1.f;
 
-        if (!mTargets.empty())
+        if (hitObject->getBroadphaseHandle()->m_collisionFilterGroup == CollisionType_Actor && !mTargets.empty())
         {
-            if ((std::find(mTargets.begin(), mTargets.end(), rayResult.m_collisionObject) == mTargets.end()))
-            {
-                auto* holder = static_cast<PtrHolder*>(rayResult.m_collisionObject->getUserPointer());
-                if (holder && !holder->getPtr().isEmpty() && holder->getPtr().getClass().isActor())
-                    return 1.f;
-            }
+            if ((std::find(mTargets.begin(), mTargets.end(), hitObject) == mTargets.end()))
+                return 1.f;
         }
 
         return btCollisionWorld::ClosestRayResultCallback::addSingleResult(rayResult, normalInWorldSpace);

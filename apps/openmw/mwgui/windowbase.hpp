@@ -12,10 +12,10 @@ namespace MWGui
 {
     class DragAndDrop;
 
-    class WindowBase: public Layout
+    class WindowBase : public Layout
     {
     public:
-        WindowBase(const std::string& parLayout);
+        WindowBase(std::string_view parLayout);
 
         virtual MyGUI::Widget* getDefaultKeyFocus() { return nullptr; }
 
@@ -31,9 +31,9 @@ namespace MWGui
         /// Notify that window has been made visible
         virtual void onOpen() {}
         /// Notify that window has been hidden
-        virtual void onClose () {}
+        virtual void onClose() {}
         /// Gracefully exits the window
-        virtual bool exit() {return true;}
+        virtual bool exit() { return true; }
         /// Sets the visibility of the window
         void setVisible(bool visible) override;
         /// Returns the visibility state of the window
@@ -46,6 +46,8 @@ namespace MWGui
 
         /// Called when GUI viewport changes size
         virtual void onResChange(int width, int height) {}
+
+        virtual void onDeleteCustomData(const MWWorld::Ptr& ptr) {}
 
     protected:
         virtual void onTitleDoubleClicked();
@@ -63,7 +65,7 @@ namespace MWGui
         WindowModal(const std::string& parLayout);
         void onOpen() override;
         void onClose() override;
-        bool exit() override {return true;}
+        bool exit() override { return true; }
     };
 
     /// A window that cannot be the target of a drag&drop action.
@@ -86,10 +88,10 @@ namespace MWGui
     class BookWindowBase : public WindowBase
     {
     public:
-        BookWindowBase(const std::string& parLayout);
+        BookWindowBase(std::string_view parLayout);
 
     protected:
-        float adjustButton (char const * name);
+        float adjustButton(std::string_view name);
     };
 }
 

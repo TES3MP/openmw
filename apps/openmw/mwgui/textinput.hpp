@@ -11,10 +11,10 @@ namespace MWGui
         TextInputDialog();
 
         std::string getTextInput() const;
-        void setTextInput(const std::string &text);
+        void setTextInput(const std::string& text);
 
         void setNextButtonShow(bool shown);
-        void setTextLabel(const std::string &label);
+        void setTextLabel(std::string_view label);
         void onOpen() override;
 
         bool exit() override { return false; }

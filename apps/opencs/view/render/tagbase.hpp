@@ -9,18 +9,18 @@
 
 namespace CSVRender
 {
+    struct WorldspaceHitResult;
+
     class TagBase : public osg::Referenced
     {
-            Mask mMask;
+        Mask mMask;
 
-        public:
+    public:
+        TagBase(Mask mask);
 
-            TagBase (Mask mask);
+        Mask getMask() const;
 
-            Mask getMask() const;
-
-            virtual QString getToolTip (bool hideBasics) const;
-
+        virtual QString getToolTip(bool hideBasics, const WorldspaceHitResult& hit) const;
     };
 }
 

@@ -1,9 +1,9 @@
 #ifndef OPENMW_MWRENDER_EFFECTMANAGER_H
 #define OPENMW_MWRENDER_EFFECTMANAGER_H
 
-#include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <osg/ref_ptr>
 
@@ -29,10 +29,12 @@ namespace MWRender
     {
     public:
         EffectManager(osg::ref_ptr<osg::Group> parent, Resource::ResourceSystem* resourceSystem);
+        EffectManager(const EffectManager&) = delete;
         ~EffectManager();
 
         /// Add an effect. When it's finished playing, it will be removed automatically.
-        void addEffect (const std::string& model, const std::string& textureOverride, const osg::Vec3f& worldPosition, float scale, bool isMagicVFX = true);
+        void addEffect(const std::string& model, std::string_view textureOverride, const osg::Vec3f& worldPosition,
+            float scale, bool isMagicVFX = true);
 
         void update(float dt);
 
@@ -44,16 +46,13 @@ namespace MWRender
         {
             float mMaxControllerLength;
             std::shared_ptr<EffectAnimationTime> mAnimTime;
+            osg::ref_ptr<osg::PositionAttitudeTransform> mTransform;
         };
 
-        typedef std::map<osg::ref_ptr<osg::PositionAttitudeTransform>, Effect> EffectMap;
-        EffectMap mEffects;
+        std::vector<Effect> mEffects;
 
         osg::ref_ptr<osg::Group> mParentNode;
         Resource::ResourceSystem* mResourceSystem;
-
-        EffectManager(const EffectManager&);
-        void operator=(const EffectManager&);
     };
 
 }

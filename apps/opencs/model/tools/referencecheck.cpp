@@ -1,23 +1,38 @@
 #include "referencecheck.hpp"
 
+#include <string>
+
 #include "../prefs/state.hpp"
 
-CSMTools::ReferenceCheckStage::ReferenceCheckStage(
-    const CSMWorld::RefCollection& references,
-    const CSMWorld::RefIdCollection& referencables,
-    const CSMWorld::IdCollection<CSMWorld::Cell>& cells,
+#include "../../model/world/cell.hpp"
+
+#include <apps/opencs/model/doc/messages.hpp>
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/model/world/record.hpp>
+#include <apps/opencs/model/world/ref.hpp>
+#include <apps/opencs/model/world/refcollection.hpp>
+#include <apps/opencs/model/world/refidcollection.hpp>
+#include <apps/opencs/model/world/refiddata.hpp>
+#include <apps/opencs/model/world/universalid.hpp>
+
+#include <components/esm3/cellref.hpp>
+#include <components/esm3/loadfact.hpp>
+
+CSMTools::ReferenceCheckStage::ReferenceCheckStage(const CSMWorld::RefCollection& references,
+    const CSMWorld::RefIdCollection& referencables, const CSMWorld::IdCollection<CSMWorld::Cell>& cells,
     const CSMWorld::IdCollection<ESM::Faction>& factions)
-    :
-    mReferences(references),
-    mObjects(referencables),
-    mDataSet(referencables.getDataSet()),
-    mCells(cells),
-    mFactions(factions)
+    : mReferences(references)
+    , mObjects(referencables)
+    , mDataSet(referencables.getDataSet())
+    , mCells(cells)
+    , mFactions(factions)
 {
     mIgnoreBaseRecords = false;
 }
 
-void CSMTools::ReferenceCheckStage::perform(int stage, CSMDoc::Messages &messages)
+void CSMTools::ReferenceCheckStage::perform(int stage, CSMDoc::Messages& messages)
 {
     const CSMWorld::Record<CSMWorld::CellRef>& record = mReferences.getRecord(stage);
 
@@ -31,12 +46,13 @@ void CSMTools::ReferenceCheckStage::perform(int stage, CSMDoc::Messages &message
     // Check reference id
     if (cellRef.mRefID.empty())
         messages.add(id, "Instance is not based on an object", "", CSMDoc::Message::Severity_Error);
-    else 
+    else
     {
         // Check for non existing referenced object
         if (mObjects.searchId(cellRef.mRefID) == -1)
-            messages.add(id, "Instance of a non-existent object '" + cellRef.mRefID + "'", "", CSMDoc::Message::Severity_Error);
-        else 
+            messages.add(id, "Instance of a non-existent object '" + cellRef.mRefID.getRefIdString() + "'", "",
+                CSMDoc::Message::Severity_Error);
+        else
         {
             // Check if reference charge is valid for it's proper referenced type
             CSMWorld::RefIdData::LocalIndex localIndex = mDataSet.searchId(cellRef.mRefID);
@@ -48,12 +64,14 @@ void CSMTools::ReferenceCheckStage::perform(int stage, CSMDoc::Messages &message
 
     // If object have owner, check if that owner reference is valid
     if (!cellRef.mOwner.empty() && mObjects.searchId(cellRef.mOwner) == -1)
-        messages.add(id, "Owner object '" + cellRef.mOwner + "' does not exist", "", CSMDoc::Message::Severity_Error);
+        messages.add(id, "Owner object '" + cellRef.mOwner.getRefIdString() + "' does not exist", "",
+            CSMDoc::Message::Severity_Error);
 
     // If object have creature soul trapped, check if that creature reference is valid
     if (!cellRef.mSoul.empty())
         if (mObjects.searchId(cellRef.mSoul) == -1)
-            messages.add(id, "Trapped soul object '" + cellRef.mSoul + "' does not exist", "", CSMDoc::Message::Severity_Error);
+            messages.add(id, "Trapped soul object '" + cellRef.mSoul.getRefIdString() + "' does not exist", "",
+                CSMDoc::Message::Severity_Error);
 
     if (cellRef.mFaction.empty())
     {
@@ -63,13 +81,15 @@ void CSMTools::ReferenceCheckStage::perform(int stage, CSMDoc::Messages &message
     else
     {
         if (mFactions.searchId(cellRef.mFaction) == -1)
-            messages.add(id, "Faction '" + cellRef.mFaction + "' does not exist", "", CSMDoc::Message::Severity_Error);
+            messages.add(id, "Faction '" + cellRef.mFaction.getRefIdString() + "' does not exist", "",
+                CSMDoc::Message::Severity_Error);
         else if (cellRef.mFactionRank < -1)
             messages.add(id, "Invalid faction rank", "", CSMDoc::Message::Severity_Error);
     }
 
-    if (!cellRef.mDestCell.empty() && mCells.searchId(cellRef.mDestCell) == -1)
-        messages.add(id, "Destination cell '" + cellRef.mDestCell + "' does not exist", "", CSMDoc::Message::Severity_Error);
+    if (!cellRef.mDestCell.empty() && mCells.searchId(ESM::RefId::stringRefId(cellRef.mDestCell)) == -1)
+        messages.add(
+            id, "Destination cell '" + cellRef.mDestCell + "' does not exist", "", CSMDoc::Message::Severity_Error);
 
     if (cellRef.mScale < 0)
         messages.add(id, "Negative scale", "", CSMDoc::Message::Severity_Error);

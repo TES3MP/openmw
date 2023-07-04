@@ -1,6 +1,8 @@
 #ifndef INSTALLATIONTARGETPAGE_HPP
 #define INSTALLATIONTARGETPAGE_HPP
 
+#include <QWizard>
+
 #include "ui_installationtargetpage.h"
 
 namespace Files
@@ -16,7 +18,7 @@ namespace Wizard
     {
         Q_OBJECT
     public:
-        InstallationTargetPage(QWidget *parent, const Files::ConfigurationManager &cfg);
+        InstallationTargetPage(QWidget* parent, const Files::ConfigurationManager& cfg);
 
         int nextId() const override;
         bool validatePage() override;
@@ -25,12 +27,11 @@ namespace Wizard
         void on_browseButton_clicked();
 
     private:
-        MainWizard *mWizard;
-        const Files::ConfigurationManager &mCfgMgr;
+        MainWizard* mWizard;
+        const Files::ConfigurationManager& mCfgMgr;
 
     protected:
         void initializePage() override;
-
     };
 
 }

@@ -1,13 +1,12 @@
 #ifndef OPENMW_COMPONENTS_DETOURNAVIGATOR_NAVMESHMANAGER_H
 #define OPENMW_COMPONENTS_DETOURNAVIGATOR_NAVMESHMANAGER_H
 
+#include "agentbounds.hpp"
 #include "asyncnavmeshupdater.hpp"
-#include "cachedrecastmeshmanager.hpp"
+#include "heightfieldshape.hpp"
 #include "offmeshconnectionsmanager.hpp"
 #include "recastmeshtiles.hpp"
 #include "waitconditiontype.hpp"
-
-#include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
 
 #include <osg/Vec3f>
 
@@ -21,58 +20,75 @@ namespace DetourNavigator
     class NavMeshManager
     {
     public:
-        NavMeshManager(const Settings& settings);
+        explicit NavMeshManager(const Settings& settings, std::unique_ptr<NavMeshDb>&& db);
 
+<<<<<<< HEAD
         bool addObject(const ObjectId id, const CollisionShape& shape, const btTransform& transform,
                        const AreaType areaType);
 
         bool updateObject(const ObjectId id, const CollisionShape& shape, const btTransform& transform,
                           const AreaType areaType);
+=======
+        ScopedUpdateGuard makeUpdateGuard() { return mRecastMeshManager.makeUpdateGuard(); }
 
-        bool removeObject(const ObjectId id);
+        void setWorldspace(std::string_view worldspace, const UpdateGuard* guard);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
-        void addAgent(const osg::Vec3f& agentHalfExtents);
+        void updateBounds(const osg::Vec3f& playerPosition, const UpdateGuard* guard);
 
-        bool addWater(const osg::Vec2i& cellPosition, const int cellSize, const btTransform& transform);
+        bool addObject(const ObjectId id, const CollisionShape& shape, const btTransform& transform,
+            const AreaType areaType, const UpdateGuard* guard);
 
-        bool removeWater(const osg::Vec2i& cellPosition);
+        bool updateObject(ObjectId id, const btTransform& transform, AreaType areaType, const UpdateGuard* guard);
 
-        bool reset(const osg::Vec3f& agentHalfExtents);
+        void removeObject(const ObjectId id, const UpdateGuard* guard);
 
-        void addOffMeshConnection(const ObjectId id, const osg::Vec3f& start, const osg::Vec3f& end, const AreaType areaType);
+        void addAgent(const AgentBounds& agentBounds);
+
+        void addWater(const osg::Vec2i& cellPosition, int cellSize, float level, const UpdateGuard* guard);
+
+        void removeWater(const osg::Vec2i& cellPosition, const UpdateGuard* guard);
+
+        void addHeightfield(
+            const osg::Vec2i& cellPosition, int cellSize, const HeightfieldShape& shape, const UpdateGuard* guard);
+
+        void removeHeightfield(const osg::Vec2i& cellPosition, const UpdateGuard* guard);
+
+        bool reset(const AgentBounds& agentBounds);
+
+        void addOffMeshConnection(
+            const ObjectId id, const osg::Vec3f& start, const osg::Vec3f& end, const AreaType areaType);
 
         void removeOffMeshConnections(const ObjectId id);
 
-        void update(osg::Vec3f playerPosition, const osg::Vec3f& agentHalfExtents);
+        void update(const osg::Vec3f& playerPosition, const UpdateGuard* guard);
 
-        void wait(Loading::Listener& listener, WaitConditionType waitConditionType);
+        void wait(WaitConditionType waitConditionType, Loading::Listener* listener);
 
-        SharedNavMeshCacheItem getNavMesh(const osg::Vec3f& agentHalfExtents) const;
+        SharedNavMeshCacheItem getNavMesh(const AgentBounds& agentBounds) const;
 
-        std::map<osg::Vec3f, SharedNavMeshCacheItem> getNavMeshes() const;
+        std::map<AgentBounds, SharedNavMeshCacheItem> getNavMeshes() const;
 
-        void reportStats(unsigned int frameNumber, osg::Stats& stats) const;
+        Stats getStats() const;
 
-        RecastMeshTiles getRecastMeshTiles();
+        RecastMeshTiles getRecastMeshTiles() const;
 
     private:
         const Settings& mSettings;
+        std::string mWorldspace;
         TileCachedRecastMeshManager mRecastMeshManager;
         OffMeshConnectionsManager mOffMeshConnectionsManager;
         AsyncNavMeshUpdater mAsyncNavMeshUpdater;
-        std::map<osg::Vec3f, SharedNavMeshCacheItem> mCache;
-        std::map<osg::Vec3f, std::map<TilePosition, ChangeType>> mChangedTiles;
+        std::map<AgentBounds, SharedNavMeshCacheItem> mCache;
         std::size_t mGenerationCounter = 0;
-        std::map<osg::Vec3f, TilePosition> mPlayerTile;
-        std::map<osg::Vec3f, std::size_t> mLastRecastMeshManagerRevision;
+        std::optional<TilePosition> mPlayerTile;
+        std::size_t mLastRecastMeshManagerRevision = 0;
 
-        void addChangedTiles(const btCollisionShape& shape, const btTransform& transform, const ChangeType changeType);
+        inline SharedNavMeshCacheItem getCached(const AgentBounds& agentBounds) const;
 
-        void addChangedTiles(const int cellSize, const btTransform& transform, const ChangeType changeType);
-
-        void addChangedTile(const TilePosition& tilePosition, const ChangeType changeType);
-
-        SharedNavMeshCacheItem getCached(const osg::Vec3f& agentHalfExtents) const;
+        inline void update(const AgentBounds& agentBounds, const TilePosition& playerTile,
+            const TilesPositionsRange& range, const SharedNavMeshCacheItem& cached,
+            const std::map<osg::Vec2i, ChangeType>& changedTiles);
     };
 }
 

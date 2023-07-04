@@ -1,24 +1,44 @@
 #include "scope.hpp"
 
-#include <stdexcept>
+#include <string_view>
 
-#include <components/misc/stringops.hpp>
+#include <components/esm/refid.hpp>
+#include <components/misc/strings/algorithm.hpp>
 
-CSMWorld::Scope CSMWorld::getScopeFromId (const std::string& id)
+namespace CSMWorld
 {
-    // get root namespace
-    std::string namespace_;
+    namespace
+    {
+        struct GetScope
+        {
+            Scope operator()(ESM::StringRefId v) const
+            {
+                std::string_view namespace_;
 
-    std::string::size_type i = id.find ("::");
+                const std::string::size_type i = v.getValue().find("::");
 
-    if (i!=std::string::npos)
-        namespace_ = Misc::StringUtils::lowerCase (id.substr (0, i));
+                if (i != std::string::npos)
+                    namespace_ = std::string_view(v.getValue()).substr(0, i);
 
-    if (namespace_=="project")
-        return Scope_Project;
+                if (Misc::StringUtils::ciEqual(namespace_, "project"))
+                    return Scope_Project;
 
-    if (namespace_=="session")
-        return Scope_Session;
+                if (Misc::StringUtils::ciEqual(namespace_, "session"))
+                    return Scope_Session;
 
-    return Scope_Content;
+                return Scope_Content;
+            }
+
+            template <class T>
+            Scope operator()(const T& /*v*/) const
+            {
+                return Scope_Content;
+            }
+        };
+    }
+}
+
+CSMWorld::Scope CSMWorld::getScopeFromId(ESM::RefId id)
+{
+    return visit(GetScope{}, id);
 }

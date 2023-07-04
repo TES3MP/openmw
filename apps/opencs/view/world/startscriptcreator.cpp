@@ -2,15 +2,22 @@
 
 #include <QLabel>
 
+#include <memory>
+
+#include <apps/opencs/model/world/columnbase.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/view/world/genericcreator.hpp>
+
 #include "../../model/doc/document.hpp"
 
 #include "../../model/world/columns.hpp"
-#include "../../model/world/commands.hpp"
 #include "../../model/world/data.hpp"
 #include "../../model/world/idcompletionmanager.hpp"
 #include "../../model/world/idtable.hpp"
 
 #include "../widget/droplineedit.hpp"
+
+class QUndoStack;
 
 std::string CSVWorld::StartScriptCreator::getId() const
 {
@@ -19,22 +26,17 @@ std::string CSVWorld::StartScriptCreator::getId() const
 
 CSMWorld::IdTable& CSVWorld::StartScriptCreator::getStartScriptsTable() const
 {
-    return dynamic_cast<CSMWorld::IdTable&> (
-        *getData().getTableModel(getCollectionId())
-    );
+    return dynamic_cast<CSMWorld::IdTable&>(*getData().getTableModel(getCollectionId()));
 }
 
-CSVWorld::StartScriptCreator::StartScriptCreator(
-    CSMWorld::Data &data,
-    QUndoStack &undoStack,
-    const CSMWorld::UniversalId &id,
-    CSMWorld::IdCompletionManager& completionManager
-) : GenericCreator(data, undoStack, id)
+CSVWorld::StartScriptCreator::StartScriptCreator(CSMWorld::Data& data, QUndoStack& undoStack,
+    const CSMWorld::UniversalId& id, CSMWorld::IdCompletionManager& completionManager)
+    : GenericCreator(data, undoStack, id)
 {
     setManualEditing(false);
 
     // Add script ID input label.
-    QLabel *label = new QLabel("Script", this);
+    QLabel* label = new QLabel("Script", this);
     insertBeforeButtons(label, false);
 
     // Add script ID input with auto-completion.
@@ -44,13 +46,11 @@ CSVWorld::StartScriptCreator::StartScriptCreator(
     mScript->setCompleter(completionManager.getCompleter(displayType).get());
     insertBeforeButtons(mScript, true);
 
-    connect(mScript, SIGNAL (textChanged(const QString&)), this, SLOT (scriptChanged()));
-    connect(mScript, SIGNAL (returnPressed()), this, SLOT (inputReturnPressed()));
+    connect(mScript, &CSVWidget::DropLineEdit::textChanged, this, &StartScriptCreator::scriptChanged);
+    connect(mScript, &CSVWidget::DropLineEdit::returnPressed, this, &StartScriptCreator::inputReturnPressed);
 }
 
-void CSVWorld::StartScriptCreator::cloneMode(
-    const std::string& originId,
-    const CSMWorld::UniversalId::Type type)
+void CSVWorld::StartScriptCreator::cloneMode(const std::string& originId, const CSMWorld::UniversalId::Type type)
 {
     CSVWorld::GenericCreator::cloneMode(originId, type);
 
@@ -62,7 +62,7 @@ void CSVWorld::StartScriptCreator::cloneMode(
 
 std::string CSVWorld::StartScriptCreator::getErrors() const
 {
-    std::string scriptId = getId();
+    const ESM::RefId scriptId = ESM::RefId::stringRefId(getId());
 
     // Check user input for any errors.
     std::string errors;
@@ -98,14 +98,8 @@ void CSVWorld::StartScriptCreator::scriptChanged()
     update();
 }
 
-CSVWorld::Creator *CSVWorld::StartScriptCreatorFactory::makeCreator(
-    CSMDoc::Document& document,
-    const CSMWorld::UniversalId& id) const
+CSVWorld::Creator* CSVWorld::StartScriptCreatorFactory::makeCreator(
+    CSMDoc::Document& document, const CSMWorld::UniversalId& id) const
 {
-    return new StartScriptCreator(
-        document.getData(),
-        document.getUndoStack(),
-        id,
-        document.getIdCompletionManager()
-    );
+    return new StartScriptCreator(document.getData(), document.getUndoStack(), id, document.getIdCompletionManager());
 }

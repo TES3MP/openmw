@@ -1,60 +1,75 @@
 #ifndef INTERPRETER_INTERPRETER_H_INCLUDED
 #define INTERPRETER_INTERPRETER_H_INCLUDED
 
+#include <cassert>
 #include <map>
+#include <memory>
 #include <stack>
+#include <utility>
 
+#include "components/interpreter/program.hpp"
+#include "opcodes.hpp"
 #include "runtime.hpp"
 #include "types.hpp"
 
 namespace Interpreter
 {
-    class Opcode0;
-    class Opcode1;
+    struct Program;
 
     class Interpreter
     {
-            std::stack<Runtime> mCallstack;
-            bool mRunning;
-            Runtime mRuntime;
-            std::map<int, Opcode1 *> mSegment0;
-            std::map<int, Opcode1 *> mSegment2;
-            std::map<int, Opcode1 *> mSegment3;
-            std::map<int, Opcode0 *> mSegment5;
+        std::stack<Runtime> mCallstack;
+        bool mRunning = false;
+        Runtime mRuntime;
+        std::map<int, std::unique_ptr<Opcode1>> mSegment0;
+        std::map<int, std::unique_ptr<Opcode1>> mSegment2;
+        std::map<int, std::unique_ptr<Opcode1>> mSegment3;
+        std::map<int, std::unique_ptr<Opcode0>> mSegment5;
 
-            // not implemented
-            Interpreter (const Interpreter&);
-            Interpreter& operator= (const Interpreter&);
+        void execute(Type_Code code);
 
-            void execute (Type_Code code);
+        void begin();
 
-            void abortUnknownCode (int segment, int opcode);
+        void end();
 
-            void abortUnknownSegment (Type_Code code);
+        template <typename TSeg, typename TOp>
+        void installSegment(TSeg& seg, int code, TOp&& op)
+        {
+            assert(seg.find(code) == seg.end());
+            seg.emplace(code, std::move(op));
+        }
 
-            void begin();
+    public:
+        Interpreter() = default;
 
-            void end();
+        Interpreter(const Interpreter&) = delete;
+        Interpreter& operator=(const Interpreter&) = delete;
 
-        public:
+        template <typename T, typename... TArgs>
+        void installSegment0(int code, TArgs&&... args)
+        {
+            installSegment(mSegment0, code, std::make_unique<T>(std::forward<TArgs>(args)...));
+        }
 
-            Interpreter();
+        template <typename T, typename... TArgs>
+        void installSegment2(int code, TArgs&&... args)
+        {
+            installSegment(mSegment2, code, std::make_unique<T>(std::forward<TArgs>(args)...));
+        }
 
-            ~Interpreter();
+        template <typename T, typename... TArgs>
+        void installSegment3(int code, TArgs&&... args)
+        {
+            installSegment(mSegment3, code, std::make_unique<T>(std::forward<TArgs>(args)...));
+        }
 
-            void installSegment0 (int code, Opcode1 *opcode);
-            ///< ownership of \a opcode is transferred to *this.
+        template <typename T, typename... TArgs>
+        void installSegment5(int code, TArgs&&... args)
+        {
+            installSegment(mSegment5, code, std::make_unique<T>(std::forward<TArgs>(args)...));
+        }
 
-            void installSegment2 (int code, Opcode1 *opcode);
-            ///< ownership of \a opcode is transferred to *this.
-
-            void installSegment3 (int code, Opcode1 *opcode);
-            ///< ownership of \a opcode is transferred to *this.
-
-            void installSegment5 (int code, Opcode0 *opcode);
-            ///< ownership of \a opcode is transferred to *this.
-
-            void run (const Type_Code *code, int codeSize, Context& context);
+        void run(const Program& program, Context& context);
     };
 }
 

@@ -1,0 +1,24 @@
+DurationDay: "{days} d "
+DurationHour: "{hours} h "
+DurationMinute: "{minutes} min "
+DurationMonth: |-
+  {months, plural,
+    one{{months} mo }
+    other{{months} mos }
+  }
+DurationSecond: "{seconds} s "
+DurationYear: |-
+  {years, plural,
+    one{{years} yr }
+    other{{years} yrs }
+  }
+No: "No"
+NotAvailableShort: "N/A"
+Reset: "Reset"
+Yes: "Yes"
+On: "On"
+Off: "Off"
+None: "None"
+OK: "OK"
+Cancel: "Cancel"
+Close: "Close"

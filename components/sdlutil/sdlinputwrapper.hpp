@@ -1,8 +1,6 @@
 #ifndef OPENMW_COMPONENTS_SDLUTIL_SDLINPUTWRAPPER_H
 #define OPENMW_COMPONENTS_SDLUTIL_SDLINPUTWRAPPER_H
 
-#include <map>
-
 #include <osg/ref_ptr>
 
 #include <SDL_events.h>
@@ -21,7 +19,7 @@ namespace SDLUtil
     class InputWrapper
     {
     public:
-        InputWrapper(SDL_Window *window, osg::ref_ptr<osgViewer::Viewer> viewer, bool grab);
+        InputWrapper(SDL_Window* window, osg::ref_ptr<osgViewer::Viewer> viewer, bool grab);
         ~InputWrapper();
 
         void setMouseEventCallback(MouseListener* listen) { mMouseListener = listen; }
@@ -34,7 +32,7 @@ namespace SDLUtil
         bool isModifierHeld(int mod);
         bool isKeyDown(SDL_Scancode key);
 
-        void setMouseVisible (bool visible);
+        void setMouseVisible(bool visible);
         void setMouseRelative(bool relative);
         bool getMouseRelative() { return mMouseRelative; }
         void setGrabPointer(bool grab);
@@ -47,8 +45,9 @@ namespace SDLUtil
         void handleWindowEvent(const SDL_Event& evt);
 
         bool _handleWarpMotion(const SDL_MouseMotionEvent& evt);
-        void _wrapMousePointer(const SDL_MouseMotionEvent &evt);
+        void _wrapMousePointer(const SDL_MouseMotionEvent& evt);
         MouseMotionEvent _packageMouseMotion(const SDL_Event& evt);
+        void _setWindowScale();
 
         SDL_Window* mSDLWindow;
         osg::ref_ptr<osgViewer::Viewer> mViewer;
@@ -79,6 +78,9 @@ namespace SDLUtil
 
         bool mWindowHasFocus;
         bool mMouseInWindow;
+
+        Uint16 mScaleX;
+        Uint16 mScaleY;
     };
 
 }

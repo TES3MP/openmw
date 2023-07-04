@@ -14,15 +14,15 @@
 #include <components/compiler/opcodes.hpp>
 
 #include <components/interpreter/interpreter.hpp>
-#include <components/interpreter/runtime.hpp>
 #include <components/interpreter/opcodes.hpp>
+#include <components/interpreter/runtime.hpp>
 
 #include "../mwworld/esmstore.hpp"
 
 #include "../mwbase/environment.hpp"
+#include "../mwbase/mechanicsmanager.hpp"
 #include "../mwbase/windowmanager.hpp"
 #include "../mwbase/world.hpp"
-#include "../mwbase/mechanicsmanager.hpp"
 
 #include "../mwmechanics/actorutil.hpp"
 
@@ -35,36 +35,38 @@ namespace MWScript
     {
         class OpEnableWindow : public Interpreter::Opcode0
         {
-                MWGui::GuiWindow mWindow;
+            MWGui::GuiWindow mWindow;
 
-            public:
+        public:
+            OpEnableWindow(MWGui::GuiWindow window)
+                : mWindow(window)
+            {
+            }
 
-                OpEnableWindow (MWGui::GuiWindow window) : mWindow (window) {}
-
-                void execute (Interpreter::Runtime& runtime) override
-                {
-                    MWBase::Environment::get().getWindowManager()->allow (mWindow);
-                }
+            void execute(Interpreter::Runtime& runtime) override
+            {
+                MWBase::Environment::get().getWindowManager()->allow(mWindow);
+            }
         };
 
         class OpEnableRest : public Interpreter::Opcode0
         {
-            public:
-
-                void execute (Interpreter::Runtime& runtime) override
-                {
-                    MWBase::Environment::get().getWindowManager()->enableRest();
-                }
+        public:
+            void execute(Interpreter::Runtime& runtime) override
+            {
+                MWBase::Environment::get().getWindowManager()->enableRest();
+            }
         };
 
         template <class R>
         class OpShowRestMenu : public Interpreter::Opcode0
         {
         public:
-            void execute (Interpreter::Runtime& runtime) override
+            void execute(Interpreter::Runtime& runtime) override
             {
                 MWWorld::Ptr bed = R()(runtime, false);
 
+<<<<<<< HEAD
                 if (bed.isEmpty() || !MWBase::Environment::get().getMechanicsManager()->sleepInBed(MWMechanics::getPlayer(),
                                                                              bed))
                 /*
@@ -84,84 +86,81 @@ namespace MWScript
                 /*
                     End of tes3mp change (minor)
                 */
+=======
+                if (bed.isEmpty()
+                    || !MWBase::Environment::get().getMechanicsManager()->sleepInBed(MWMechanics::getPlayer(), bed))
+                    MWBase::Environment::get().getWindowManager()->pushGuiMode(MWGui::GM_Rest, bed);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
             }
         };
 
         class OpShowDialogue : public Interpreter::Opcode0
         {
-                MWGui::GuiMode mDialogue;
+            MWGui::GuiMode mDialogue;
 
-            public:
+        public:
+            OpShowDialogue(MWGui::GuiMode dialogue)
+                : mDialogue(dialogue)
+            {
+            }
 
-                OpShowDialogue (MWGui::GuiMode dialogue)
-                : mDialogue (dialogue)
-                {}
-
-                void execute (Interpreter::Runtime& runtime) override
-                {
-                    MWBase::Environment::get().getWindowManager()->pushGuiMode(mDialogue);
-                }
+            void execute(Interpreter::Runtime& runtime) override
+            {
+                MWBase::Environment::get().getWindowManager()->pushGuiMode(mDialogue);
+            }
         };
 
         class OpGetButtonPressed : public Interpreter::Opcode0
         {
-            public:
-
-                void execute (Interpreter::Runtime& runtime) override
-                {
-                    runtime.push (MWBase::Environment::get().getWindowManager()->readPressedButton());
-                }
+        public:
+            void execute(Interpreter::Runtime& runtime) override
+            {
+                runtime.push(MWBase::Environment::get().getWindowManager()->readPressedButton());
+            }
         };
 
         class OpToggleFogOfWar : public Interpreter::Opcode0
         {
-            public:
-
-                void execute (Interpreter::Runtime& runtime) override
-                {
-                    runtime.getContext().report(MWBase::Environment::get().getWindowManager()->toggleFogOfWar() ? "Fog of war -> On"
-                                                                                                                : "Fog of war -> Off");
-                }
+        public:
+            void execute(Interpreter::Runtime& runtime) override
+            {
+                runtime.getContext().report(MWBase::Environment::get().getWindowManager()->toggleFogOfWar()
+                        ? "Fog of war -> On"
+                        : "Fog of war -> Off");
+            }
         };
 
         class OpToggleFullHelp : public Interpreter::Opcode0
         {
-            public:
-
-                void execute (Interpreter::Runtime& runtime) override
-                {
-                    runtime.getContext().report(MWBase::Environment::get().getWindowManager()->toggleFullHelp() ? "Full help -> On"
-                                                                                                                : "Full help -> Off");
-                }
+        public:
+            void execute(Interpreter::Runtime& runtime) override
+            {
+                runtime.getContext().report(MWBase::Environment::get().getWindowManager()->toggleFullHelp()
+                        ? "Full help -> On"
+                        : "Full help -> Off");
+            }
         };
 
         class OpShowMap : public Interpreter::Opcode0
         {
         public:
-
-            void execute (Interpreter::Runtime& runtime) override
+            void execute(Interpreter::Runtime& runtime) override
             {
-                std::string cell = (runtime.getStringLiteral (runtime[0].mInteger));
-                ::Misc::StringUtils::lowerCaseInPlace(cell);
+                std::string_view cell = runtime.getStringLiteral(runtime[0].mInteger);
                 runtime.pop();
 
-                // "Will match complete or partial cells, so ShowMap, "Vivec" will show cells Vivec and Vivec, Fred's House as well."
-                // http://www.uesp.net/wiki/Tes3Mod:ShowMap
+                // "Will match complete or partial cells, so ShowMap, "Vivec" will show cells Vivec and Vivec, Fred's
+                // House as well." http://www.uesp.net/wiki/Tes3Mod:ShowMap
 
-                const MWWorld::Store<ESM::Cell> &cells =
-                    MWBase::Environment::get().getWorld()->getStore().get<ESM::Cell>();
+                const MWWorld::Store<ESM::Cell>& cells = MWBase::Environment::get().getESMStore()->get<ESM::Cell>();
 
-                MWWorld::Store<ESM::Cell>::iterator it = cells.extBegin();
-                for (; it != cells.extEnd(); ++it)
+                MWBase::WindowManager* winMgr = MWBase::Environment::get().getWindowManager();
+
+                for (auto it = cells.extBegin(); it != cells.extEnd(); ++it)
                 {
-                    std::string name = it->mName;
-                    ::Misc::StringUtils::lowerCaseInPlace(name);
-                    if (name.find(cell) != std::string::npos)
-                        MWBase::Environment::get().getWindowManager()->addVisitedLocation (
-                            it->mName,
-                            it->getGridX(),
-                            it->getGridY()
-                        );
+                    const auto& cellName = it->mName;
+                    if (Misc::StringUtils::ciStartsWith(cellName, cell))
+                        winMgr->addVisitedLocation(cellName, it->getGridX(), it->getGridY());
                 }
             }
         };
@@ -169,22 +168,16 @@ namespace MWScript
         class OpFillMap : public Interpreter::Opcode0
         {
         public:
-
-            void execute (Interpreter::Runtime& runtime) override
+            void execute(Interpreter::Runtime& runtime) override
             {
-                const MWWorld::Store<ESM::Cell> &cells =
-                    MWBase::Environment::get().getWorld ()->getStore().get<ESM::Cell>();
+                const MWWorld::Store<ESM::Cell>& cells = MWBase::Environment::get().getESMStore()->get<ESM::Cell>();
 
-                MWWorld::Store<ESM::Cell>::iterator it = cells.extBegin();
-                for (; it != cells.extEnd(); ++it)
+                for (auto it = cells.extBegin(); it != cells.extEnd(); ++it)
                 {
-                    std::string name = it->mName;
-                    if (name != "")
-                        MWBase::Environment::get().getWindowManager()->addVisitedLocation (
-                            name,
-                            it->getGridX(),
-                            it->getGridY()
-                        );
+                    const std::string& name = it->mName;
+                    if (!name.empty())
+                        MWBase::Environment::get().getWindowManager()->addVisitedLocation(
+                            name, it->getGridX(), it->getGridY());
                 }
             }
         };
@@ -192,22 +185,20 @@ namespace MWScript
         class OpMenuTest : public Interpreter::Opcode1
         {
         public:
-
-            void execute (Interpreter::Runtime& runtime, unsigned int arg0) override
+            void execute(Interpreter::Runtime& runtime, unsigned int arg0) override
             {
-                int arg=0;
-                if(arg0>0)
+                int arg = 0;
+                if (arg0 > 0)
                 {
                     arg = runtime[0].mInteger;
                     runtime.pop();
                 }
 
-
                 if (arg == 0)
                 {
                     MWGui::GuiMode modes[] = { MWGui::GM_Inventory, MWGui::GM_Container };
 
-                    for (int i=0; i<2; ++i)
+                    for (int i = 0; i < 2; ++i)
                     {
                         if (MWBase::Environment::get().getWindowManager()->containsMode(modes[i]))
                             MWBase::Environment::get().getWindowManager()->removeGuiMode(modes[i]);
@@ -233,60 +224,49 @@ namespace MWScript
         class OpToggleMenus : public Interpreter::Opcode0
         {
         public:
-            void execute(Interpreter::Runtime &runtime) override
+            void execute(Interpreter::Runtime& runtime) override
             {
                 bool state = MWBase::Environment::get().getWindowManager()->toggleHud();
                 runtime.getContext().report(state ? "GUI -> On" : "GUI -> Off");
 
                 if (!state)
                 {
-                    while (MWBase::Environment::get().getWindowManager()->getMode() != MWGui::GM_None) // don't use isGuiMode, or we get an infinite loop for modal message boxes!
+                    while (MWBase::Environment::get().getWindowManager()->getMode()
+                        != MWGui::GM_None) // don't use isGuiMode, or we get an infinite loop for modal message boxes!
                         MWBase::Environment::get().getWindowManager()->popGuiMode();
                 }
             }
         };
 
-        void installOpcodes (Interpreter::Interpreter& interpreter)
+        void installOpcodes(Interpreter::Interpreter& interpreter)
         {
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableBirthMenu,
-                new OpShowDialogue (MWGui::GM_Birth));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableClassMenu,
-                new OpShowDialogue (MWGui::GM_Class));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableNameMenu,
-                new OpShowDialogue (MWGui::GM_Name));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableRaceMenu,
-                new OpShowDialogue (MWGui::GM_Race));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableStatsReviewMenu,
-                new OpShowDialogue (MWGui::GM_Review));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableLevelupMenu,
-                new OpShowDialogue (MWGui::GM_Levelup));
+            interpreter.installSegment5<OpShowDialogue>(Compiler::Gui::opcodeEnableBirthMenu, MWGui::GM_Birth);
+            interpreter.installSegment5<OpShowDialogue>(Compiler::Gui::opcodeEnableClassMenu, MWGui::GM_Class);
+            interpreter.installSegment5<OpShowDialogue>(Compiler::Gui::opcodeEnableNameMenu, MWGui::GM_Name);
+            interpreter.installSegment5<OpShowDialogue>(Compiler::Gui::opcodeEnableRaceMenu, MWGui::GM_Race);
+            interpreter.installSegment5<OpShowDialogue>(Compiler::Gui::opcodeEnableStatsReviewMenu, MWGui::GM_Review);
+            interpreter.installSegment5<OpShowDialogue>(Compiler::Gui::opcodeEnableLevelupMenu, MWGui::GM_Levelup);
 
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableInventoryMenu,
-                new OpEnableWindow (MWGui::GW_Inventory));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableMagicMenu,
-                new OpEnableWindow (MWGui::GW_Magic));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableMapMenu,
-                new OpEnableWindow (MWGui::GW_Map));
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableStatsMenu,
-                new OpEnableWindow (MWGui::GW_Stats));
+            interpreter.installSegment5<OpEnableWindow>(Compiler::Gui::opcodeEnableInventoryMenu, MWGui::GW_Inventory);
+            interpreter.installSegment5<OpEnableWindow>(Compiler::Gui::opcodeEnableMagicMenu, MWGui::GW_Magic);
+            interpreter.installSegment5<OpEnableWindow>(Compiler::Gui::opcodeEnableMapMenu, MWGui::GW_Map);
+            interpreter.installSegment5<OpEnableWindow>(Compiler::Gui::opcodeEnableStatsMenu, MWGui::GW_Stats);
 
-            interpreter.installSegment5 (Compiler::Gui::opcodeEnableRest,
-                new OpEnableRest ());
+            interpreter.installSegment5<OpEnableRest>(Compiler::Gui::opcodeEnableRest);
 
-            interpreter.installSegment5 (Compiler::Gui::opcodeShowRestMenu,
-                new OpShowRestMenu<ImplicitRef>);
-            interpreter.installSegment5 (Compiler::Gui::opcodeShowRestMenuExplicit, new OpShowRestMenu<ExplicitRef>);
+            interpreter.installSegment5<OpShowRestMenu<ImplicitRef>>(Compiler::Gui::opcodeShowRestMenu);
+            interpreter.installSegment5<OpShowRestMenu<ExplicitRef>>(Compiler::Gui::opcodeShowRestMenuExplicit);
 
-            interpreter.installSegment5 (Compiler::Gui::opcodeGetButtonPressed, new OpGetButtonPressed);
+            interpreter.installSegment5<OpGetButtonPressed>(Compiler::Gui::opcodeGetButtonPressed);
 
-            interpreter.installSegment5 (Compiler::Gui::opcodeToggleFogOfWar, new OpToggleFogOfWar);
+            interpreter.installSegment5<OpToggleFogOfWar>(Compiler::Gui::opcodeToggleFogOfWar);
 
-            interpreter.installSegment5 (Compiler::Gui::opcodeToggleFullHelp, new OpToggleFullHelp);
+            interpreter.installSegment5<OpToggleFullHelp>(Compiler::Gui::opcodeToggleFullHelp);
 
-            interpreter.installSegment5 (Compiler::Gui::opcodeShowMap, new OpShowMap);
-            interpreter.installSegment5 (Compiler::Gui::opcodeFillMap, new OpFillMap);
-            interpreter.installSegment3 (Compiler::Gui::opcodeMenuTest, new OpMenuTest);
-            interpreter.installSegment5 (Compiler::Gui::opcodeToggleMenus, new OpToggleMenus);
+            interpreter.installSegment5<OpShowMap>(Compiler::Gui::opcodeShowMap);
+            interpreter.installSegment5<OpFillMap>(Compiler::Gui::opcodeFillMap);
+            interpreter.installSegment3<OpMenuTest>(Compiler::Gui::opcodeMenuTest);
+            interpreter.installSegment5<OpToggleMenus>(Compiler::Gui::opcodeToggleMenus);
         }
     }
 }

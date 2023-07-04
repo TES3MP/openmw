@@ -3,8 +3,9 @@
 
 #include <map>
 
+#include <apps/opencs/model/world/resources.hpp>
+
 #include "universalid.hpp"
-#include "resources.hpp"
 
 namespace VFS
 {
@@ -15,26 +16,25 @@ namespace CSMWorld
 {
     class ResourcesManager
     {
-            std::map<UniversalId::Type, Resources> mResources;
-            const VFS::Manager* mVFS;
+        std::map<UniversalId::Type, Resources> mResources;
+        const VFS::Manager* mVFS;
 
-        private:
+    private:
+        void addResources(const Resources& resources);
 
-            void addResources (const Resources& resources);
+        const char* const* getMeshExtensions();
 
-            const char * const * getMeshExtensions();
+    public:
+        ResourcesManager();
+        ~ResourcesManager();
 
-        public:
+        const VFS::Manager* getVFS() const;
 
-            ResourcesManager();
+        void setVFS(const VFS::Manager* vfs);
 
-            const VFS::Manager* getVFS() const;
+        void recreateResources();
 
-            void setVFS(const VFS::Manager* vfs);
-
-            void recreateResources();
-
-            const Resources& get (UniversalId::Type type) const;
+        const Resources& get(UniversalId::Type type) const;
     };
 }
 

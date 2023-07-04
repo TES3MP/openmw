@@ -1,7 +1,10 @@
 #include "trainingwindow.hpp"
 
+#include <MyGUI_Button.h>
 #include <MyGUI_Gui.h>
+#include <MyGUI_TextIterator.h>
 
+<<<<<<< HEAD
 /*
     Start of tes3mp addition
 
@@ -15,38 +18,24 @@
 */
 
 #include "../mwbase/windowmanager.hpp"
+=======
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 #include "../mwbase/environment.hpp"
-#include "../mwbase/world.hpp"
 #include "../mwbase/mechanicsmanager.hpp"
+#include "../mwbase/windowmanager.hpp"
+#include "../mwbase/world.hpp"
 
 #include "../mwworld/class.hpp"
 #include "../mwworld/containerstore.hpp"
 #include "../mwworld/esmstore.hpp"
 
-#include "../mwmechanics/npcstats.hpp"
 #include "../mwmechanics/actorutil.hpp"
+#include "../mwmechanics/npcstats.hpp"
 
-#include <components/settings/settings.hpp>
+#include <components/esm3/loadclas.hpp>
+#include <components/settings/values.hpp>
 
 #include "tooltips.hpp"
-
-namespace
-{
-// Sorts a container descending by skill value. If skill value is equal, sorts ascending by skill ID.
-// pair <skill ID, skill value>
-bool sortSkills (const std::pair<int, int>& left, const std::pair<int, int>& right)
-{
-    if (left == right)
-        return false;
-
-    if (left.second > right.second)
-        return true;
-    else if (left.second < right.second)
-        return false;
-
-    return left.first < right.first;
-}
-}
 
 namespace MWGui
 {
@@ -54,7 +43,6 @@ namespace MWGui
     TrainingWindow::TrainingWindow()
         : WindowBase("openmw_trainingwindow.layout")
         , mTimeAdvancer(0.05f)
-        , mTrainingSkillBasedOnBaseSkill(Settings::Manager::getBool("trainers training skills based on base skill", "Game"))
     {
         getWidget(mTrainingOptions, "TrainingOptions");
         getWidget(mCancelButton, "CancelButton");
@@ -79,7 +67,7 @@ namespace MWGui
         center();
     }
 
-    void TrainingWindow::setPtr (const MWWorld::Ptr& actor)
+    void TrainingWindow::setPtr(const MWWorld::Ptr& actor)
     {
         mPtr = actor;
 
@@ -88,98 +76,109 @@ namespace MWGui
 
         mPlayerGold->setCaptionWithReplacing("#{sGold}: " + MyGUI::utility::toString(playerGold));
 
+        const auto& store = MWBase::Environment::get().getESMStore();
+        const MWWorld::Store<ESM::GameSetting>& gmst = store->get<ESM::GameSetting>();
+        const MWWorld::Store<ESM::Skill>& skillStore = store->get<ESM::Skill>();
+
         // NPC can train you in his best 3 skills
-        std::vector< std::pair<int, float> > skills;
+        std::vector<std::pair<const ESM::Skill*, float>> skills;
 
         MWMechanics::NpcStats const& actorStats(actor.getClass().getNpcStats(actor));
-        for (int i=0; i<ESM::Skill::Length; ++i)
+        for (const ESM::Skill& skill : skillStore)
         {
-            float value = getSkillForTraining(actorStats, i);
+            float value = getSkillForTraining(actorStats, skill.mId);
 
-            skills.emplace_back(i, value);
+            skills.emplace_back(&skill, value);
         }
 
-        std::sort(skills.begin(), skills.end(), sortSkills);
+        std::sort(skills.begin(), skills.end(), [](const auto& left, const auto& right) {
+            return std::tie(right.second, left.first->mId) < std::tie(left.second, right.first->mId);
+        });
 
-        MyGUI::EnumeratorWidgetPtr widgets = mTrainingOptions->getEnumerator ();
-        MyGUI::Gui::getInstance ().destroyWidgets (widgets);
+        MyGUI::EnumeratorWidgetPtr widgets = mTrainingOptions->getEnumerator();
+        MyGUI::Gui::getInstance().destroyWidgets(widgets);
 
-        MWMechanics::NpcStats& pcStats = player.getClass().getNpcStats (player);
+        MWMechanics::NpcStats& pcStats = player.getClass().getNpcStats(player);
 
-        const MWWorld::Store<ESM::GameSetting> &gmst =
-            MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+        const int lineHeight = MWBase::Environment::get().getWindowManager()->getFontHeight() + 2;
 
-        for (int i=0; i<3; ++i)
+        for (int i = 0; i < 3; ++i)
         {
-            int price = static_cast<int>(pcStats.getSkill (skills[i].first).getBase() * gmst.find("iTrainingMod")->mValue.getInteger());
+            const ESM::Skill* skill = skills[i].first;
+            int price = static_cast<int>(
+                pcStats.getSkill(skill->mId).getBase() * gmst.find("iTrainingMod")->mValue.getInteger());
             price = std::max(1, price);
             price = MWBase::Environment::get().getMechanicsManager()->getBarterOffer(mPtr, price, true);
 
-            MyGUI::Button* button = mTrainingOptions->createWidget<MyGUI::Button>(price <= playerGold ? "SandTextButton" : "SandTextButtonDisabled", // can't use setEnabled since that removes tooltip
-                MyGUI::IntCoord(5, 5+i*18, mTrainingOptions->getWidth()-10, 18), MyGUI::Align::Default);
+            MyGUI::Button* button = mTrainingOptions->createWidget<MyGUI::Button>(price <= playerGold
+                    ? "SandTextButton"
+                    : "SandTextButtonDisabled", // can't use setEnabled since that removes tooltip
+                MyGUI::IntCoord(5, 5 + i * lineHeight, mTrainingOptions->getWidth() - 10, lineHeight),
+                MyGUI::Align::Default);
 
             button->setUserData(skills[i].first);
             button->eventMouseButtonClick += MyGUI::newDelegate(this, &TrainingWindow::onTrainingSelected);
 
-            button->setCaptionWithReplacing("#{" + ESM::Skill::sSkillNameIds[skills[i].first] + "} - " + MyGUI::utility::toString(price));
+            button->setCaptionWithReplacing(
+                MyGUI::TextIterator::toTagsString(skill->mName) + " - " + MyGUI::utility::toString(price));
 
-            button->setSize(button->getTextSize ().width+12, button->getSize().height);
+            button->setSize(button->getTextSize().width + 12, button->getSize().height);
 
-            ToolTips::createSkillToolTip (button, skills[i].first);
+            ToolTips::createSkillToolTip(button, skill->mId);
         }
 
         center();
     }
 
-    void TrainingWindow::onReferenceUnavailable ()
+    void TrainingWindow::onReferenceUnavailable()
     {
         MWBase::Environment::get().getWindowManager()->removeGuiMode(GM_Training);
     }
 
-    void TrainingWindow::onCancelButtonClicked (MyGUI::Widget *sender)
+    void TrainingWindow::onCancelButtonClicked(MyGUI::Widget* sender)
     {
         MWBase::Environment::get().getWindowManager()->removeGuiMode(GM_Training);
     }
 
-    void TrainingWindow::onTrainingSelected (MyGUI::Widget *sender)
+    void TrainingWindow::onTrainingSelected(MyGUI::Widget* sender)
     {
-        int skillId = *sender->getUserData<int>();
+        const ESM::Skill* skill = *sender->getUserData<const ESM::Skill*>();
 
-        MWWorld::Ptr player = MWBase::Environment::get().getWorld ()->getPlayerPtr();
-        MWMechanics::NpcStats& pcStats = player.getClass().getNpcStats (player);
+        MWWorld::Ptr player = MWBase::Environment::get().getWorld()->getPlayerPtr();
+        MWMechanics::NpcStats& pcStats = player.getClass().getNpcStats(player);
 
-        const MWWorld::ESMStore &store =
-            MWBase::Environment::get().getWorld()->getStore();
+        const MWWorld::ESMStore& store = *MWBase::Environment::get().getESMStore();
 
-        int price = pcStats.getSkill (skillId).getBase() * store.get<ESM::GameSetting>().find("iTrainingMod")->mValue.getInteger();
-        price = MWBase::Environment::get().getMechanicsManager()->getBarterOffer(mPtr,price,true);
+        int price = pcStats.getSkill(skill->mId).getBase()
+            * store.get<ESM::GameSetting>().find("iTrainingMod")->mValue.getInteger();
+        price = MWBase::Environment::get().getMechanicsManager()->getBarterOffer(mPtr, price, true);
 
         if (price > player.getClass().getContainerStore(player).count(MWWorld::ContainerStore::sGoldId))
             return;
 
-        if (getSkillForTraining(mPtr.getClass().getNpcStats(mPtr), skillId) <= pcStats.getSkill(skillId).getBase())
+        if (getSkillForTraining(mPtr.getClass().getNpcStats(mPtr), skill->mId)
+            <= pcStats.getSkill(skill->mId).getBase())
         {
-            MWBase::Environment::get().getWindowManager()->messageBox ("#{sServiceTrainingWords}");
+            MWBase::Environment::get().getWindowManager()->messageBox("#{sServiceTrainingWords}");
             return;
         }
 
         // You can not train a skill above its governing attribute
-        const ESM::Skill* skill = MWBase::Environment::get().getWorld()->getStore().get<ESM::Skill>().find(skillId);
-        if (pcStats.getSkill(skillId).getBase() >= pcStats.getAttribute(skill->mData.mAttribute).getBase())
+        if (pcStats.getSkill(skill->mId).getBase()
+            >= pcStats.getAttribute(ESM::Attribute::AttributeID(skill->mData.mAttribute)).getBase())
         {
-            MWBase::Environment::get().getWindowManager()->messageBox ("#{sNotifyMessage17}");
+            MWBase::Environment::get().getWindowManager()->messageBox("#{sNotifyMessage17}");
             return;
         }
 
         // increase skill
-        MWWorld::LiveCellRef<ESM::NPC> *playerRef = player.get<ESM::NPC>();
+        MWWorld::LiveCellRef<ESM::NPC>* playerRef = player.get<ESM::NPC>();
 
-        const ESM::Class *class_ =
-            store.get<ESM::Class>().find(playerRef->mBase->mClass);
-        pcStats.increaseSkill (skillId, *class_, true);
+        const ESM::Class* class_ = store.get<ESM::Class>().find(playerRef->mBase->mClass);
+        pcStats.increaseSkill(skill->mId, *class_, true);
 
         // remove gold
-        player.getClass().getContainerStore(player).remove(MWWorld::ContainerStore::sGoldId, price, player);
+        player.getClass().getContainerStore(player).remove(MWWorld::ContainerStore::sGoldId, price);
 
         // add gold to NPC trading gold pool
         MWMechanics::NpcStats& npcStats = mPtr.getClass().getNpcStats(mPtr);
@@ -201,6 +200,7 @@ namespace MWGui
             End of tes3mp change (major)
         */
 
+<<<<<<< HEAD
         // advance time
         MWBase::Environment::get().getMechanicsManager()->rest(2, false);
 
@@ -214,13 +214,15 @@ namespace MWGui
             End of tes3mp change (major)
         */
 
+=======
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         setVisible(false);
         mProgressBar.setVisible(true);
         mProgressBar.setProgress(0, 2);
         mTimeAdvancer.run(2);
 
-        MWBase::Environment::get().getWindowManager()->fadeScreenOut(0.25);
-        MWBase::Environment::get().getWindowManager()->fadeScreenIn(0.25, false, 0.25);
+        MWBase::Environment::get().getWindowManager()->fadeScreenOut(0.2);
+        MWBase::Environment::get().getWindowManager()->fadeScreenIn(0.2, false, 0.2);
     }
 
     void TrainingWindow::onTrainingProgressChanged(int cur, int total)
@@ -232,16 +234,20 @@ namespace MWGui
     {
         mProgressBar.setVisible(false);
 
+        // advance time
+        MWBase::Environment::get().getMechanicsManager()->rest(2, false);
+        MWBase::Environment::get().getWorld()->advanceTime(2);
+
         // go back to game mode
-        MWBase::Environment::get().getWindowManager()->removeGuiMode (GM_Training);
+        MWBase::Environment::get().getWindowManager()->removeGuiMode(GM_Training);
         MWBase::Environment::get().getWindowManager()->exitCurrentGuiMode();
     }
 
-    float TrainingWindow::getSkillForTraining(const MWMechanics::NpcStats& stats, int skillId) const
+    float TrainingWindow::getSkillForTraining(const MWMechanics::NpcStats& stats, ESM::RefId id) const
     {
-        if (mTrainingSkillBasedOnBaseSkill)
-            return stats.getSkill(skillId).getBase();
-        return stats.getSkill(skillId).getModified();
+        if (Settings::game().mTrainersTrainingSkillsBasedOnBaseSkill)
+            return stats.getSkill(id).getBase();
+        return stats.getSkill(id).getModified();
     }
 
     void TrainingWindow::onFrame(float dt)

@@ -1,8 +1,8 @@
 #include "controlswitch.hpp"
 
-#include <components/esm/esmwriter.hpp>
-#include <components/esm/esmreader.hpp>
-#include <components/esm/controlsstate.hpp>
+#include <components/esm3/controlsstate.hpp>
+#include <components/esm3/esmreader.hpp>
+#include <components/esm3/esmwriter.hpp>
 
 #include <components/loadinglistener/loadinglistener.hpp>
 
@@ -20,46 +20,34 @@ namespace MWInput
 
     void ControlSwitch::clear()
     {
-        mSwitches["playercontrols"]      = true;
-        mSwitches["playerfighting"]      = true;
-        mSwitches["playerjumping"]       = true;
-        mSwitches["playerlooking"]       = true;
-        mSwitches["playermagic"]         = true;
-        mSwitches["playerviewswitch"]    = true;
-        mSwitches["vanitymode"]          = true;
+        mSwitches["playercontrols"] = true;
+        mSwitches["playerfighting"] = true;
+        mSwitches["playerjumping"] = true;
+        mSwitches["playerlooking"] = true;
+        mSwitches["playermagic"] = true;
+        mSwitches["playerviewswitch"] = true;
+        mSwitches["vanitymode"] = true;
     }
 
-    bool ControlSwitch::get(const std::string& key)
+    bool ControlSwitch::get(std::string_view key)
     {
-        return mSwitches[key];
+        auto it = mSwitches.find(key);
+        if (it == mSwitches.end())
+            throw std::runtime_error("Incorrect ControlSwitch: " + std::string(key));
+        return it->second;
     }
 
-    void ControlSwitch::set(const std::string& key, bool value)
+    void ControlSwitch::set(std::string_view key, bool value)
     {
-        MWWorld::Player& player = MWBase::Environment::get().getWorld()->getPlayer();
-
-        /// \note 7 switches at all, if-else is relevant
-        if (key == "playercontrols" && !value)
+        if (key == "playerlooking" && !value)
         {
-            player.setLeftRight(0);
-            player.setForwardBackward(0);
-            player.setAutoMove(false);
-            player.setUpDown(0);
+            auto world = MWBase::Environment::get().getWorld();
+            world->rotateObject(world->getPlayerPtr(), osg::Vec3f());
         }
-        else if (key == "playerjumping" && !value)
-        {
-            /// \fixme maybe crouching at this time
-            player.setUpDown(0);
-        }
-        else if (key == "vanitymode")
-        {
-            MWBase::Environment::get().getWorld()->allowVanityMode(value);
-        }
-        else if (key == "playerlooking" && !value)
-        {
-            MWBase::Environment::get().getWorld()->rotateObject(player.getPlayer(), 0.f, 0.f, 0.f);
-        }
-        mSwitches[key] = value;
+        auto it = mSwitches.find(key);
+        if (it == mSwitches.end())
+            throw std::runtime_error("Incorrect ControlSwitch: " + std::string(key));
+        it->second = value;
     }
 
     void ControlSwitch::write(ESM::ESMWriter& writer, Loading::Listener& /*progress*/)
@@ -73,9 +61,9 @@ namespace MWInput
         controls.mWeaponDrawingDisabled = !mSwitches["playerfighting"];
         controls.mSpellDrawingDisabled = !mSwitches["playermagic"];
 
-        writer.startRecord (ESM::REC_INPU);
+        writer.startRecord(ESM::REC_INPU);
         controls.save(writer);
-        writer.endRecord (ESM::REC_INPU);
+        writer.endRecord(ESM::REC_INPU);
     }
 
     void ControlSwitch::readRecord(ESM::ESMReader& reader, uint32_t type)

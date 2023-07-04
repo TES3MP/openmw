@@ -5,16 +5,22 @@
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPushButton>
-#include <QWidget>
 
-#include "state.hpp"
+#include <components/settings/settings.hpp>
+
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+
 #include "shortcutmanager.hpp"
+#include "state.hpp"
+
+class QObject;
+class QWidget;
 
 namespace CSMPrefs
 {
-    ModifierSetting::ModifierSetting(Category* parent, Settings::Manager* values, QMutex* mutex, const std::string& key,
-        const std::string& label)
-        : Setting(parent, values, mutex, key, label)
+    ModifierSetting::ModifierSetting(Category* parent, QMutex* mutex, const std::string& key, const std::string& label)
+        : Setting(parent, mutex, key, label)
         , mButton(nullptr)
         , mEditorActive(false)
     {
@@ -38,7 +44,7 @@ namespace CSMPrefs
 
         mButton = widget;
 
-        connect(widget, SIGNAL(toggled(bool)), this, SLOT(buttonToggled(bool)));
+        connect(widget, &QPushButton::toggled, this, &ModifierSetting::buttonToggled);
 
         return std::make_pair(label, widget);
     }
@@ -47,7 +53,7 @@ namespace CSMPrefs
     {
         if (mButton)
         {
-            std::string shortcut = getValues().getString(getKey(), getParent()->getKey());
+            const std::string& shortcut = Settings::Manager::getString(getKey(), getParent()->getKey());
 
             int modifier;
             State::get().getShortcutManager().convertFromString(shortcut, modifier);
@@ -88,10 +94,7 @@ namespace CSMPrefs
     bool ModifierSetting::handleEvent(QObject* target, int mod, int value)
     {
         // For potential future exceptions
-        const int Blacklist[] =
-        {
-            0
-        };
+        const int Blacklist[] = { 0 };
 
         const size_t BlacklistSize = sizeof(Blacklist) / sizeof(int);
 
@@ -116,7 +119,6 @@ namespace CSMPrefs
                 return true;
         }
 
-
         // Update modifier
         int modifier = value;
         storeValue(modifier);
@@ -135,7 +137,7 @@ namespace CSMPrefs
 
         {
             QMutexLocker lock(getMutex());
-            getValues().setString(getKey(), getParent()->getKey(), value);
+            Settings::Manager::setString(getKey(), getParent()->getKey(), value);
         }
 
         getParent()->getState()->update(*this);

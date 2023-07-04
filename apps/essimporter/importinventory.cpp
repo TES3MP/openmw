@@ -2,12 +2,12 @@
 
 #include <stdexcept>
 
-#include <components/esm/esmreader.hpp>
+#include <components/esm3/esmreader.hpp>
 
 namespace ESSImport
 {
 
-    void Inventory::load(ESM::ESMReader &esm)
+    void Inventory::load(ESM::ESMReader& esm)
     {
         while (esm.isNextSub("NPCO"))
         {
@@ -19,11 +19,10 @@ namespace ESSImport
             item.mCount = contItem.mCount;
             item.mRelativeEquipmentSlot = -1;
             item.mLockLevel = 0;
-            item.mRefNum.unset();
 
             unsigned int itemCount = std::abs(item.mCount);
             bool separateStacks = false;
-            for (unsigned int i=0;i<itemCount;++i)
+            for (unsigned int i = 0; i < itemCount; ++i)
             {
                 bool newStack = esm.isNextSub("XIDX");
                 if (newStack)
@@ -40,7 +39,7 @@ namespace ESSImport
                 bool isDeleted = false;
                 item.ESM::CellRef::loadData(esm, isDeleted);
 
-                int charge=-1;
+                int charge = -1;
                 esm.getHNOT(charge, "XHLT");
                 item.mChargeInt = charge;
 

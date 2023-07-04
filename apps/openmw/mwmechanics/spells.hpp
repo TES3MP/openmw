@@ -1,14 +1,13 @@
 #ifndef GAME_MWMECHANICS_SPELLS_H
 #define GAME_MWMECHANICS_SPELLS_H
 
-#include <memory>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "../mwworld/timestamp.hpp"
 
-#include "magiceffects.hpp"
 #include "spelllist.hpp"
 
 namespace ESM
@@ -28,48 +27,47 @@ namespace MWMechanics
     /// diseases. It also keeps track of used powers (which can only be used every 24h).
     class Spells
     {
-            std::shared_ptr<SpellList> mSpellList;
-            std::map<const ESM::Spell*, SpellParams> mSpells;
+        std::shared_ptr<SpellList> mSpellList;
+        std::vector<const ESM::Spell*> mSpells;
 
-            // Note: this is the spell that's about to be cast, *not* the spell selected in the GUI (which may be different)
-            std::string mSelectedSpell;
+        // Note: this is the spell that's about to be cast, *not* the spell selected in the GUI (which may be different)
+        ESM::RefId mSelectedSpell;
 
-            std::map<const ESM::Spell*, MWWorld::TimeStamp> mUsedPowers;
+        std::vector<std::pair<const ESM::Spell*, MWWorld::TimeStamp>> mUsedPowers;
 
-            mutable bool mSpellsChanged;
-            mutable MagicEffects mEffects;
-            mutable std::map<const ESM::Spell*, MagicEffects> mSourcedEffects;
-            void rebuildEffects() const;
+        bool hasSpellType(const ESM::Spell::SpellType type) const;
 
-            bool hasDisease(const ESM::Spell::SpellType type) const;
+        using SpellFilter = bool (*)(const ESM::Spell*);
+        void purge(const SpellFilter& filter);
 
-            using SpellFilter = bool (*)(const ESM::Spell*);
-            void purge(const SpellFilter& filter);
+        void addSpell(const ESM::Spell* spell);
+        void removeSpell(const ESM::Spell* spell);
+        void removeAllSpells();
 
-            void addSpell(const ESM::Spell* spell);
-            void removeSpell(const ESM::Spell* spell);
-            void removeAllSpells();
+        friend class SpellList;
 
-            friend class SpellList;
-        public:
-            using TIterator = std::map<const ESM::Spell*, SpellParams>::const_iterator;
+    public:
+        using Collection = std::vector<const ESM::Spell*>;
 
-            Spells();
+        Spells();
 
-            Spells(const Spells&);
+        Spells(const Spells&);
 
-            Spells(Spells&& spells);
+        Spells(Spells&& spells);
 
-            ~Spells();
+        ~Spells();
 
-            static bool hasCorprusEffect(const ESM::Spell *spell);
+        static bool hasCorprusEffect(const ESM::Spell* spell);
 
-            void purgeEffect(int effectId);
-            void purgeEffect(int effectId, const std::string & sourceId);
+        bool canUsePower(const ESM::Spell* spell) const;
+        void usePower(const ESM::Spell* spell);
 
-            bool canUsePower (const ESM::Spell* spell) const;
-            void usePower (const ESM::Spell* spell);
+        void purgeCommonDisease();
+        void purgeBlightDisease();
+        void purgeCorprusDisease();
+        void purgeCurses();
 
+<<<<<<< HEAD
             /*
                 Start of tes3mp addition
 
@@ -84,53 +82,48 @@ namespace MWMechanics
             void purgeBlightDisease();
             void purgeCorprusDisease();
             void purgeCurses();
+=======
+        Collection::const_iterator begin() const;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
-            TIterator begin() const;
+        Collection::const_iterator end() const;
 
-            TIterator end() const;
+        bool hasSpell(const ESM::RefId& spell) const;
+        bool hasSpell(const ESM::Spell* spell) const;
 
-            bool hasSpell(const std::string& spell) const;
-            bool hasSpell(const ESM::Spell* spell) const;
+        void add(const ESM::RefId& spell);
+        ///< Adding a spell that is already listed in *this is a no-op.
 
-            void add (const std::string& spell);
-            ///< Adding a spell that is already listed in *this is a no-op.
+        void add(const ESM::Spell* spell);
+        ///< Adding a spell that is already listed in *this is a no-op.
 
-            void add (const ESM::Spell* spell);
-            ///< Adding a spell that is already listed in *this is a no-op.
+        void remove(const ESM::RefId& spell);
+        ///< If the spell to be removed is the selected spell, the selected spell will be changed to
+        /// no spell (empty string).
 
-            void remove (const std::string& spell);
-            ///< If the spell to be removed is the selected spell, the selected spell will be changed to
-            /// no spell (empty string).
+        void clear(bool modifyBase = false);
+        ///< Remove all spells of al types.
 
-            MagicEffects getMagicEffects() const;
-            ///< Return sum of magic effects resulting from abilities, blights, deseases and curses.
+        void setSelectedSpell(const ESM::RefId& spellId);
+        ///< This function does not verify, if the spell is available.
 
-            void clear(bool modifyBase = false);
-            ///< Remove all spells of al types.
+        const ESM::RefId& getSelectedSpell() const;
+        ///< May return an empty string.
 
-            void setSelectedSpell (const std::string& spellId);
-            ///< This function does not verify, if the spell is available.
+        bool hasCommonDisease() const;
 
-            const std::string getSelectedSpell() const;
-            ///< May return an empty string.
+        bool hasBlightDisease() const;
 
-            bool isSpellActive(const std::string& id) const;
-            ///< Are we under the effects of the given spell ID?
+        /// Iteration methods for lua
+        size_t count() const { return mSpells.size(); }
+        const ESM::Spell* at(size_t index) const { return mSpells.at(index); }
 
-            bool hasCommonDisease() const;
+        void readState(const ESM::SpellState& state, CreatureStats* creatureStats);
+        void writeState(ESM::SpellState& state) const;
 
-            bool hasBlightDisease() const;
+        bool setSpells(const ESM::RefId& id);
 
-            void removeEffects(const std::string& id);
-
-            void visitEffectSources (MWMechanics::EffectSourceVisitor& visitor) const;
-
-            void readState (const ESM::SpellState& state, CreatureStats* creatureStats);
-            void writeState (ESM::SpellState& state) const;
-
-            bool setSpells(const std::string& id);
-
-            void addAllToInstance(const std::vector<std::string>& spells);
+        void addAllToInstance(const std::vector<ESM::RefId>& spells);
     };
 }
 

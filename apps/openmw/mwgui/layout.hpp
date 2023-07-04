@@ -2,74 +2,77 @@
 #define OPENMW_MWGUI_LAYOUT_H
 
 #include <string>
-#include <MyGUI_WidgetDefines.h>
+#include <string_view>
+
 #include <MyGUI_Widget.h>
 
 #include <components/debug/debuglog.hpp>
 
 namespace MWGui
 {
-  /** The Layout class is an utility class used to load MyGUI layouts
-      from xml files, and to manipulate member widgets.
-   */
-  class Layout
-  {
-  public:
-    Layout(const std::string & _layout, MyGUI::Widget* _parent = nullptr)
-      : mMainWidget(nullptr)
-    { initialise(_layout, _parent); }
-    virtual ~Layout()
+    /** The Layout class is an utility class used to load MyGUI layouts
+        from xml files, and to manipulate member widgets.
+     */
+    class Layout
     {
-        try
+    public:
+        Layout(std::string_view layout)
+            : mMainWidget(nullptr)
         {
-            shutdown();
+            initialise(layout);
+            assert(mMainWidget);
         }
-        catch(const MyGUI::Exception& e)
+
+        virtual ~Layout()
         {
-            Log(Debug::Error) << "Error in the destructor: " << e.what();
+            try
+            {
+                shutdown();
+            }
+            catch (const MyGUI::Exception& e)
+            {
+                Log(Debug::Error) << "Error in the destructor: " << e.what();
+            }
         }
-    }
 
-    MyGUI::Widget* getWidget(const std::string& _name);
+        MyGUI::Widget* getWidget(std::string_view name);
 
-    template <typename T>
-    void getWidget(T * & _widget, const std::string & _name)
-    {
-        MyGUI::Widget* w = getWidget(_name);
-        T* cast = w->castType<T>(false);
-        if (!cast)
+        template <typename T>
+        void getWidget(T*& _widget, std::string_view _name)
         {
-            MYGUI_EXCEPT("Error cast : dest type = '" << T::getClassTypeName()
-                         << "' source name = '" << w->getName()
-                         << "' source type = '" << w->getTypeName() << "' in layout '" << mLayoutName << "'");
+            MyGUI::Widget* w = getWidget(_name);
+            T* cast = w->castType<T>(false);
+            if (!cast)
+            {
+                MYGUI_EXCEPT("Error cast : dest type = '" << T::getClassTypeName() << "' source name = '"
+                                                          << w->getName() << "' source type = '" << w->getTypeName()
+                                                          << "' in layout '" << mLayoutName << "'");
+            }
+            else
+                _widget = cast;
         }
-        else
-            _widget = cast;
-    }
 
-  private:
-    void initialise(const std::string & _layout,
-                    MyGUI::Widget* _parent = nullptr);
+    private:
+        void initialise(std::string_view layout);
 
-    void shutdown();
+        void shutdown();
 
-  public:
-    void setCoord(int x, int y, int w, int h);
+    public:
+        void setCoord(int x, int y, int w, int h);
 
-    virtual void setVisible(bool b);
+        virtual void setVisible(bool b);
 
-    void setText(const std::string& name, const std::string& caption);
+        void setText(std::string_view name, std::string_view caption);
 
-    // NOTE: this assume that mMainWidget is of type Window.
-    void setTitle(const std::string& title);
+        // NOTE: this assume that mMainWidget is of type Window.
+        void setTitle(std::string_view title);
 
-    MyGUI::Widget* mMainWidget;
+        MyGUI::Widget* mMainWidget;
 
-  protected:
-
-    std::string mPrefix;
-    std::string mLayoutName;
-    MyGUI::VectorWidgetPtr mListWindowRoot;
-  };
+    protected:
+        std::string mPrefix;
+        std::string mLayoutName;
+        MyGUI::VectorWidgetPtr mListWindowRoot;
+    };
 }
 #endif

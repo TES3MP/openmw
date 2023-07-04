@@ -2,8 +2,8 @@
 #define MWGUI_WAIT_DIALOG_H
 
 #include "timeadvancer.hpp"
-
 #include "windowbase.hpp"
+#include <components/esm/refid.hpp>
 
 namespace MWGui
 {
@@ -27,7 +27,7 @@ namespace MWGui
     public:
         WaitDialog();
 
-        void setPtr(const MWWorld::Ptr &ptr) override;
+        void setPtr(const MWWorld::Ptr& ptr) override;
 
         void onOpen() override;
 
@@ -59,7 +59,7 @@ namespace MWGui
         float mFadeTimeRemaining;
 
         int mInterruptAt;
-        std::string mInterruptCreatureList;
+        ESM::RefId mInterruptCreatureList;
 
         WaitDialogProgressBar mProgressBar;
 

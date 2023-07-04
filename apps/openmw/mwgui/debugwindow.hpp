@@ -13,9 +13,16 @@ namespace MWGui
 
         void onFrame(float dt) override;
 
-    private:
-        MyGUI::TabControl* mTabControl;
+        static void startLogRecording();
 
+    private:
+        void updateLogView();
+        void updateLuaProfile();
+        void updateBulletProfile();
+
+        MyGUI::TabControl* mTabControl;
+        MyGUI::EditBox* mLogView;
+        MyGUI::EditBox* mLuaProfiler;
         MyGUI::EditBox* mBulletProfilerEdit;
     };
 

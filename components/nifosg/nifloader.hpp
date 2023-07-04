@@ -2,13 +2,13 @@
 #define OPENMW_COMPONENTS_NIFOSG_LOADER
 
 #include <components/nif/niffile.hpp>
-#include <components/sceneutil/keyframe.hpp>
-#include <components/sceneutil/textkeymap.hpp>
 
 #include <osg/ref_ptr>
-#include <osg/Referenced>
 
-#include "controller.hpp"
+namespace SceneUtil
+{
+    class KeyframeHolder;
+}
 
 namespace osg
 {
@@ -28,11 +28,12 @@ namespace NifOsg
     class Loader
     {
     public:
-        /// Create a scene graph for the given NIF. Auto-detects when skinning is used and wraps the graph in a Skeleton if so.
-        static osg::ref_ptr<osg::Node> load(Nif::NIFFilePtr file, Resource::ImageManager* imageManager);
+        /// Create a scene graph for the given NIF. Auto-detects when skinning is used and wraps the graph in a Skeleton
+        /// if so.
+        static osg::ref_ptr<osg::Node> load(Nif::FileView file, Resource::ImageManager* imageManager);
 
         /// Load keyframe controllers from the given kf file.
-        static void loadKf(Nif::NIFFilePtr kf, SceneUtil::KeyframeHolder& target);
+        static void loadKf(Nif::FileView kf, SceneUtil::KeyframeHolder& target);
 
         /// Set whether or not nodes marked as "MRK" should be shown.
         /// These should be hidden ingame, but visible in the editor.
@@ -42,7 +43,8 @@ namespace NifOsg
         static bool getShowMarkers();
 
         /// Set the mask to use for hidden nodes. The default is 0, i.e. updates to those nodes can no longer happen.
-        /// If you need to run animations or physics for hidden nodes, you may want to set this to a non-zero mask and remove exactly that mask from the camera's cull mask.
+        /// If you need to run animations or physics for hidden nodes, you may want to set this to a non-zero mask and
+        /// remove exactly that mask from the camera's cull mask.
         static void setHiddenNodeMask(unsigned int mask);
         static unsigned int getHiddenNodeMask();
 

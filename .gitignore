@@ -35,7 +35,6 @@ CMakeLists.txt.user*
 .vscode
 
 ## resources
-data
 resources
 /*.cfg
 /*.desktop
@@ -73,6 +72,7 @@ components/ui_contentselector.h
 docs/mainpage.hpp
 docs/Doxyfile
 docs/DoxyfilePages
+docs/source/reference/lua-scripting/generated_html
 moc_*.cxx
 *.cxx_parameters
 *qrc_launcher.cxx
@@ -85,3 +85,7 @@ moc_*.cxx
 *.[ao]
 *.so
 venv/
+
+## operating system files
+.DS_Store
+Thumbs.db

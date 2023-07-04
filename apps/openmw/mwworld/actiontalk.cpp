@@ -7,9 +7,12 @@
 
 namespace MWWorld
 {
-    ActionTalk::ActionTalk (const Ptr& actor) : Action (false, actor) {}
+    ActionTalk::ActionTalk(const Ptr& actor)
+        : Action(false, actor)
+    {
+    }
 
-    void ActionTalk::executeImp (const Ptr& actor)
+    void ActionTalk::executeImp(const Ptr& actor)
     {
         /*
             Start of tes3mp change (major)

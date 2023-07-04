@@ -38,7 +38,9 @@ This setting causes the behavior of the sneak key (bound to Ctrl by default)
 to toggle sneaking on and off rather than requiring the key to be held down while sneaking.
 Players that spend significant time sneaking may find the character easier to control with this option enabled.
 
-This setting can be toggled in the launcher under "Advanced" -> "Game Mechanics" -> "Toggle sneak".
+**This setting is removed from settings.cfg.**
+
+Can be configured in game in the settings menu.
 
 always run
 ----------
@@ -52,7 +54,9 @@ The shift key will temporarily invert this setting, and the caps lock key will i
 This setting is updated every time you exit the game,
 based on whether the caps lock key was on or off at the time you exited.
 
-This settings can be toggled in game by pressing the CapsLock key and exiting.
+**This setting is removed from settings.cfg.**
+
+This setting can be toggled in game by pressing the CapsLock key or in the settings menu.
 
 camera sensitivity
 ------------------
@@ -158,6 +162,11 @@ Enable the support of camera rotation based on the information supplied from the
 
 This setting can only be configured by editing the settings configuration file.
 
+Built-in (e. g. in a phone or tablet) and controller gyroscopes are supported. If both are present, controller gyroscope takes priority.
+
+Note: controller gyroscopes are only supported when OpenMW is built with SDL 2.0.14 or higher,
+and were tested only on Windows.
+
 gyro horizontal axis
 --------------------
 
@@ -190,8 +199,8 @@ gyro input threshold
 --------------------
 
 :Type:		floating point
-:Range:		> 0
-:Default:	0.01
+:Range:		>=0
+:Default:	0.0
 
 This setting determines the minimum value of the rotation that will be accepted.
 It allows to avoid crosshair oscillation due to gyroscope "noise".
@@ -209,6 +218,8 @@ This setting controls the overall gyroscope horizontal sensitivity.
 The smaller this sensitivity is, the less visible effect the device rotation
 will have on the horizontal camera rotation, and vice versa.
 
+Value of X means that rotating the device by 1 degree will cause the player to rotate by X degrees.
+
 This setting can only be configured by editing the settings configuration file.
 
 gyro vertical sensitivity
@@ -221,5 +232,7 @@ gyro vertical sensitivity
 This setting controls the overall gyroscope vertical sensitivity.
 The smaller this sensitivity is, the less visible effect the device
 rotation will have on the vertical camera rotation, and vice versa.
+
+Value of X means that rotating the device by 1 degree will cause the player to rotate by X degrees.
 
 This setting can only be configured by editing the settings configuration file.

@@ -1,7 +1,8 @@
 #include "difficultyscaling.hpp"
 
-#include <components/settings/settings.hpp>
+#include <components/settings/values.hpp>
 
+<<<<<<< HEAD
 /*
     Start of tes3mp addition
 
@@ -14,8 +15,11 @@
 */
 
 #include "../mwbase/world.hpp"
+=======
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 #include "../mwbase/environment.hpp"
 #include "../mwworld/esmstore.hpp"
+#include "../mwworld/ptr.hpp"
 
 #include "actorutil.hpp"
 
@@ -23,11 +27,10 @@ float scaleDamage(float damage, const MWWorld::Ptr& attacker, const MWWorld::Ptr
 {
     const MWWorld::Ptr& player = MWMechanics::getPlayer();
 
-    // [-500, 500]
-    int difficultySetting = Settings::Manager::getInt("difficulty", "Game");
-    difficultySetting = std::min(difficultySetting, 500);
-    difficultySetting = std::max(difficultySetting, -500);
+    static const float fDifficultyMult
+        = MWBase::Environment::get().getESMStore()->get<ESM::GameSetting>().find("fDifficultyMult")->mValue.getFloat();
 
+<<<<<<< HEAD
     /*
         Start of tes3mp change (major)
 
@@ -41,6 +44,9 @@ float scaleDamage(float damage, const MWWorld::Ptr& attacker, const MWWorld::Ptr
     static const float fDifficultyMult = MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>().find("fDifficultyMult")->mValue.getFloat();
 
     float difficultyTerm = 0.01f * difficultySetting;
+=======
+    const float difficultyTerm = 0.01f * Settings::game().mDifficulty;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
     float x = 0;
     if (victim == player)

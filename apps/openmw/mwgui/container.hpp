@@ -1,8 +1,8 @@
 #ifndef MGUI_CONTAINER_H
 #define MGUI_CONTAINER_H
 
-#include "windowbase.hpp"
 #include "referenceinterface.hpp"
+#include "windowbase.hpp"
 
 #include "itemmodel.hpp"
 
@@ -19,7 +19,6 @@ namespace MWGui
     class SortFilterItemModel;
 }
 
-
 namespace MWGui
 {
     class ContainerWindow : public WindowBase, public ReferenceInterface
@@ -35,6 +34,7 @@ namespace MWGui
 
         void resetReference() override;
 
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -57,6 +57,11 @@ namespace MWGui
         /*
             End of tes3mp addition
         */
+=======
+        void onDeleteCustomData(const MWWorld::Ptr& ptr) override;
+
+        void treatNextOpenAsLoot() { mTreatNextOpenAsLoot = true; }
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
     private:
         DragAndDrop* mDragAndDrop;
@@ -65,7 +70,7 @@ namespace MWGui
         SortFilterItemModel* mSortModel;
         ItemModel* mModel;
         int mSelectedItem;
-
+        bool mTreatNextOpenAsLoot;
         MyGUI::Button* mDisposeCorpseButton;
         MyGUI::Button* mTakeButton;
         MyGUI::Button* mCloseButton;

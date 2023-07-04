@@ -4,18 +4,15 @@
 #include <memory>
 #include <vector>
 
-#include <MyGUI_ControllerItem.h>
 #include <MyGUI_ComboBox.h>
+#include <MyGUI_ControllerItem.h>
 
 #include <components/widgets/box.hpp>
 #include <components/widgets/numericeditbox.hpp>
 
 #include "windowbase.hpp"
 
-namespace MWMechanics
-{
-    class Alchemy;
-}
+#include "../mwmechanics/alchemy.hpp"
 
 namespace MWGui
 {
@@ -34,12 +31,15 @@ namespace MWGui
         void onResChange(int, int) override { center(); }
 
     private:
-
         static const float sCountChangeInitialPause; // in seconds
         static const float sCountChangeInterval; // in seconds
 
         std::string mSuggestedPotionName;
-        enum class FilterType { ByName, ByEffect };
+        enum class FilterType
+        {
+            ByName,
+            ByEffect
+        };
         FilterType mCurrentFilter;
 
         ItemView* mItemView;

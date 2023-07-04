@@ -1,10 +1,50 @@
 #include "columnimp.hpp"
 
+#include <apps/opencs/model/world/columnbase.hpp>
+#include <apps/opencs/model/world/columns.hpp>
+#include <apps/opencs/model/world/land.hpp>
+#include <apps/opencs/model/world/landtexture.hpp>
+#include <apps/opencs/model/world/record.hpp>
+
+#include <components/esm3/loadland.hpp>
+#include <components/esm3/loadmgef.hpp>
+
+#include <algorithm>
 #include <stdexcept>
-#include <QVector>
 
 namespace CSMWorld
 {
+    namespace
+    {
+        struct GetStringId
+        {
+            std::string operator()(ESM::EmptyRefId /*value*/) const { return std::string(); }
+
+            std::string operator()(ESM::StringRefId value) const { return value.getValue(); }
+
+            std::string operator()(ESM::IndexRefId value) const
+            {
+                switch (value.getRecordType())
+                {
+                    case ESM::REC_SKIL:
+                        return ESM::Skill::sSkillNames[value.getValue()];
+                    case ESM::REC_MGEF:
+                        return std::string(ESM::MagicEffect::sIndexNames[value.getValue()]);
+                    default:
+                        break;
+                }
+
+                return value.toDebugString();
+            }
+
+            template <class T>
+            std::string operator()(const T& value) const
+            {
+                return value.toDebugString();
+            }
+        };
+    }
+
     /* LandTextureNicknameColumn */
     LandTextureNicknameColumn::LandTextureNicknameColumn()
         : Column<LandTexture>(Columns::ColumnId_TextureNickname, ColumnBase::Display_String)
@@ -13,13 +53,13 @@ namespace CSMWorld
 
     QVariant LandTextureNicknameColumn::get(const Record<LandTexture>& record) const
     {
-        return QString::fromUtf8(record.get().mId.c_str());
+        return QString::fromStdString(record.get().mId.toString());
     }
 
     void LandTextureNicknameColumn::set(Record<LandTexture>& record, const QVariant& data)
     {
         LandTexture copy = record.get();
-        copy.mId = data.toString().toUtf8().constData();
+        copy.mId = ESM::RefId::stringRefId(data.toString().toUtf8().constData());
         record.setModified(copy);
     }
 
@@ -52,7 +92,7 @@ namespace CSMWorld
 
     QVariant LandPluginIndexColumn::get(const Record<Land>& record) const
     {
-        return record.get().mPlugin;
+        return record.get().getPlugin();
     }
 
     bool LandPluginIndexColumn::isEditable() const
@@ -265,24 +305,25 @@ namespace CSMWorld
     }
 
     /* BodyPartRaceColumn */
-    BodyPartRaceColumn::BodyPartRaceColumn(const MeshTypeColumn<ESM::BodyPart> *meshType)
+    BodyPartRaceColumn::BodyPartRaceColumn(const MeshTypeColumn<ESM::BodyPart>* meshType)
         : mMeshType(meshType)
-    {}
+    {
+    }
 
-    QVariant BodyPartRaceColumn::get(const Record<ESM::BodyPart> &record) const
+    QVariant BodyPartRaceColumn::get(const Record<ESM::BodyPart>& record) const
     {
         if (mMeshType != nullptr && mMeshType->get(record) == ESM::BodyPart::MT_Skin)
         {
-            return QString::fromUtf8(record.get().mRace.c_str());
+            return QString::fromUtf8(record.get().mRace.getRefIdString().c_str());
         }
         return QVariant(QVariant::UserType);
     }
 
-    void BodyPartRaceColumn::set(Record<ESM::BodyPart> &record, const QVariant &data)
+    void BodyPartRaceColumn::set(Record<ESM::BodyPart>& record, const QVariant& data)
     {
         ESM::BodyPart record2 = record.get();
 
-        record2.mRace = data.toString().toUtf8().constData();
+        record2.mRace = ESM::RefId::stringRefId(data.toString().toUtf8().constData());
 
         record.setModified(record2);
     }
@@ -290,5 +331,18 @@ namespace CSMWorld
     bool BodyPartRaceColumn::isEditable() const
     {
         return true;
+    }
+
+    std::optional<std::uint32_t> getSkillIndex(std::string_view value)
+    {
+        const auto it = std::find(std::begin(ESM::Skill::sSkillNames), std::end(ESM::Skill::sSkillNames), value);
+        if (it == std::end(ESM::Skill::sSkillNames))
+            return std::nullopt;
+        return static_cast<std::uint32_t>(it - std::begin(ESM::Skill::sSkillNames));
+    }
+
+    std::string getStringId(ESM::RefId value)
+    {
+        return visit(GetStringId{}, value);
     }
 }

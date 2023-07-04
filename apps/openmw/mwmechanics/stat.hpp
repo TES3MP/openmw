@@ -1,123 +1,93 @@
 #ifndef GAME_MWMECHANICS_STAT_H
 #define GAME_MWMECHANICS_STAT_H
 
-#include <algorithm>
-#include <limits>
-
 namespace ESM
 {
-    template<typename T>
+    template <typename T>
     struct StatState;
 }
 
 namespace MWMechanics
 {
-    template<typename T>
+    template <typename T>
     class Stat
     {
-            T mBase;
-            T mModified;
-            T mCurrentModified;
+        T mBase;
+        T mModifier;
 
-        public:
-            typedef T Type;
+    public:
+        typedef T Type;
 
-            Stat();
-            Stat(T base);
-            Stat(T base, T modified);
+        Stat();
+        Stat(T base, T modified);
 
-            const T& getBase() const;
+        const T& getBase() const { return mBase; }
 
-            T getModified(bool capped = true) const;
-            T getCurrentModified() const;
-            T getModifier() const;
-            T getCurrentModifier() const;
+        T getModified(bool capped = true) const;
+        T getModifier() const { return mModifier; }
 
-            /// Set base and modified to \a value.
-            void set (const T& value);
+        void setBase(const T& value) { mBase = value; }
 
-            /// Set base and adjust modified accordingly.
-            void setBase (const T& value);
+        void setModifier(const T& modifier) { mModifier = modifier; }
 
-            /// Set modified value and adjust base accordingly.
-            void setModified (T value, const T& min, const T& max = std::numeric_limits<T>::max());
-
-            /// Set "current modified," used for drain and fortify. Unlike the regular modifier
-            /// this just adds and subtracts from the current value without changing the maximum.
-            void setCurrentModified(T value);
-
-            void setModifier (const T& modifier);
-            void setCurrentModifier (const T& modifier);
-
-            void writeState (ESM::StatState<T>& state) const;
-            void readState (const ESM::StatState<T>& state);
+        void writeState(ESM::StatState<T>& state) const;
+        void readState(const ESM::StatState<T>& state);
     };
 
-    template<typename T>
-    inline bool operator== (const Stat<T>& left, const Stat<T>& right)
+    template <typename T>
+    inline bool operator==(const Stat<T>& left, const Stat<T>& right)
     {
-        return left.getBase()==right.getBase() &&
-            left.getModified()==right.getModified();
+        return left.getBase() == right.getBase() && left.getModifier() == right.getModifier();
     }
 
-    template<typename T>
-    inline bool operator!= (const Stat<T>& left, const Stat<T>& right)
+    template <typename T>
+    inline bool operator!=(const Stat<T>& left, const Stat<T>& right)
     {
-        return !(left==right);
+        return !(left == right);
     }
 
-    template<typename T>
+    template <typename T>
     class DynamicStat
     {
-            Stat<T> mStatic;
-            T mCurrent;
+        Stat<T> mStatic;
+        T mCurrent;
 
-        public:
-            typedef T Type;
+    public:
+        typedef T Type;
 
-            DynamicStat();
-            DynamicStat(T base);
-            DynamicStat(T base, T modified, T current);
-            DynamicStat(const Stat<T> &stat, T current);
+        DynamicStat();
+        DynamicStat(T base);
+        DynamicStat(T base, T modified, T current);
+        DynamicStat(const Stat<T>& stat, T current);
 
-            const T& getBase() const;
-            T getModified() const;
-            T getCurrentModified() const;
-            const T& getCurrent() const;
+        const T& getBase() const { return mStatic.getBase(); }
+        T getModified(bool capped = true) const { return mStatic.getModified(capped); }
+        const T& getCurrent() const { return mCurrent; }
+        T getRatio(bool nanIsZero = true) const;
 
-            /// Set base, modified and current to \a value.
-            void set (const T& value);
+        /// Set base and adjust current accordingly.
+        void setBase(const T& value) { mStatic.setBase(value); }
 
-            /// Set base and adjust modified accordingly.
-            void setBase (const T& value);
+        void setCurrent(const T& value, bool allowDecreaseBelowZero = false, bool allowIncreaseAboveModified = false);
 
-            /// Set modified value and adjust base accordingly.
-            void setModified (T value, const T& min, const T& max = std::numeric_limits<T>::max());
+        T getModifier() const { return mStatic.getModifier(); }
+        void setModifier(T value) { mStatic.setModifier(value); }
 
-            /// Set "current modified," used for drain and fortify. Unlike the regular modifier
-            /// this just adds and subtracts from the current value without changing the maximum.
-            void setCurrentModified(T value);
-
-            void setCurrent (const T& value, bool allowDecreaseBelowZero = false, bool allowIncreaseAboveModified = false);
-            void setModifier (const T& modifier, bool allowCurrentToDecreaseBelowZero=false);
-            void setCurrentModifier (const T& modifier, bool allowCurrentToDecreaseBelowZero = false);
-
-            void writeState (ESM::StatState<T>& state) const;
-            void readState (const ESM::StatState<T>& state);
+        void writeState(ESM::StatState<T>& state) const;
+        void readState(const ESM::StatState<T>& state);
     };
 
-    template<typename T>
-    inline bool operator== (const DynamicStat<T>& left, const DynamicStat<T>& right)
+    template <typename T>
+    inline bool operator==(const DynamicStat<T>& left, const DynamicStat<T>& right)
     {
-        return left.getBase()==right.getBase() &&
-            left.getModified()==right.getModified() &&
-            left.getCurrent()==right.getCurrent();
+        return left.getBase() == right.getBase() && left.getModifier() == right.getModifier()
+            && left.getCurrent() == right.getCurrent();
     }
 
-    template<typename T>
-    inline bool operator!= (const DynamicStat<T>& left, const DynamicStat<T>& right)
+    template <typename T>
+    inline bool operator!=(const DynamicStat<T>& left, const DynamicStat<T>& right)
     {
-        return !(left==right);
+        return !(left == right);
     }
 
     class AttributeValue
@@ -133,53 +103,52 @@ namespace MWMechanics
         float getBase() const;
         float getModifier() const;
 
-        void setBase(float base);
+        void setBase(float base, bool clearModifier = false);
 
         void setModifier(float mod);
 
         // Maximum attribute damage is limited to the modified value.
-        // Note: I think MW applies damage directly to mModified, since you can also
-        // "restore" drained attributes. We need to rewrite the magic effect system to support this.
+        // Note: MW applies damage directly to mModified, however it does track how much
+        // a damaged attribute that has been fortified beyond its base can be restored.
+        // Getting rid of mDamage would require calculating its value by ignoring active effects when restoring
         void damage(float damage);
         void restore(float amount);
 
         float getDamage() const;
 
-        void writeState (ESM::StatState<float>& state) const;
-        void readState (const ESM::StatState<float>& state);
+        void writeState(ESM::StatState<float>& state) const;
+        void readState(const ESM::StatState<float>& state);
     };
 
     class SkillValue : public AttributeValue
     {
         float mProgress;
+
     public:
         SkillValue();
         float getProgress() const;
         void setProgress(float progress);
 
-        void writeState (ESM::StatState<float>& state) const;
-        void readState (const ESM::StatState<float>& state);
+        void writeState(ESM::StatState<float>& state) const;
+        void readState(const ESM::StatState<float>& state);
     };
 
-    inline bool operator== (const AttributeValue& left, const AttributeValue& right)
+    inline bool operator==(const AttributeValue& left, const AttributeValue& right)
     {
-        return left.getBase() == right.getBase()
-                && left.getModifier() == right.getModifier()
-                && left.getDamage() == right.getDamage();
+        return left.getBase() == right.getBase() && left.getModifier() == right.getModifier()
+            && left.getDamage() == right.getDamage();
     }
-    inline bool operator!= (const AttributeValue& left, const AttributeValue& right)
+    inline bool operator!=(const AttributeValue& left, const AttributeValue& right)
     {
         return !(left == right);
     }
 
-    inline bool operator== (const SkillValue& left, const SkillValue& right)
+    inline bool operator==(const SkillValue& left, const SkillValue& right)
     {
-        return left.getBase() == right.getBase()
-                && left.getModifier() == right.getModifier()
-                && left.getDamage() == right.getDamage()
-                && left.getProgress() == right.getProgress();
+        return left.getBase() == right.getBase() && left.getModifier() == right.getModifier()
+            && left.getDamage() == right.getDamage() && left.getProgress() == right.getProgress();
     }
-    inline bool operator!= (const SkillValue& left, const SkillValue& right)
+    inline bool operator!=(const SkillValue& left, const SkillValue& right)
     {
         return !(left == right);
     }

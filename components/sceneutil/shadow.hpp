@@ -1,15 +1,22 @@
 #ifndef COMPONENTS_SCENEUTIL_SHADOW_H
 #define COMPONENTS_SCENEUTIL_SHADOW_H
 
-#include <osgShadow/ShadowSettings>
-#include <osgShadow/ShadowedScene>
-
 #include <components/shader/shadermanager.hpp>
 
-#include "mwshadowtechnique.hpp"
+namespace osg
+{
+    class StateSet;
+    class Group;
+}
+namespace osgShadow
+{
+    class ShadowSettings;
+    class ShadowedScene;
+}
 
 namespace SceneUtil
 {
+    class MWShadowTechnique;
     class ShadowManager
     {
     public:
@@ -17,15 +24,19 @@ namespace SceneUtil
 
         static Shader::ShaderManager::DefineMap getShadowsDisabledDefines();
 
-        ShadowManager(osg::ref_ptr<osg::Group> sceneRoot, osg::ref_ptr<osg::Group> rootNode, unsigned int outdoorShadowCastingMask, unsigned int indoorShadowCastingMask, Shader::ShaderManager &shaderManager);
+        ShadowManager(osg::ref_ptr<osg::Group> sceneRoot, osg::ref_ptr<osg::Group> rootNode,
+            unsigned int outdoorShadowCastingMask, unsigned int indoorShadowCastingMask, unsigned int worldMask,
+            Shader::ShaderManager& shaderManager);
+        ~ShadowManager();
 
-        void setupShadowSettings();
+        void setupShadowSettings(Shader::ShaderManager& shaderManager);
 
         Shader::ShaderManager::DefineMap getShadowDefines();
 
         void enableIndoorMode();
 
         void enableOutdoorMode();
+
     protected:
         bool mEnableShadows;
 
@@ -38,4 +49,4 @@ namespace SceneUtil
     };
 }
 
-#endif //COMPONENTS_SCENEUTIL_SHADOW_H
+#endif // COMPONENTS_SCENEUTIL_SHADOW_H

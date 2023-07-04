@@ -1,10 +1,10 @@
-#include <components/esm/loaddial.hpp>
+#include <components/esm3/loaddial.hpp>
 
 #include "../mwbase/environment.hpp"
 #include "../mwbase/world.hpp"
 
-#include "../mwworld/store.hpp"
 #include "../mwworld/esmstore.hpp"
+#include "../mwworld/store.hpp"
 
 #include "keywordsearch.hpp"
 
@@ -14,11 +14,11 @@ namespace MWDialogue
 {
     namespace HyperTextParser
     {
-        std::vector<Token> parseHyperText(const std::string & text)
+        std::vector<Token> parseHyperText(const std::string& text)
         {
             std::vector<Token> result;
             size_t pos_end = std::string::npos, iteration_pos = 0;
-            for(;;)
+            for (;;)
             {
                 size_t pos_begin = text.find('@', iteration_pos);
                 if (pos_begin != std::string::npos)
@@ -45,40 +45,30 @@ namespace MWDialogue
             return result;
         }
 
-        void tokenizeKeywords(const std::string & text, std::vector<Token> & tokens)
+        void tokenizeKeywords(const std::string& text, std::vector<Token>& tokens)
         {
-            const MWWorld::Store<ESM::Dialogue> & dialogs =
-                MWBase::Environment::get().getWorld()->getStore().get<ESM::Dialogue>();
+            const auto& keywordSearch
+                = MWBase::Environment::get().getESMStore()->get<ESM::Dialogue>().getDialogIdKeywordSearch();
 
-            std::list<std::string> keywordList;
-            for (MWWorld::Store<ESM::Dialogue>::iterator it = dialogs.begin(); it != dialogs.end(); ++it)
-                keywordList.push_back(Misc::StringUtils::lowerCase(it->mId));
-            keywordList.sort(Misc::StringUtils::ciLess);
-
-            KeywordSearch<std::string, int /*unused*/> keywordSearch;
-
-            for (std::list<std::string>::const_iterator it = keywordList.begin(); it != keywordList.end(); ++it)
-                keywordSearch.seed(*it, 0 /*unused*/);
-
-            std::vector<KeywordSearch<std::string, int /*unused*/>::Match> matches;
+            std::vector<KeywordSearch<int /*unused*/>::Match> matches;
             keywordSearch.highlightKeywords(text.begin(), text.end(), matches);
 
-            for (std::vector<KeywordSearch<std::string, int /*unused*/>::Match>::const_iterator it = matches.begin(); it != matches.end(); ++it)
+            for (const auto& match : matches)
             {
-                tokens.emplace_back(std::string(it->mBeg, it->mEnd), Token::ImplicitKeyword);
+                tokens.emplace_back(std::string(match.mBeg, match.mEnd), Token::ImplicitKeyword);
             }
         }
 
-        size_t removePseudoAsterisks(std::string & phrase)
+        size_t removePseudoAsterisks(std::string& phrase)
         {
             size_t pseudoAsterisksCount = 0;
 
-            if( !phrase.empty() )
+            if (!phrase.empty())
             {
                 std::string::reverse_iterator rit = phrase.rbegin();
 
                 const char specialPseudoAsteriskCharacter = 127;
-                while( rit != phrase.rend() && *rit == specialPseudoAsteriskCharacter )
+                while (rit != phrase.rend() && *rit == specialPseudoAsteriskCharacter)
                 {
                     pseudoAsterisksCount++;
                     ++rit;

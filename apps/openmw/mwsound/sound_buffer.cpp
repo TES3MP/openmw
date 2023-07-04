@@ -5,8 +5,9 @@
 #include "../mwworld/esmstore.hpp"
 
 #include <components/debug/debuglog.hpp>
+#include <components/esm3/loadsoun.hpp>
 #include <components/settings/settings.hpp>
-#include <components/vfs/manager.hpp>
+#include <components/vfs/pathutil.hpp>
 
 #include <algorithm>
 #include <cmath>
@@ -23,9 +24,8 @@ namespace MWSound
             float mAudioMaxDistanceMult;
         };
 
-        AudioParams makeAudioParams(const MWBase::World& world)
+        AudioParams makeAudioParams(const MWWorld::Store<ESM::GameSetting>& settings)
         {
-            const auto& settings = world.getStore().get<ESM::GameSetting>();
             AudioParams params;
             params.mAudioDefaultMinDistance = settings.find("fAudioDefaultMinDistance")->mValue.getFloat();
             params.mAudioDefaultMaxDistance = settings.find("fAudioDefaultMaxDistance")->mValue.getFloat();
@@ -35,11 +35,13 @@ namespace MWSound
         }
     }
 
-    SoundBufferPool::SoundBufferPool(const VFS::Manager& vfs, Sound_Output& output) :
-        mVfs(&vfs),
-        mOutput(&output),
-        mBufferCacheMax(std::max(Settings::Manager::getInt("buffer cache max", "Sound"), 1) * 1024 * 1024),
-        mBufferCacheMin(std::min(static_cast<std::size_t>(std::max(Settings::Manager::getInt("buffer cache min", "Sound"), 1)) * 1024 * 1024, mBufferCacheMax))
+    SoundBufferPool::SoundBufferPool(Sound_Output& output)
+        : mOutput(&output)
+        , mBufferCacheMax(std::max(Settings::Manager::getInt("buffer cache max", "Sound"), 1) * 1024 * 1024)
+        , mBufferCacheMin(
+              std::min(static_cast<std::size_t>(std::max(Settings::Manager::getInt("buffer cache min", "Sound"), 1))
+                      * 1024 * 1024,
+                  mBufferCacheMax))
     {
     }
 
@@ -48,7 +50,7 @@ namespace MWSound
         clear();
     }
 
-    Sound_Buffer* SoundBufferPool::lookup(const std::string& soundId) const
+    Sound_Buffer* SoundBufferPool::lookup(const ESM::RefId& soundId) const
     {
         const auto it = mBufferNameMap.find(soundId);
         if (it != mBufferNameMap.end())
@@ -60,12 +62,12 @@ namespace MWSound
         return nullptr;
     }
 
-    Sound_Buffer* SoundBufferPool::load(const std::string& soundId)
+    Sound_Buffer* SoundBufferPool::load(const ESM::RefId& soundId)
     {
         if (mBufferNameMap.empty())
         {
-            for (const ESM::Sound& sound : MWBase::Environment::get().getWorld()->getStore().get<ESM::Sound>())
-                insertSound(Misc::StringUtils::lowerCase(sound.mId), sound);
+            for (const ESM::Sound& sound : MWBase::Environment::get().getESMStore()->get<ESM::Sound>())
+                insertSound(sound.mId, sound);
         }
 
         Sound_Buffer* sfx;
@@ -74,7 +76,7 @@ namespace MWSound
             sfx = it->second;
         else
         {
-            const ESM::Sound *sound = MWBase::Environment::get().getWorld()->getStore().get<ESM::Sound>().search(soundId);
+            const ESM::Sound* sound = MWBase::Environment::get().getESMStore()->get<ESM::Sound>().search(soundId);
             if (sound == nullptr)
                 return {};
             sfx = insertSound(soundId, *sound);
@@ -103,18 +105,19 @@ namespace MWSound
 
     void SoundBufferPool::clear()
     {
-        for (auto &sfx : mSoundBuffers)
+        for (auto& sfx : mSoundBuffers)
         {
-            if(sfx.mHandle)
+            if (sfx.mHandle)
                 mOutput->unloadSound(sfx.mHandle);
             sfx.mHandle = nullptr;
         }
         mUnusedBuffers.clear();
     }
 
-    Sound_Buffer* SoundBufferPool::insertSound(const std::string& soundId, const ESM::Sound& sound)
+    Sound_Buffer* SoundBufferPool::insertSound(const ESM::RefId& soundId, const ESM::Sound& sound)
     {
-        static const AudioParams audioParams = makeAudioParams(*MWBase::Environment::get().getWorld());
+        static const AudioParams audioParams
+            = makeAudioParams(MWBase::Environment::get().getESMStore()->get<ESM::GameSetting>());
 
         float volume = static_cast<float>(std::pow(10.0, (sound.mData.mVolume / 255.0 * 3348.0 - 3348.0) / 2000.0));
         float min = sound.mData.mMinRange;
@@ -131,7 +134,7 @@ namespace MWSound
         max = std::max(min, max);
 
         Sound_Buffer& sfx = mSoundBuffers.emplace_back("Sound/" + sound.mSound, volume, min, max);
-        mVfs->normalizeFilename(sfx.mResourceName);
+        VFS::Path::normalizeFilenameInPlace(sfx.mResourceName);
 
         mBufferNameMap.emplace(soundId, &sfx);
         return &sfx;

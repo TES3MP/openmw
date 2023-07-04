@@ -19,7 +19,7 @@
 
 namespace MWWorld
 {
-    void ActionTrap::executeImp(const Ptr &actor)
+    void ActionTrap::executeImp(const Ptr& actor)
     {
         osg::Vec3f actorPosition(actor.getRefData().getPosition().asVec3());
         osg::Vec3f trapPosition(mTrapSource.getRefData().getPosition().asVec3());
@@ -29,7 +29,9 @@ namespace MWWorld
         // radius, because for most trap spells this is 1 foot, much less than the activation distance.
         // Using activation distance as the trap range.
 
-        if (actor == MWBase::Environment::get().getWorld()->getPlayerPtr() && MWBase::Environment::get().getWorld()->getDistanceToFacedObject() > trapRange) // player activated object outside range of trap
+        if (actor == MWBase::Environment::get().getWorld()->getPlayerPtr()
+            && MWBase::Environment::get().getWorld()->getDistanceToFacedObject()
+                > trapRange) // player activated object outside range of trap
         {
             MWMechanics::CastSpell cast(mTrapSource, mTrapSource);
             cast.mHitPosition = trapPosition;
@@ -41,6 +43,7 @@ namespace MWWorld
             cast.mHitPosition = actorPosition;
             cast.cast(mSpellId);
         }
+<<<<<<< HEAD
 
         /*
             Start of tes3mp change (major)
@@ -74,5 +77,8 @@ namespace MWWorld
         /*
             End of tes3mp addition
         */
+=======
+        mTrapSource.getCellRef().setTrap(ESM::RefId());
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 }

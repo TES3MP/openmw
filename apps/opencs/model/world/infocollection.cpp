@@ -1,225 +1,141 @@
 #include "infocollection.hpp"
 
+#include <algorithm>
+#include <memory>
 #include <stdexcept>
-#include <iterator>
+#include <string>
+#include <utility>
 
-#include <components/esm/esmreader.hpp>
-#include <components/esm/loaddial.hpp>
+#include "components/debug/debuglog.hpp"
+#include "components/esm3/infoorder.hpp"
+#include "components/esm3/loaddial.hpp"
+#include "components/esm3/loadinfo.hpp"
 
-#include <components/misc/stringops.hpp>
+#include "collection.hpp"
+#include "info.hpp"
 
-void CSMWorld::InfoCollection::load (const Info& record, bool base)
+namespace CSMWorld
 {
-    int index = searchId (record.mId);
+    namespace
+    {
+        std::string_view getInfoTopicId(const ESM::RefId& infoId)
+        {
+            return parseInfoRefId(infoId).first;
+        }
+    }
 
-    if (index==-1)
+    ESM::RefId makeCompositeInfoRefId(const ESM::RefId& topicId, const ESM::RefId& infoId)
+    {
+        return ESM::RefId::stringRefId(topicId.getRefIdString() + '#' + infoId.getRefIdString());
+    }
+}
+
+void CSMWorld::InfoCollection::load(const Info& value, bool base)
+{
+    const int index = searchId(value.mId);
+
+    if (index == -1)
     {
         // new record
-        Record<Info> record2;
-        record2.mState = base ? RecordBase::State_BaseOnly : RecordBase::State_ModifiedOnly;
-        (base ? record2.mBase : record2.mModified) = record;
+        auto record = std::make_unique<Record<Info>>();
+        record->mState = base ? RecordBase::State_BaseOnly : RecordBase::State_ModifiedOnly;
+        (base ? record->mBase : record->mModified) = value;
 
-        std::string topic = Misc::StringUtils::lowerCase (record2.get().mTopicId);
-
-        if (!record2.get().mPrev.empty())
-        {
-            index = getInfoIndex (record2.get().mPrev, topic);
-
-            if (index!=-1)
-                ++index;
-        }
-
-        if (index==-1 && !record2.get().mNext.empty())
-        {
-            index = getInfoIndex (record2.get().mNext, topic);
-        }
-
-        if (index==-1)
-        {
-            Range range = getTopicRange (topic);
-
-            index = std::distance (getRecords().begin(), range.second);
-        }
-
-        insertRecord (record2, index);
+        insertRecord(std::move(record), getSize());
     }
     else
     {
         // old record
-        Record<Info> record2 = getRecord (index);
+        auto record = std::make_unique<Record<Info>>(getRecord(index));
 
         if (base)
-            record2.mBase = record;
+            record->mBase = value;
         else
-            record2.setModified (record);
+            record->setModified(value);
 
-        setRecord (index, record2);
+        setRecord(index, std::move(record));
     }
 }
 
-int CSMWorld::InfoCollection::getInfoIndex (const std::string& id, const std::string& topic) const
-{
-    std::string fullId = Misc::StringUtils::lowerCase (topic) + "#" +  id;
-
-    std::pair<RecordConstIterator, RecordConstIterator> range = getTopicRange (topic);
-
-    for (; range.first!=range.second; ++range.first)
-        if (Misc::StringUtils::ciEqual(range.first->get().mId, fullId))
-            return std::distance (getRecords().begin(), range.first);
-
-    return -1;
-}
-
-int CSMWorld::InfoCollection::getAppendIndex (const std::string& id, UniversalId::Type type) const
-{
-    std::string::size_type separator = id.find_last_of ('#');
-
-    if (separator==std::string::npos)
-        throw std::runtime_error ("invalid info ID: " + id);
-
-    std::pair<RecordConstIterator, RecordConstIterator> range = getTopicRange (id.substr (0, separator));
-
-    if (range.first==range.second)
-        return Collection<Info, IdAccessor<Info> >::getAppendIndex (id, type);
-
-    return std::distance (getRecords().begin(), range.second);
-}
-
-bool CSMWorld::InfoCollection::reorderRows (int baseIndex, const std::vector<int>& newOrder)
-{
-    // check if the range is valid
-    int lastIndex = baseIndex + newOrder.size() -1;
-
-    if (lastIndex>=getSize())
-        return false;
-
-    // Check that topics match
-    if (!Misc::StringUtils::ciEqual(getRecord(baseIndex).get().mTopicId,
-                                    getRecord(lastIndex).get().mTopicId))
-        return false;
-
-    // reorder
-    return reorderRowsImp (baseIndex, newOrder);
-}
-
-void CSMWorld::InfoCollection::load (ESM::ESMReader& reader, bool base, const ESM::Dialogue& dialogue)
+void CSMWorld::InfoCollection::load(
+    ESM::ESMReader& reader, bool base, const ESM::Dialogue& dialogue, InfoOrderByTopic& infoOrders)
 {
     Info info;
     bool isDeleted = false;
 
-    info.load (reader, isDeleted);
-    std::string id = Misc::StringUtils::lowerCase (dialogue.mId) + "#" + info.mId;
+    info.load(reader, isDeleted);
+
+    const ESM::RefId id = makeCompositeInfoRefId(dialogue.mId, info.mId);
 
     if (isDeleted)
     {
-        int index = searchId (id);
+        const int index = searchId(id);
 
-        if (index==-1)
+        if (index == -1)
         {
-            // deleting a record that does not exist
-            // ignore it for now
-            /// \todo report the problem to the user
+            Log(Debug::Warning) << "Trying to delete absent info \"" << info.mId << "\" from topic \"" << dialogue.mId
+                                << "\"";
+            return;
         }
-        else if (base)
+
+        if (base)
         {
-            removeRows (index, 1);
+            infoOrders.at(dialogue.mId).removeInfo(info.mId);
+            removeRows(index, 1);
+            return;
         }
-        else
-        {
-            Record<Info> record = getRecord (index);
-            record.mState = RecordBase::State_Deleted;
-            setRecord (index, record);
-        }
+
+        auto record = std::make_unique<Record<Info>>(getRecord(index));
+        record->mState = RecordBase::State_Deleted;
+        setRecord(index, std::move(record));
+
+        return;
     }
-    else
-    {
-        info.mTopicId = dialogue.mId;
-        info.mId = id;
-        load (info, base);
-    }
+
+    info.mTopicId = dialogue.mId;
+    info.mOriginalId = info.mId;
+    info.mId = id;
+
+    load(info, base);
+
+    infoOrders[dialogue.mId].insertInfo(OrderedInfo(info), isDeleted);
 }
 
-CSMWorld::InfoCollection::Range CSMWorld::InfoCollection::getTopicRange (const std::string& topic)
-    const
+void CSMWorld::InfoCollection::sort(const InfoOrderByTopic& infoOrders)
 {
-    std::string topic2 = Misc::StringUtils::lowerCase (topic);
-
-    std::map<std::string, int>::const_iterator iter = getIdMap().lower_bound (topic2);
-
-    // Skip invalid records: The beginning of a topic string could be identical to another topic
-    // string.
-    for (; iter!=getIdMap().end(); ++iter)
-    {
-        std::string testTopicId =
-            Misc::StringUtils::lowerCase (getRecord (iter->second).get().mTopicId);
-
-        if (testTopicId==topic2)
-            break;
-
-        std::size_t size = topic2.size();
-
-        if (testTopicId.size()<size || testTopicId.substr (0, size)!=topic2)
-            return Range (getRecords().end(), getRecords().end());
-    }
-
-    if (iter==getIdMap().end())
-        return Range (getRecords().end(), getRecords().end());
-
-    RecordConstIterator begin = getRecords().begin()+iter->second;
-
-    while (begin != getRecords().begin())
-    {
-        if (!Misc::StringUtils::ciEqual(begin->get().mTopicId, topic2))
-        {
-            // we've gone one too far, go back
-            ++begin;
-            break;
-        }
-        --begin;
-    }
-
-    // Find end
-    RecordConstIterator end = begin;
-
-    for (; end!=getRecords().end(); ++end)
-        if (!Misc::StringUtils::ciEqual(end->get().mTopicId, topic2))
-            break;
-
-    return Range (begin, end);
+    std::vector<int> order;
+    order.reserve(getSize());
+    for (const auto& [topicId, infoOrder] : infoOrders)
+        for (const OrderedInfo& info : infoOrder.getOrderedInfo())
+            order.push_back(getIndex(makeCompositeInfoRefId(topicId, info.mId)));
+    reorderRowsImp(order);
 }
 
-void CSMWorld::InfoCollection::removeDialogueInfos(const std::string& dialogueId)
+CSMWorld::InfosRecordPtrByTopic CSMWorld::InfoCollection::getInfosByTopic() const
 {
-    std::string id = Misc::StringUtils::lowerCase(dialogueId);
-    std::vector<int> erasedRecords;
+    InfosRecordPtrByTopic result;
+    for (const std::unique_ptr<Record<Info>>& record : getRecords())
+        result[record->get().mTopicId].push_back(record.get());
+    return result;
+}
 
-    std::map<std::string, int>::const_iterator current = getIdMap().lower_bound(id);
-    std::map<std::string, int>::const_iterator end = getIdMap().end();
-    for (; current != end; ++current)
-    {
-        Record<Info> record = getRecord(current->second);
+int CSMWorld::InfoCollection::getAppendIndex(const ESM::RefId& id, UniversalId::Type /*type*/) const
+{
+    const auto lessByTopicId
+        = [](std::string_view lhs, const std::unique_ptr<Record<Info>>& rhs) { return lhs < rhs->get().mTopicId; };
+    const auto it = std::upper_bound(getRecords().begin(), getRecords().end(), getInfoTopicId(id), lessByTopicId);
+    return static_cast<int>(it - getRecords().begin());
+}
 
-        if (Misc::StringUtils::ciEqual(dialogueId, record.get().mTopicId))
-        {
-            if (record.mState == RecordBase::State_ModifiedOnly)
-            {
-                erasedRecords.push_back(current->second);
-            }
-            else
-            {
-                record.mState = RecordBase::State_Deleted;
-                setRecord(current->second, record);
-            }
-        }
-        else
-        {
-            break;
-        }
-    }
+bool CSMWorld::InfoCollection::reorderRows(int baseIndex, const std::vector<int>& newOrder)
+{
+    const int lastIndex = baseIndex + static_cast<int>(newOrder.size()) - 1;
 
-    while (!erasedRecords.empty())
-    {
-        removeRows(erasedRecords.back(), 1);
-        erasedRecords.pop_back();
-    }
+    if (lastIndex >= getSize())
+        return false;
+
+    if (getRecord(baseIndex).get().mTopicId != getRecord(lastIndex).get().mTopicId)
+        return false;
+
+    return reorderRowsImp(baseIndex, newOrder);
 }

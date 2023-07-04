@@ -3,7 +3,7 @@
 
 #if defined(macintosh) || defined(Macintosh) || defined(__APPLE__) || defined(__MACH__)
 
-#include <boost/filesystem.hpp>
+#include <filesystem>
 
 /**
  * \namespace Files
@@ -11,55 +11,55 @@
 namespace Files
 {
 
-/**
- * \struct MacOsPath
- */
-struct MacOsPath
-{
-    MacOsPath(const std::string& application_name);
-
     /**
-     * \brief Return path to the local directory.
-     *
-     * \return boost::filesystem::path
+     * \struct MacOsPath
      */
-    boost::filesystem::path getUserConfigPath() const;
+    struct MacOsPath
+    {
+        MacOsPath(const std::string& application_name);
 
-    boost::filesystem::path getUserDataPath() const;
+        /**
+         * \brief Return path to the local directory.
+         *
+         * \return std::filesystem::path
+         */
+        std::filesystem::path getUserConfigPath() const;
 
-    /**
-     * \brief Return path to the global (system) directory.
-     *
-     * \return boost::filesystem::path
-     */
-    boost::filesystem::path getGlobalConfigPath() const;
+        std::filesystem::path getUserDataPath() const;
 
-    /**
-     * \brief Return path to the runtime directory which is the
-     * place where an application was started.
-     *
-     * \return boost::filesystem::path
-     */
-    boost::filesystem::path getLocalPath() const;
+        /**
+         * \brief Return path to the global (system) directory.
+         *
+         * \return std::filesystem::path
+         */
+        std::filesystem::path getGlobalConfigPath() const;
 
-    /**
-     * \brief
-     *
-     * \return boost::filesystem::path
-     */
-    boost::filesystem::path getCachePath() const;
+        /**
+         * \brief Return path to the runtime directory which is the
+         * place where an application was started.
+         *
+         * \return std::filesystem::path
+         */
+        std::filesystem::path getLocalPath() const;
 
-    /**
-     * \brief
-     *
-     * \return boost::filesystem::path
-     */
-    boost::filesystem::path getGlobalDataPath() const;
+        /**
+         * \brief
+         *
+         * \return std::filesystem::path
+         */
+        std::filesystem::path getCachePath() const;
 
-    boost::filesystem::path getInstallPath() const;
+        /**
+         * \brief
+         *
+         * \return std::filesystem::path
+         */
+        std::filesystem::path getGlobalDataPath() const;
 
-    std::string mName;
-};
+        std::filesystem::path getInstallPath() const;
+
+        std::string mName;
+    };
 
 } /* namespace Files */
 

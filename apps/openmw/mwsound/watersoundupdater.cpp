@@ -4,7 +4,7 @@
 #include "../mwworld/cellstore.hpp"
 #include "../mwworld/ptr.hpp"
 
-#include <components/esm/loadcell.hpp>
+#include <components/esm3/loadcell.hpp>
 
 #include <osg/Vec3f>
 
@@ -53,7 +53,8 @@ namespace MWSound
                 {
                     const float terrainX = pos.x() - mSettings.mNearWaterRadius + x * step;
                     const float terrainY = pos.y() - mSettings.mNearWaterRadius + y * step;
-                    const float height = world.getTerrainHeightAt(osg::Vec3f(terrainX, terrainY, 0.0f));
+                    const float height = world.getTerrainHeightAt(
+                        osg::Vec3f(terrainX, terrainY, 0.0f), cell.getCell()->getWorldSpace());
 
                     if (height < 0)
                         underwaterPoints++;

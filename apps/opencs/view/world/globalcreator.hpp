@@ -3,19 +3,28 @@
 
 #include "genericcreator.hpp"
 
+class QObject;
+class QUndoStack;
+
+#include <apps/opencs/model/world/universalid.hpp>
+
+namespace CSMWorld
+{
+    class CreateCommand;
+    class Data;
+}
+
 namespace CSVWorld
 {
     class GlobalCreator : public GenericCreator
     {
-            Q_OBJECT
+        Q_OBJECT
 
-        public:
+    public:
+        GlobalCreator(CSMWorld::Data& data, QUndoStack& undoStack, const CSMWorld::UniversalId& id);
 
-            GlobalCreator(CSMWorld::Data& data, QUndoStack& undoStack, const CSMWorld::UniversalId& id);
-
-        protected:
-
-            void configureCreateCommand(CSMWorld::CreateCommand& command) const override;
+    protected:
+        void configureCreateCommand(CSMWorld::CreateCommand& command) const override;
     };
 }
 

@@ -1,11 +1,24 @@
 #include "enchantmentcheck.hpp"
 
+#include <stddef.h>
+#include <string>
+#include <vector>
+
+#include <apps/opencs/model/doc/messages.hpp>
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+#include <apps/opencs/model/world/idcollection.hpp>
+#include <apps/opencs/model/world/record.hpp>
+
+#include <components/esm3/effectlist.hpp>
+#include <components/esm3/loadench.hpp>
+
 #include "../prefs/state.hpp"
 
 #include "../world/universalid.hpp"
 
-CSMTools::EnchantmentCheckStage::EnchantmentCheckStage (const CSMWorld::IdCollection<ESM::Enchantment>& enchantments)
-    : mEnchantments (enchantments)
+CSMTools::EnchantmentCheckStage::EnchantmentCheckStage(const CSMWorld::IdCollection<ESM::Enchantment>& enchantments)
+    : mEnchantments(enchantments)
 {
     mIgnoreBaseRecords = false;
 }
@@ -17,9 +30,9 @@ int CSMTools::EnchantmentCheckStage::setup()
     return mEnchantments.getSize();
 }
 
-void CSMTools::EnchantmentCheckStage::perform (int stage, CSMDoc::Messages& messages)
+void CSMTools::EnchantmentCheckStage::perform(int stage, CSMDoc::Messages& messages)
 {
-    const CSMWorld::Record<ESM::Enchantment>& record = mEnchantments.getRecord (stage);
+    const CSMWorld::Record<ESM::Enchantment>& record = mEnchantments.getRecord(stage);
 
     // Skip "Base" records (setting!) and "Deleted" records
     if ((mIgnoreBaseRecords && record.mState == CSMWorld::RecordBase::State_BaseOnly) || record.isDeleted())
@@ -27,7 +40,7 @@ void CSMTools::EnchantmentCheckStage::perform (int stage, CSMDoc::Messages& mess
 
     const ESM::Enchantment& enchantment = record.get();
 
-    CSMWorld::UniversalId id (CSMWorld::UniversalId::Type_Enchantment, enchantment.mId);
+    CSMWorld::UniversalId id(CSMWorld::UniversalId::Type_Enchantment, enchantment.mId);
 
     if (enchantment.mData.mType < 0 || enchantment.mData.mType > 3)
         messages.add(id, "Invalid type", "", CSMDoc::Message::Severity_Error);
@@ -61,9 +74,11 @@ void CSMTools::EnchantmentCheckStage::perform (int stage, CSMDoc::Messages& mess
             }
 
             if (effect->mSkill < -1 || effect->mSkill > 26)
-                messages.add(id, "Effect #" + number + " affected skill is invalid", "", CSMDoc::Message::Severity_Error);
+                messages.add(
+                    id, "Effect #" + number + " affected skill is invalid", "", CSMDoc::Message::Severity_Error);
             if (effect->mAttribute < -1 || effect->mAttribute > 7)
-                messages.add(id, "Effect #" + number + " affected attribute is invalid", "", CSMDoc::Message::Severity_Error);
+                messages.add(
+                    id, "Effect #" + number + " affected attribute is invalid", "", CSMDoc::Message::Severity_Error);
             if (effect->mRange < 0 || effect->mRange > 2)
                 messages.add(id, "Effect #" + number + " range is invalid", "", CSMDoc::Message::Severity_Error);
             if (effect->mArea < 0)
@@ -71,11 +86,14 @@ void CSMTools::EnchantmentCheckStage::perform (int stage, CSMDoc::Messages& mess
             if (effect->mDuration < 0)
                 messages.add(id, "Effect #" + number + " duration is negative", "", CSMDoc::Message::Severity_Error);
             if (effect->mMagnMin < 0)
-                messages.add(id, "Effect #" + number + " minimum magnitude is negative", "", CSMDoc::Message::Severity_Error);
+                messages.add(
+                    id, "Effect #" + number + " minimum magnitude is negative", "", CSMDoc::Message::Severity_Error);
             if (effect->mMagnMax < 0)
-                messages.add(id, "Effect #" + number + " maximum magnitude is negative", "", CSMDoc::Message::Severity_Error);
+                messages.add(
+                    id, "Effect #" + number + " maximum magnitude is negative", "", CSMDoc::Message::Severity_Error);
             if (effect->mMagnMin > effect->mMagnMax)
-                messages.add(id, "Effect #" + number + " minimum magnitude is higher than maximum magnitude", "", CSMDoc::Message::Severity_Error);
+                messages.add(id, "Effect #" + number + " minimum magnitude is higher than maximum magnitude", "",
+                    CSMDoc::Message::Severity_Error);
             ++effect;
         }
     }

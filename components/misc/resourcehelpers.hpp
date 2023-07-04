@@ -2,10 +2,16 @@
 #define MISC_RESOURCEHELPERS_H
 
 #include <string>
+#include <string_view>
 
 namespace VFS
 {
     class Manager;
+}
+
+namespace ESM
+{
+    class RefId;
 }
 
 namespace Misc
@@ -15,14 +21,28 @@ namespace Misc
     // so we have the opportunity to use proper resource handling for content created in OpenMW-CS.
     namespace ResourceHelpers
     {
-        bool changeExtensionToDds(std::string &path);
-        std::string correctResourcePath(const std::string &topLevelDirectory, const std::string &resPath, const VFS::Manager* vfs);
-        std::string correctTexturePath(const std::string &resPath, const VFS::Manager* vfs);
-        std::string correctIconPath(const std::string &resPath, const VFS::Manager* vfs);
-        std::string correctBookartPath(const std::string &resPath, const VFS::Manager* vfs);
-        std::string correctBookartPath(const std::string &resPath, int width, int height, const VFS::Manager* vfs);
-        /// Use "xfoo.nif" instead of "foo.nif" if available
-        std::string correctActorModelPath(const std::string &resPath, const VFS::Manager* vfs);
+        bool changeExtensionToDds(std::string& path);
+        std::string correctResourcePath(
+            std::string_view topLevelDirectory, std::string_view resPath, const VFS::Manager* vfs);
+        std::string correctTexturePath(std::string_view resPath, const VFS::Manager* vfs);
+        std::string correctIconPath(std::string_view resPath, const VFS::Manager* vfs);
+        std::string correctBookartPath(std::string_view resPath, const VFS::Manager* vfs);
+        std::string correctBookartPath(std::string_view resPath, int width, int height, const VFS::Manager* vfs);
+        /// Use "xfoo.nif" instead of "foo.nif" if "xfoo.kf" is available
+        /// Note that if "xfoo.nif" is actually unavailable, we can't fall back to "foo.nif". :(
+        std::string correctActorModelPath(const std::string& resPath, const VFS::Manager* vfs);
+
+        // Adds "meshes\\".
+        std::string correctMeshPath(const std::string& resPath, const VFS::Manager* vfs);
+
+        // Removes "meshes\\".
+        std::string_view meshPathForESM3(std::string_view resPath);
+
+        std::string correctSoundPath(std::string_view resPath, const VFS::Manager* vfs);
+
+        /// marker objects that have a hardcoded function in the game logic, should be hidden from the player
+        bool isHiddenMarker(const ESM::RefId& id);
+        std::string getLODMeshName(int esmVersion, std::string resPath, const VFS::Manager* vfs, unsigned char lod = 0);
     }
 }
 

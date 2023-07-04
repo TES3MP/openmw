@@ -1,6 +1,7 @@
 #ifndef GAME_SOUND_WATERSOUNDUPDATER_H
 #define GAME_SOUND_WATERSOUNDUPDATER_H
 
+#include "components/esm/refid.hpp"
 #include <string>
 
 namespace MWBase
@@ -21,33 +22,30 @@ namespace MWSound
         int mNearWaterPoints;
         float mNearWaterIndoorTolerance;
         float mNearWaterOutdoorTolerance;
-        std::string mNearWaterIndoorID;
-        std::string mNearWaterOutdoorID;
+        ESM::RefId mNearWaterIndoorID;
+        ESM::RefId mNearWaterOutdoorID;
     };
 
     struct WaterSoundUpdate
     {
-        std::string mId;
+        ESM::RefId mId;
         float mVolume;
     };
 
     class WaterSoundUpdater
     {
-        public:
-            explicit WaterSoundUpdater(const WaterSoundUpdaterSettings& settings);
+    public:
+        explicit WaterSoundUpdater(const WaterSoundUpdaterSettings& settings);
 
-            WaterSoundUpdate update(const MWWorld::ConstPtr& player, const MWBase::World& world) const;
+        WaterSoundUpdate update(const MWWorld::ConstPtr& player, const MWBase::World& world) const;
 
-            void setUnderwater(bool value)
-            {
-                mListenerUnderwater = value;
-            }
+        void setUnderwater(bool value) { mListenerUnderwater = value; }
 
-        private:
-            const WaterSoundUpdaterSettings mSettings;
-            bool mListenerUnderwater = false;
+    private:
+        const WaterSoundUpdaterSettings mSettings;
+        bool mListenerUnderwater = false;
 
-            float getVolume(const MWWorld::ConstPtr& player, const MWBase::World& world) const;
+        float getVolume(const MWWorld::ConstPtr& player, const MWBase::World& world) const;
     };
 }
 

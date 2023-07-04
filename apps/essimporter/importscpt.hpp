@@ -3,7 +3,8 @@
 
 #include "importscri.hpp"
 
-#include <components/esm/loadscpt.hpp>
+#include <components/esm/esmcommon.hpp>
+#include <components/esm3/loadscpt.hpp>
 
 namespace ESM
 {
@@ -15,8 +16,8 @@ namespace ESSImport
 
     struct SCHD
     {
-        ESM::NAME32              mName;
-        ESM::Script::SCHDstruct  mData;
+        ESM::NAME32 mName;
+        ESM::Script::SCHDstruct mData;
     };
 
     // A running global script

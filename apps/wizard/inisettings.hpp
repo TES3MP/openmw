@@ -4,7 +4,7 @@
 #include <QHash>
 #include <QVariant>
 
-class QTextStream;
+#include <components/to_utf8/to_utf8.hpp>
 
 namespace Wizard
 {
@@ -14,39 +14,28 @@ namespace Wizard
     class IniSettings
     {
     public:
-        explicit IniSettings();
-        ~IniSettings();
+        explicit IniSettings() = default;
 
-        inline QVariant value(const QString &key, const QVariant &defaultValue = QVariant()) const
+        inline QVariant value(const QString& key, const QVariant& defaultValue = QVariant()) const
         {
             return mSettings.value(key, defaultValue);
         }
 
-        inline QList<QVariant> values() const
-        {
-            return mSettings.values();
-        }
+        inline QList<QVariant> values() const { return mSettings.values(); }
 
-        inline void setValue(const QString &key, const QVariant &value)
-        {
-            mSettings.insert(key, value);
-        }
+        inline void setValue(const QString& key, const QVariant& value) { mSettings.insert(key, value); }
 
-        inline void remove(const QString &key)
-        {
-            mSettings.remove(key);
-        }
+        inline void remove(const QString& key) { mSettings.remove(key); }
 
-        QStringList findKeys(const QString &text);
+        QStringList findKeys(const QString& text);
 
-        bool readFile(QTextStream &stream);
-        bool writeFile(const QString &path, QTextStream &stream);
+        bool readFile(std::ifstream& stream, ToUTF8::FromType encoding);
+        bool writeFile(const QString& path, std::ifstream& stream, ToUTF8::FromType encoding);
 
-        bool parseInx(const QString &path);
+        bool parseInx(const QString& path);
 
     private:
-
-        int getLastNewline(const QString &buffer, int from);
+        int getLastNewline(const QString& buffer, int from);
 
         SettingsMap mSettings;
     };

@@ -1,34 +1,40 @@
 #include "bodypart.hpp"
 
-#include "../mwrender/renderinginterface.hpp"
+#include <components/esm3/loadbody.hpp>
+
 #include "../mwrender/objects.hpp"
+#include "../mwrender/renderinginterface.hpp"
 
 #include "../mwworld/cellstore.hpp"
 
+#include "classmodel.hpp"
+
 namespace MWClass
 {
-
-    MWWorld::Ptr BodyPart::copyToCellImpl(const MWWorld::ConstPtr &ptr, MWWorld::CellStore &cell) const
+    BodyPart::BodyPart()
+        : MWWorld::RegisteredClass<BodyPart>(ESM::BodyPart::sRecordId)
     {
-        const MWWorld::LiveCellRef<ESM::BodyPart> *ref = ptr.get<ESM::BodyPart>();
+    }
+
+    MWWorld::Ptr BodyPart::copyToCellImpl(const MWWorld::ConstPtr& ptr, MWWorld::CellStore& cell) const
+    {
+        const MWWorld::LiveCellRef<ESM::BodyPart>* ref = ptr.get<ESM::BodyPart>();
 
         return MWWorld::Ptr(cell.insert(ref), &cell);
     }
 
-    void BodyPart::insertObjectRendering(const MWWorld::Ptr &ptr, const std::string &model, MWRender::RenderingInterface &renderingInterface) const
+    void BodyPart::insertObjectRendering(
+        const MWWorld::Ptr& ptr, const std::string& model, MWRender::RenderingInterface& renderingInterface) const
     {
-        if (!model.empty()) {
+        if (!model.empty())
+        {
             renderingInterface.getObjects().insertModel(ptr, model);
         }
     }
 
-    void BodyPart::insertObject(const MWWorld::Ptr &ptr, const std::string &model, MWPhysics::PhysicsSystem &physics) const
+    std::string_view BodyPart::getName(const MWWorld::ConstPtr& ptr) const
     {
-    }
-
-    std::string BodyPart::getName(const MWWorld::ConstPtr &ptr) const
-    {
-        return std::string();
+        return {};
     }
 
     bool BodyPart::hasToolTip(const MWWorld::ConstPtr& ptr) const
@@ -36,22 +42,9 @@ namespace MWClass
         return false;
     }
 
-    void BodyPart::registerSelf()
+    std::string BodyPart::getModel(const MWWorld::ConstPtr& ptr) const
     {
-        std::shared_ptr<MWWorld::Class> instance (new BodyPart);
-
-        registerClass (typeid (ESM::BodyPart).name(), instance);
-    }
-
-    std::string BodyPart::getModel(const MWWorld::ConstPtr &ptr) const
-    {
-        const MWWorld::LiveCellRef<ESM::BodyPart> *ref = ptr.get<ESM::BodyPart>();
-
-        const std::string &model = ref->mBase->mModel;
-        if (!model.empty()) {
-            return "meshes\\" + model;
-        }
-        return "";
+        return getClassModel<ESM::BodyPart>(ptr);
     }
 
 }

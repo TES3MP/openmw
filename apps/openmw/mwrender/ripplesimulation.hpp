@@ -5,6 +5,8 @@
 
 #include "../mwworld/ptr.hpp"
 
+#include "ripples.hpp"
+
 namespace osg
 {
     class Group;
@@ -35,6 +37,7 @@ namespace MWRender
         osg::Vec3f mLastEmitPosition;
         float mScale;
         float mForce;
+        float mTimer;
     };
 
     class RippleSimulation
@@ -47,9 +50,9 @@ namespace MWRender
         void update(float dt);
 
         /// adds an emitter, position will be tracked automatically
-        void addEmitter (const MWWorld::ConstPtr& ptr, float scale = 1.f, float force = 1.f);
-        void removeEmitter (const MWWorld::ConstPtr& ptr);
-        void updateEmitterPtr (const MWWorld::ConstPtr& old, const MWWorld::ConstPtr& ptr);
+        void addEmitter(const MWWorld::ConstPtr& ptr, float scale = 1.f, float force = 1.f);
+        void removeEmitter(const MWWorld::ConstPtr& ptr);
+        void updateEmitterPtr(const MWWorld::ConstPtr& old, const MWWorld::ConstPtr& ptr);
         void removeCell(const MWWorld::CellStore* store);
 
         void emitRipple(const osg::Vec3f& pos);
@@ -60,6 +63,8 @@ namespace MWRender
         /// Remove all active ripples
         void clear();
 
+        void setRipples(Ripples* ripples) { mRipples = ripples; }
+
     private:
         osg::ref_ptr<osg::Group> mParent;
 
@@ -67,6 +72,8 @@ namespace MWRender
         osg::ref_ptr<osg::PositionAttitudeTransform> mParticleNode;
 
         std::vector<Emitter> mEmitters;
+
+        Ripples* mRipples = nullptr;
     };
 
 }

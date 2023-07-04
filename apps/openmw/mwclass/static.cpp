@@ -1,20 +1,28 @@
 #include "static.hpp"
 
-#include <components/esm/loadstat.hpp>
+#include <components/esm3/loadstat.hpp>
+#include <components/esm4/loadstat.hpp>
 #include <components/sceneutil/positionattitudetransform.hpp>
 
-#include "../mwworld/ptr.hpp"
 #include "../mwphysics/physicssystem.hpp"
 #include "../mwworld/cellstore.hpp"
+#include "../mwworld/ptr.hpp"
 
 #include "../mwrender/objects.hpp"
 #include "../mwrender/renderinginterface.hpp"
 #include "../mwrender/vismask.hpp"
 
+#include "classmodel.hpp"
+
 namespace MWClass
 {
+    Static::Static()
+        : MWWorld::RegisteredClass<Static>(ESM::Static::sRecordId)
+    {
+    }
 
-    void Static::insertObjectRendering (const MWWorld::Ptr& ptr, const std::string& model, MWRender::RenderingInterface& renderingInterface) const
+    void Static::insertObjectRendering(
+        const MWWorld::Ptr& ptr, const std::string& model, MWRender::RenderingInterface& renderingInterface) const
     {
         if (!model.empty())
         {
@@ -23,26 +31,26 @@ namespace MWClass
         }
     }
 
-    void Static::insertObject(const MWWorld::Ptr& ptr, const std::string& model, MWPhysics::PhysicsSystem& physics) const
+    void Static::insertObject(const MWWorld::Ptr& ptr, const std::string& model, const osg::Quat& rotation,
+        MWPhysics::PhysicsSystem& physics) const
     {
-        if(!model.empty())
-            physics.addObject(ptr, model);
+        insertObjectPhysics(ptr, model, rotation, physics);
     }
 
-    std::string Static::getModel(const MWWorld::ConstPtr &ptr) const
+    void Static::insertObjectPhysics(const MWWorld::Ptr& ptr, const std::string& model, const osg::Quat& rotation,
+        MWPhysics::PhysicsSystem& physics) const
     {
-        const MWWorld::LiveCellRef<ESM::Static> *ref = ptr.get<ESM::Static>();
-
-        const std::string &model = ref->mBase->mModel;
-        if (!model.empty()) {
-            return "meshes\\" + model;
-        }
-        return "";
+        physics.addObject(ptr, model, rotation, MWPhysics::CollisionType_World);
     }
 
-    std::string Static::getName (const MWWorld::ConstPtr& ptr) const
+    std::string Static::getModel(const MWWorld::ConstPtr& ptr) const
     {
-        return "";
+        return getClassModel<ESM::Static>(ptr);
+    }
+
+    std::string_view Static::getName(const MWWorld::ConstPtr& ptr) const
+    {
+        return {};
     }
 
     bool Static::hasToolTip(const MWWorld::ConstPtr& ptr) const
@@ -50,16 +58,9 @@ namespace MWClass
         return false;
     }
 
-    void Static::registerSelf()
+    MWWorld::Ptr Static::copyToCellImpl(const MWWorld::ConstPtr& ptr, MWWorld::CellStore& cell) const
     {
-        std::shared_ptr<Class> instance (new Static);
-
-        registerClass (typeid (ESM::Static).name(), instance);
-    }
-
-    MWWorld::Ptr Static::copyToCellImpl(const MWWorld::ConstPtr &ptr, MWWorld::CellStore &cell) const
-    {
-        const MWWorld::LiveCellRef<ESM::Static> *ref = ptr.get<ESM::Static>();
+        const MWWorld::LiveCellRef<ESM::Static>* ref = ptr.get<ESM::Static>();
 
         return MWWorld::Ptr(cell.insert(ref), &cell);
     }

@@ -1,14 +1,19 @@
 #include "modebutton.hpp"
 
-CSVWidget::ModeButton::ModeButton (const QIcon& icon, const QString& tooltip, QWidget *parent)
-: PushButton (icon, Type_Mode, tooltip, parent)
-{}
+#include <apps/opencs/view/widget/pushbutton.hpp>
 
-void CSVWidget::ModeButton::activate (SceneToolbar *toolbar) {}
+class QWidget;
 
-void CSVWidget::ModeButton::deactivate (SceneToolbar *toolbar) {}
+CSVWidget::ModeButton::ModeButton(const QIcon& icon, const QString& tooltip, QWidget* parent)
+    : PushButton(icon, Type_Mode, tooltip, parent)
+{
+}
 
-bool CSVWidget::ModeButton::createContextMenu (QMenu *menu)
+void CSVWidget::ModeButton::activate(SceneToolbar* toolbar) {}
+
+void CSVWidget::ModeButton::deactivate(SceneToolbar* toolbar) {}
+
+bool CSVWidget::ModeButton::createContextMenu(QMenu* menu)
 {
     return false;
 }

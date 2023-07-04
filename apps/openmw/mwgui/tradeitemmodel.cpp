@@ -1,7 +1,7 @@
 #include "tradeitemmodel.hpp"
 
-#include <components/misc/stringops.hpp>
-#include <components/settings/settings.hpp>
+#include <components/misc/strings/algorithm.hpp>
+#include <components/settings/values.hpp>
 
 #include "../mwworld/class.hpp"
 #include "../mwworld/containerstore.hpp"
@@ -10,10 +10,10 @@
 namespace MWGui
 {
 
-    TradeItemModel::TradeItemModel(ItemModel *sourceModel, const MWWorld::Ptr& merchant)
+    TradeItemModel::TradeItemModel(std::unique_ptr<ItemModel> sourceModel, const MWWorld::Ptr& merchant)
         : mMerchant(merchant)
     {
-        mSourceModel = sourceModel;
+        mSourceModel = std::move(sourceModel);
     }
 
     bool TradeItemModel::allowedToUseItems() const
@@ -21,7 +21,7 @@ namespace MWGui
         return true;
     }
 
-    ItemStack TradeItemModel::getItem (ModelIndex index)
+    ItemStack TradeItemModel::getItem(ModelIndex index)
     {
         if (index < 0)
             throw std::runtime_error("Invalid index supplied");
@@ -35,7 +35,7 @@ namespace MWGui
         return mItems.size();
     }
 
-    void TradeItemModel::borrowImpl(const ItemStack &item, std::vector<ItemStack> &out)
+    void TradeItemModel::borrowImpl(const ItemStack& item, std::vector<ItemStack>& out)
     {
         bool found = false;
         for (ItemStack& itemStack : out)
@@ -51,7 +51,7 @@ namespace MWGui
             out.push_back(item);
     }
 
-    void TradeItemModel::unborrowImpl(const ItemStack &item, size_t count, std::vector<ItemStack> &out)
+    void TradeItemModel::unborrowImpl(const ItemStack& item, size_t count, std::vector<ItemStack>& out)
     {
         std::vector<ItemStack>::iterator it = out.begin();
         bool found = false;
@@ -72,33 +72,33 @@ namespace MWGui
             throw std::runtime_error("Can't find borrowed item to return");
     }
 
-    void TradeItemModel::borrowItemFromUs (ModelIndex itemIndex, size_t count)
+    void TradeItemModel::borrowItemFromUs(ModelIndex itemIndex, size_t count)
     {
         ItemStack item = getItem(itemIndex);
         item.mCount = count;
         borrowImpl(item, mBorrowedFromUs);
     }
 
-    void TradeItemModel::borrowItemToUs (ModelIndex itemIndex, ItemModel* source, size_t count)
+    void TradeItemModel::borrowItemToUs(ModelIndex itemIndex, ItemModel* source, size_t count)
     {
         ItemStack item = source->getItem(itemIndex);
         item.mCount = count;
         borrowImpl(item, mBorrowedToUs);
     }
 
-    void TradeItemModel::returnItemBorrowedToUs (ModelIndex itemIndex, size_t count)
+    void TradeItemModel::returnItemBorrowedToUs(ModelIndex itemIndex, size_t count)
     {
         ItemStack item = getItem(itemIndex);
         unborrowImpl(item, count, mBorrowedToUs);
     }
 
-    void TradeItemModel::returnItemBorrowedFromUs (ModelIndex itemIndex, ItemModel* source, size_t count)
+    void TradeItemModel::returnItemBorrowedFromUs(ModelIndex itemIndex, ItemModel* source, size_t count)
     {
         ItemStack item = source->getItem(itemIndex);
         unborrowImpl(item, count, mBorrowedFromUs);
     }
 
-    void TradeItemModel::adjustEncumbrance(float &encumbrance)
+    void TradeItemModel::adjustEncumbrance(float& encumbrance)
     {
         for (ItemStack& itemStack : mBorrowedToUs)
         {
@@ -130,8 +130,8 @@ namespace MWGui
         {
             // get index in the source model
             ItemModel* sourceModel = itemStack.mCreator;
-            size_t i=0;
-            for (; i<sourceModel->getItemCount(); ++i)
+            size_t i = 0;
+            for (; i < sourceModel->getItemCount(); ++i)
             {
                 if (itemStack.mBase == sourceModel->getItem(i).mBase)
                     break;
@@ -140,9 +140,8 @@ namespace MWGui
                 throw std::runtime_error("The borrowed item disappeared");
 
             const ItemStack& item = sourceModel->getItem(i);
-            static const bool prevent = Settings::Manager::getBool("prevent merchant equipping", "Game");
             // copy the borrowed items to our model
-            copyItem(item, itemStack.mCount, !prevent);
+            copyItem(item, itemStack.mCount, !Settings::game().mPreventMerchantEquipping);
             // then remove them from the source model
             sourceModel->removeItem(item, itemStack.mCount);
         }
@@ -160,19 +159,19 @@ namespace MWGui
 
         mItems.clear();
         // add regular items
-        for (size_t i=0; i<mSourceModel->getItemCount(); ++i)
+        for (size_t i = 0; i < mSourceModel->getItemCount(); ++i)
         {
             ItemStack item = mSourceModel->getItem(i);
-            if(!mMerchant.isEmpty())
+            if (!mMerchant.isEmpty())
             {
                 MWWorld::Ptr base = item.mBase;
-                if(Misc::StringUtils::ciEqual(base.getCellRef().getRefId(), MWWorld::ContainerStore::sGoldId))
+                if (base.getCellRef().getRefId() == MWWorld::ContainerStore::sGoldId)
                     continue;
 
                 if (!base.getClass().showsInInventory(base))
                     return;
 
-                if(!base.getClass().canSell(base, services))
+                if (!base.getClass().canSell(base, services))
                     continue;
 
                 // Bound items may not be bought
@@ -180,7 +179,7 @@ namespace MWGui
                     continue;
 
                 // don't show equipped items
-                if(mMerchant.getClass().hasInventoryStore(mMerchant))
+                if (mMerchant.getClass().hasInventoryStore(mMerchant))
                 {
                     MWWorld::InventoryStore& store = mMerchant.getClass().getInventoryStore(mMerchant);
                     if (store.isEquipped(base))

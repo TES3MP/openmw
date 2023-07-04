@@ -1,54 +1,77 @@
 #ifndef OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_H
 #define OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_H
 
-#include "tilebounds.hpp"
+#include "agentbounds.hpp"
+#include "areatype.hpp"
+#include "changetype.hpp"
+#include "flags.hpp"
+#include "recastmesh.hpp"
 #include "status.hpp"
+#include "tilebounds.hpp"
 
-#include <osg/io_utils>
+#include <DetourStatus.h>
 
-#include <components/bullethelpers/operators.hpp>
-#include <components/misc/guarded.hpp>
-
-#include <chrono>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <memory>
-#include <sstream>
+#include <iosfwd>
 #include <string>
-#include <thread>
 
 class dtNavMesh;
 
 namespace DetourNavigator
 {
-    inline std::ostream& operator <<(std::ostream& stream, const TileBounds& value)
-    {
-        return stream << "TileBounds {" << value.mMin << ", " << value.mMax << "}";
-    }
+    struct Version;
+    struct TilesPositionsRange;
+    struct AreaCosts;
+    struct DetourSettings;
 
-    inline std::ostream& operator <<(std::ostream& stream, Status value)
+    std::ostream& operator<<(std::ostream& stream, const TileBounds& value);
+
+    std::ostream& operator<<(std::ostream& stream, Status value);
+
+    std::ostream& operator<<(std::ostream& s, const Water& v);
+
+    std::ostream& operator<<(std::ostream& s, const CellWater& v);
+
+    std::ostream& operator<<(std::ostream& s, const FlatHeightfield& v);
+
+    std::ostream& operator<<(std::ostream& s, const Heightfield& v);
+
+    std::ostream& operator<<(std::ostream& s, CollisionShapeType v);
+
+    std::ostream& operator<<(std::ostream& s, const AgentBounds& v);
+
+    struct WriteDtStatus
     {
-#define OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(name) \
-    case Status::name: return stream << "DetourNavigator::Status::"#name;
-        switch (value)
-        {
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(Success)
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(NavMeshNotFound)
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(StartPolygonNotFound)
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(EndPolygonNotFound)
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(MoveAlongSurfaceFailed)
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(FindPathOverPolygonsFailed)
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(GetPolyHeightFailed)
-            OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE(InitNavMeshQueryFailed)
-        }
-#undef OPENMW_COMPONENTS_DETOURNAVIGATOR_DEBUG_STATUS_MESSAGE
-        return stream << "DetourNavigator::Error::" << static_cast<int>(value);
-    }
+        dtStatus mStatus;
+    };
+
+    std::ostream& operator<<(std::ostream& stream, const WriteDtStatus& value);
+
+    std::ostream& operator<<(std::ostream& stream, const Flag value);
+
+    struct WriteFlags
+    {
+        Flags mValue;
+    };
+
+    std::ostream& operator<<(std::ostream& stream, const WriteFlags& value);
+
+    std::ostream& operator<<(std::ostream& stream, AreaType value);
+
+    std::ostream& operator<<(std::ostream& stream, ChangeType value);
+
+    std::ostream& operator<<(std::ostream& stream, const Version& value);
+
+    std::ostream& operator<<(std::ostream& stream, const TilesPositionsRange& value);
+
+    std::ostream& operator<<(std::ostream& stream, const AreaCosts& value);
+
+    std::ostream& operator<<(std::ostream& stream, const DetourSettings& value);
 
     class RecastMesh;
+    struct RecastSettings;
 
-    void writeToFile(const RecastMesh& recastMesh, const std::string& pathPrefix, const std::string& revision);
+    void writeToFile(const RecastMesh& recastMesh, const std::string& pathPrefix, const std::string& revision,
+        const RecastSettings& settings);
     void writeToFile(const dtNavMesh& navMesh, const std::string& pathPrefix, const std::string& revision);
 }
 

@@ -5,10 +5,11 @@
 #include <osg/ref_ptr>
 
 #include <atomic>
-#include <queue>
-#include <thread>
-#include <mutex>
 #include <condition_variable>
+#include <deque>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 namespace SceneUtil
 {
@@ -31,7 +32,7 @@ namespace SceneUtil
         virtual void abort() {}
 
     private:
-        std::atomic_bool mDone {false};
+        std::atomic_bool mDone{ false };
         std::mutex mMutex;
         std::condition_variable mCondition;
     };
@@ -44,13 +45,17 @@ namespace SceneUtil
     class WorkQueue : public osg::Referenced
     {
     public:
-        WorkQueue(int numWorkerThreads=1);
+        WorkQueue(std::size_t workerThreads);
         ~WorkQueue();
+
+        void start(std::size_t workerThreads);
+
+        void stop();
 
         /// Add a new work item to the back of the queue.
         /// @par The work item's waitTillDone() method may be used by the caller to wait until the work is complete.
         /// @param front If true, add item to the front of the queue. If false (default), add to the back.
-        void addWorkItem(osg::ref_ptr<WorkItem> item, bool front=false);
+        void addWorkItem(osg::ref_ptr<WorkItem> item, bool front = false);
 
         /// Get the next work item from the front of the queue. If the queue is empty, waits until a new item is added.
         /// If the workqueue is in the process of being destroyed, may return nullptr.
@@ -63,7 +68,7 @@ namespace SceneUtil
 
     private:
         bool mIsReleased;
-        std::deque<osg::ref_ptr<WorkItem> > mQueue;
+        std::deque<osg::ref_ptr<WorkItem>> mQueue;
 
         mutable std::mutex mMutex;
         std::condition_variable mCondition;
@@ -88,7 +93,6 @@ namespace SceneUtil
 
         void run();
     };
-
 
 }
 

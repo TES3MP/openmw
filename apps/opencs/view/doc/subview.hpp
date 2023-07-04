@@ -1,76 +1,66 @@
 #ifndef CSV_DOC_SUBVIEW_H
 #define CSV_DOC_SUBVIEW_H
 
-#include "../../model/doc/document.hpp"
-
 #include "../../model/world/universalid.hpp"
-
-#include "subviewfactory.hpp"
 
 #include <QDockWidget>
 
-class QUndoStack;
+#include <string>
 
-namespace CSMWorld
-{
-    class Data;
-}
+class QCloseEvent;
+class QEvent;
+class QObject;
 
 namespace CSVDoc
 {
-    class View;
-
     class SubView : public QDockWidget
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            CSMWorld::UniversalId mUniversalId;
+        CSMWorld::UniversalId mUniversalId;
 
-            // not implemented
-            SubView (const SubView&);
-            SubView& operator= (SubView&);
+        // not implemented
+        SubView(const SubView&);
+        SubView& operator=(SubView&);
 
-        protected:
+    protected:
+        void setUniversalId(const CSMWorld::UniversalId& id);
 
-            void setUniversalId(const CSMWorld::UniversalId& id);
+        bool event(QEvent* event) override;
 
-            bool event (QEvent *event) override;
+    public:
+        SubView(const CSMWorld::UniversalId& id);
 
-        public:
+        CSMWorld::UniversalId getUniversalId() const;
 
-            SubView (const CSMWorld::UniversalId& id);
+        virtual void setEditLock(bool locked) = 0;
 
-            CSMWorld::UniversalId getUniversalId() const;
+        virtual void setStatusBar(bool show);
+        ///< Default implementation: ignored
 
-            virtual void setEditLock (bool locked) = 0;
+        virtual void useHint(const std::string& hint);
+        ///< Default implementation: ignored
 
-            virtual void setStatusBar (bool show);
-            ///< Default implementation: ignored
+        virtual std::string getTitle() const;
 
-            virtual void useHint (const std::string& hint);
-            ///< Default implementation: ignored
+    private:
+        void closeEvent(QCloseEvent* event) override;
 
-            virtual std::string getTitle() const;
+    signals:
 
-        private:
+        void focusId(const CSMWorld::UniversalId& universalId, const std::string& hint);
 
-            void closeEvent (QCloseEvent *event) override;
+        void closeRequest(SubView* subView);
 
-        signals:
+        void updateTitle();
 
-            void focusId (const CSMWorld::UniversalId& universalId, const std::string& hint);
+        void updateSubViewIndices(SubView* view = nullptr);
 
-            void closeRequest (SubView *subView);
+        void universalIdChanged(const CSMWorld::UniversalId& universalId);
 
-            void updateTitle();
+    protected slots:
 
-            void updateSubViewIndices (SubView *view = nullptr);
-
-            void universalIdChanged (const CSMWorld::UniversalId& universalId);
-
-        protected slots:
-
-            void closeRequest();
+        void closeRequest();
     };
 }
 

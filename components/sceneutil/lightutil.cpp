@@ -1,22 +1,50 @@
 #include "lightutil.hpp"
 
-#include <osg/Light>
 #include <osg/Group>
-#include <osg/ComputeBoundsVisitor>
+#include <osg/Light>
 
-#include <components/esm/loadligh.hpp>
+#include <osgParticle/ParticleSystem>
+
+#include <components/esm3/loadligh.hpp>
 #include <components/fallback/fallback.hpp>
+#include <components/sceneutil/lightcommon.hpp>
 
-#include "lightmanager.hpp"
 #include "lightcontroller.hpp"
+#include "lightmanager.hpp"
 #include "util.hpp"
 #include "visitor.hpp"
-#include "positionattitudetransform.hpp"
+
+namespace
+{
+    class CheckEmptyLightVisitor : public osg::NodeVisitor
+    {
+    public:
+        CheckEmptyLightVisitor()
+            : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
+        {
+        }
+
+        void apply(osg::Drawable& drawable) override
+        {
+            if (!mEmpty)
+                return;
+
+            if (dynamic_cast<const osgParticle::ParticleSystem*>(&drawable))
+                mEmpty = false;
+            else
+                traverse(drawable);
+        }
+
+        void apply(osg::Geometry& geometry) override { mEmpty = false; }
+
+        bool mEmpty = true;
+    };
+}
 
 namespace SceneUtil
 {
 
-    void configureLight(osg::Light *light, float radius, bool isExterior)
+    void configureLight(osg::Light* light, float radius, bool isExterior)
     {
         float quadraticAttenuation = 0.f;
         float linearAttenuation = 0.f;
@@ -58,70 +86,58 @@ namespace SceneUtil
         light->setQuadraticAttenuation(quadraticAttenuation);
     }
 
-    osg::ref_ptr<LightSource> addLight(osg::Group* node, const ESM::Light* esmLight, unsigned int partsysMask, unsigned int lightMask, bool isExterior)
+    osg::ref_ptr<LightSource> addLight(
+        osg::Group* node, const SceneUtil::LightCommon& esmLight, unsigned int lightMask, bool isExterior)
     {
         SceneUtil::FindByNameVisitor visitor("AttachLight");
         node->accept(visitor);
 
-        osg::Group* attachTo = nullptr;
-        if (visitor.mFoundNode)
-        {
-            attachTo = visitor.mFoundNode;
-        }
-        else
-        {
-            osg::ComputeBoundsVisitor computeBound;
-            computeBound.setTraversalMask(~partsysMask);
-            // We want the bounds of all children of the node, ignoring the node's local transformation
-            // So do a traverse(), not accept()
-            computeBound.traverse(*node);
-
-            // PositionAttitudeTransform seems to be slightly faster than MatrixTransform
-            osg::ref_ptr<SceneUtil::PositionAttitudeTransform> trans(new SceneUtil::PositionAttitudeTransform);
-            trans->setPosition(computeBound.getBoundingBox().center());
-
-            node->addChild(trans);
-
-            attachTo = trans;
-        }
-
-        osg::ref_ptr<LightSource> lightSource = createLightSource(esmLight, lightMask, isExterior, osg::Vec4f(0,0,0,1));
+        osg::Group* attachTo = visitor.mFoundNode ? visitor.mFoundNode : node;
+        osg::ref_ptr<LightSource> lightSource
+            = createLightSource(esmLight, lightMask, isExterior, osg::Vec4f(0, 0, 0, 1));
         attachTo->addChild(lightSource);
+
+        CheckEmptyLightVisitor emptyVisitor;
+        node->accept(emptyVisitor);
+
+        lightSource->setEmpty(emptyVisitor.mEmpty);
+
         return lightSource;
     }
 
-    osg::ref_ptr<LightSource> createLightSource(const ESM::Light* esmLight, unsigned int lightMask, bool isExterior, const osg::Vec4f& ambient)
+    osg::ref_ptr<LightSource> createLightSource(
+        const SceneUtil::LightCommon& esmLight, unsigned int lightMask, bool isExterior, const osg::Vec4f& ambient)
     {
-        osg::ref_ptr<SceneUtil::LightSource> lightSource (new SceneUtil::LightSource);
-        osg::ref_ptr<osg::Light> light (new osg::Light);
+        osg::ref_ptr<SceneUtil::LightSource> lightSource(new SceneUtil::LightSource);
+        osg::ref_ptr<osg::Light> light(new osg::Light);
         lightSource->setNodeMask(lightMask);
 
-        float radius = esmLight->mData.mRadius;
+        float radius = esmLight.mRadius;
         lightSource->setRadius(radius);
 
         configureLight(light, radius, isExterior);
 
-        osg::Vec4f diffuse = SceneUtil::colourFromRGB(esmLight->mData.mColor);
-        if (esmLight->mData.mFlags & ESM::Light::Negative)
+        osg::Vec4f diffuse = esmLight.mColor;
+        if (esmLight.mNegative)
         {
             diffuse *= -1;
             diffuse.a() = 1;
         }
         light->setDiffuse(diffuse);
         light->setAmbient(ambient);
-        light->setSpecular(osg::Vec4f(0,0,0,0));
+        light->setSpecular(osg::Vec4f(0, 0, 0, 0));
 
         lightSource->setLight(light);
 
-        osg::ref_ptr<SceneUtil::LightController> ctrl (new SceneUtil::LightController);
+        osg::ref_ptr<SceneUtil::LightController> ctrl(new SceneUtil::LightController);
         ctrl->setDiffuse(light->getDiffuse());
-        if (esmLight->mData.mFlags & ESM::Light::Flicker)
+        if (esmLight.mFlicker)
             ctrl->setType(SceneUtil::LightController::LT_Flicker);
-        if (esmLight->mData.mFlags & ESM::Light::FlickerSlow)
+        if (esmLight.mFlickerSlow)
             ctrl->setType(SceneUtil::LightController::LT_FlickerSlow);
-        if (esmLight->mData.mFlags & ESM::Light::Pulse)
+        if (esmLight.mPulse)
             ctrl->setType(SceneUtil::LightController::LT_Pulse);
-        if (esmLight->mData.mFlags & ESM::Light::PulseSlow)
+        if (esmLight.mPulseSlow)
             ctrl->setType(SceneUtil::LightController::LT_PulseSlow);
 
         lightSource->addUpdateCallback(ctrl);

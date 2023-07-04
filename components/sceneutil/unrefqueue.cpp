@@ -1,39 +1,32 @@
 #include "unrefqueue.hpp"
 
-//#include <osg/Timer>
-
-//#include <components/debug/debuglog.hpp>
+#include <components/sceneutil/workqueue.hpp>
 
 namespace SceneUtil
 {
-    void UnrefWorkItem::doWork()
+    namespace
     {
-        mObjects.clear();
+        struct ClearVector final : SceneUtil::WorkItem
+        {
+            std::vector<osg::ref_ptr<osg::Referenced>> mObjects;
+
+            explicit ClearVector(std::vector<osg::ref_ptr<osg::Referenced>>&& objects)
+                : mObjects(std::move(objects))
+            {
+            }
+
+            void doWork() override { mObjects.clear(); }
+        };
     }
 
-    UnrefQueue::UnrefQueue()
+    void UnrefQueue::flush(SceneUtil::WorkQueue& workQueue)
     {
-        mWorkItem = new UnrefWorkItem;
-    }
-
-    void UnrefQueue::push(const osg::Referenced *obj)
-    {
-        mWorkItem->mObjects.emplace_back(obj);
-    }
-
-    void UnrefQueue::flush(SceneUtil::WorkQueue *workQueue)
-    {
-        if (mWorkItem->mObjects.empty())
+        if (mObjects.empty())
             return;
 
-        workQueue->addWorkItem(mWorkItem, true);
-
-        mWorkItem = new UnrefWorkItem;
+        // Move only objects to keep allocated storage in mObjects
+        workQueue.addWorkItem(new ClearVector(std::vector<osg::ref_ptr<osg::Referenced>>(
+            std::move_iterator(mObjects.begin()), std::move_iterator(mObjects.end()))));
+        mObjects.clear();
     }
-
-    unsigned int UnrefQueue::getNumItems() const
-    {
-        return mWorkItem->mObjects.size();
-    }
-
 }

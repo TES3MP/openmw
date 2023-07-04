@@ -3,9 +3,10 @@
 
 #include "lighting.hpp"
 
+#include <osg/Vec4f>
+
 namespace osg
 {
-    class Light;
     class Group;
 }
 
@@ -13,15 +14,14 @@ namespace CSVRender
 {
     class LightingBright : public Lighting
     {
-        public:
+    public:
+        LightingBright();
 
-            LightingBright();
+        void activate(osg::Group* rootNode, bool /*isExterior*/) override;
 
-            void activate (osg::Group* rootNode, bool /*isExterior*/) override;
+        void deactivate() override;
 
-            void deactivate() override;
-
-            osg::Vec4f getAmbientColour(osg::Vec4f* defaultAmbient) override;
+        osg::Vec4f getAmbientColour(osg::Vec4f* defaultAmbient) override;
     };
 }
 

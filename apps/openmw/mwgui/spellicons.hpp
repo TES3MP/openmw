@@ -28,7 +28,8 @@ namespace MWGui
             , mRemainingTime(0.f)
             , mTotalTime(0.f)
             , mPermanent(false)
-        {}
+        {
+        }
         std::string mSource; // display name for effect source (e.g. potion name)
         MWMechanics::EffectKey mKey;
         int mMagnitude;
@@ -37,27 +38,12 @@ namespace MWGui
         bool mPermanent; // the effect is permanent
     };
 
-    class EffectSourceVisitor : public MWMechanics::EffectSourceVisitor
-    {
-    public:
-        bool mIsPermanent;
-
-        std::map <int, std::vector<MagicEffectInfo> > mEffectSources;
-
-        virtual ~EffectSourceVisitor() {}
-
-        void visit (MWMechanics::EffectKey key, int effectIndex,
-                            const std::string& sourceName, const std::string& sourceId, int casterActorId,
-                            float magnitude, float remainingTime = -1, float totalTime = -1) override;
-    };
-
     class SpellIcons
     {
     public:
         void updateWidgets(MyGUI::Widget* parent, bool adjustSize);
 
     private:
-
         std::map<int, MyGUI::ImageBox*> mWidgetMap;
     };
 

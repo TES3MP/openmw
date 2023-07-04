@@ -1,29 +1,26 @@
 #include "colorpickerpopup.hpp"
 
 #include <QColorDialog>
-#include <QPushButton>
 #include <QEvent>
 #include <QKeyEvent>
-#include <QLayout>
-#include <QStyleOption>
+#include <QPushButton>
+#include <QStyleOptionButton>
+#include <QVBoxLayout>
 
-CSVWidget::ColorPickerPopup::ColorPickerPopup(QWidget *parent) 
+CSVWidget::ColorPickerPopup::ColorPickerPopup(QWidget* parent)
     : QFrame(parent)
 {
     setWindowFlags(Qt::Popup);
-    setFrameStyle(QFrame::Box | QFrame::Plain);
+    setFrameStyle(QFrame::Box | static_cast<int>(QFrame::Plain));
     hide();
 
     mColorPicker = new QColorDialog(this);
     mColorPicker->setWindowFlags(Qt::Widget);
     mColorPicker->setOptions(QColorDialog::NoButtons | QColorDialog::DontUseNativeDialog);
     mColorPicker->installEventFilter(this);
-    connect(mColorPicker,
-            SIGNAL(currentColorChanged(const QColor &)),
-            this,
-            SIGNAL(colorChanged(const QColor &)));
+    connect(mColorPicker, &QColorDialog::currentColorChanged, this, &ColorPickerPopup::colorChanged);
 
-    QVBoxLayout *layout = new QVBoxLayout(this);
+    QVBoxLayout* layout = new QVBoxLayout(this);
     layout->addWidget(mColorPicker);
     layout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     layout->setContentsMargins(0, 0, 0, 0);
@@ -31,7 +28,7 @@ CSVWidget::ColorPickerPopup::ColorPickerPopup(QWidget *parent)
     setFixedSize(mColorPicker->size());
 }
 
-void CSVWidget::ColorPickerPopup::showPicker(const QPoint &position, const QColor &initialColor)
+void CSVWidget::ColorPickerPopup::showPicker(const QPoint& position, const QColor& initialColor)
 {
     QRect geometry = this->geometry();
     geometry.moveTo(position);
@@ -43,13 +40,13 @@ void CSVWidget::ColorPickerPopup::showPicker(const QPoint &position, const QColo
         mColorPicker->setCurrentColor(color);
 }
 
-void CSVWidget::ColorPickerPopup::mousePressEvent(QMouseEvent *event)
+void CSVWidget::ColorPickerPopup::mousePressEvent(QMouseEvent* event)
 {
-    QPushButton *button = qobject_cast<QPushButton *>(parentWidget());
+    QPushButton* button = qobject_cast<QPushButton*>(parentWidget());
     if (button != nullptr)
     {
         QStyleOptionButton option;
-        option.init(button);
+        option.initFrom(button);
         QRect buttonRect = option.rect;
         buttonRect.moveTo(button->mapToGlobal(buttonRect.topLeft()));
 
@@ -63,11 +60,11 @@ void CSVWidget::ColorPickerPopup::mousePressEvent(QMouseEvent *event)
     QFrame::mousePressEvent(event);
 }
 
-bool CSVWidget::ColorPickerPopup::eventFilter(QObject *object, QEvent *event)
+bool CSVWidget::ColorPickerPopup::eventFilter(QObject* object, QEvent* event)
 {
     if (object == mColorPicker && event->type() == QEvent::KeyPress)
     {
-        QKeyEvent *keyEvent = static_cast<QKeyEvent *>(event);
+        QKeyEvent* keyEvent = static_cast<QKeyEvent*>(event);
         // Prevent QColorDialog from closing when Escape is pressed.
         // Instead, hide the popup.
         if (keyEvent->key() == Qt::Key_Escape)

@@ -1,17 +1,17 @@
 #include "converter.hpp"
 
-#include <stdexcept>
 #include <algorithm>
+#include <stdexcept>
 
 #include <osgDB/WriteFile>
 
-#include <components/esm/creaturestate.hpp>
-#include <components/esm/containerstate.hpp>
+#include <components/esm3/containerstate.hpp>
+#include <components/esm3/creaturestate.hpp>
 
 #include <components/misc/constants.hpp>
 
-#include "convertcrec.hpp"
 #include "convertcntc.hpp"
+#include "convertcrec.hpp"
 #include "convertscri.hpp"
 
 namespace
@@ -19,14 +19,13 @@ namespace
 
     void convertImage(char* data, int size, int width, int height, GLenum pf, const std::string& out)
     {
-        osg::ref_ptr<osg::Image> image (new osg::Image);
+        osg::ref_ptr<osg::Image> image(new osg::Image);
         image->allocateImage(width, height, 1, pf, GL_UNSIGNED_BYTE);
         memcpy(image->data(), data, size);
         image->flipVertical();
 
         osgDB::writeImageFile(*image, out);
     }
-
 
     void convertCellRef(const ESSImport::CellRef& cellref, ESM::ObjectState& objstate)
     {
@@ -35,11 +34,11 @@ namespace
         objstate.mRef.mRefNum = cellref.mRefNum;
         if (cellref.mDeleted)
             objstate.mCount = 0;
-        convertSCRI(cellref.mSCRI, objstate.mLocals);
+        convertSCRI(cellref.mActorData.mSCRI, objstate.mLocals);
         objstate.mHasLocals = !objstate.mLocals.mVariables.empty();
 
-        if (cellref.mHasANIS)
-            convertANIS(cellref.mANIS, objstate.mAnimationState);
+        if (cellref.mActorData.mHasANIS)
+            convertANIS(cellref.mActorData.mANIS, objstate.mAnimationState);
     }
 
     bool isIndexedRefId(const std::string& indexedRefId)
@@ -51,28 +50,28 @@ namespace
             return false; // entirely numeric refid, this is a reference to
                           // a dynamically created record e.g. player-enchanted weapon
 
-        std::string index = indexedRefId.substr(indexedRefId.size()-8);
+        std::string index = indexedRefId.substr(indexedRefId.size() - 8);
         return index.find_first_not_of("0123456789ABCDEF") == std::string::npos;
     }
 
     void splitIndexedRefId(const std::string& indexedRefId, int& refIndex, std::string& refId)
     {
         std::stringstream stream;
-        stream << std::hex << indexedRefId.substr(indexedRefId.size()-8,8);
+        stream << std::hex << indexedRefId.substr(indexedRefId.size() - 8, 8);
         stream >> refIndex;
 
-        refId = indexedRefId.substr(0,indexedRefId.size()-8);
+        refId = indexedRefId.substr(0, indexedRefId.size() - 8);
     }
 
     int convertActorId(const std::string& indexedRefId, ESSImport::Context& context)
     {
         if (isIndexedRefId(indexedRefId))
         {
-            int refIndex;
+            int refIndex = 0;
             std::string refId;
             splitIndexedRefId(indexedRefId, refIndex, refId);
 
-            auto it = context.mActorIdMap.find(std::make_pair(refIndex, refId));
+            auto it = context.mActorIdMap.find(std::make_pair(refIndex, ESM::RefId::stringRefId(refId)));
             if (it == context.mActorIdMap.end())
                 return -1;
             return it->second;
@@ -89,14 +88,13 @@ namespace
 namespace ESSImport
 {
 
-
     struct MAPH
     {
         unsigned int size;
         unsigned int value;
     };
 
-    void ConvertFMAP::read(ESM::ESMReader &esm)
+    void ConvertFMAP::read(ESM::ESMReader& esm)
     {
         MAPH maph;
         esm.getHNT(maph, "MAPH");
@@ -104,63 +102,63 @@ namespace ESSImport
         esm.getSubNameIs("MAPD");
         esm.getSubHeader();
         data.resize(esm.getSubSize());
-        esm.getExact(&data[0], data.size());
+        esm.getExact(data.data(), data.size());
 
         mGlobalMapImage = new osg::Image;
         mGlobalMapImage->allocateImage(maph.size, maph.size, 1, GL_RGB, GL_UNSIGNED_BYTE);
-        memcpy(mGlobalMapImage->data(), &data[0], data.size());
+        memcpy(mGlobalMapImage->data(), data.data(), data.size());
 
         // to match openmw size
         // FIXME: filtering?
-        mGlobalMapImage->scaleImage(maph.size*2, maph.size*2, 1, GL_UNSIGNED_BYTE);
+        mGlobalMapImage->scaleImage(maph.size * 2, maph.size * 2, 1, GL_UNSIGNED_BYTE);
     }
 
-    void ConvertFMAP::write(ESM::ESMWriter &esm)
+    void ConvertFMAP::write(ESM::ESMWriter& esm)
     {
         int numcells = mGlobalMapImage->s() / 18; // NB truncating, doesn't divide perfectly
-                                                       // with the 512x512 map the game has by default
-        int cellSize = mGlobalMapImage->s()/numcells;
+                                                  // with the 512x512 map the game has by default
+        int cellSize = mGlobalMapImage->s() / numcells;
 
         // Note the upper left corner of the (0,0) cell should be at (width/2, height/2)
 
-        mContext->mGlobalMapState.mBounds.mMinX = -numcells/2;
-        mContext->mGlobalMapState.mBounds.mMaxX = (numcells-1)/2;
-        mContext->mGlobalMapState.mBounds.mMinY = -(numcells-1)/2;
-        mContext->mGlobalMapState.mBounds.mMaxY = numcells/2;
+        mContext->mGlobalMapState.mBounds.mMinX = -numcells / 2;
+        mContext->mGlobalMapState.mBounds.mMaxX = (numcells - 1) / 2;
+        mContext->mGlobalMapState.mBounds.mMinY = -(numcells - 1) / 2;
+        mContext->mGlobalMapState.mBounds.mMaxY = numcells / 2;
 
-        osg::ref_ptr<osg::Image> image2 (new osg::Image);
-        int width = cellSize*numcells;
-        int height = cellSize*numcells;
+        osg::ref_ptr<osg::Image> image2(new osg::Image);
+        int width = cellSize * numcells;
+        int height = cellSize * numcells;
         std::vector<unsigned char> data;
-        data.resize(width*height*4, 0);
+        data.resize(width * height * 4, 0);
 
         image2->allocateImage(width, height, 1, GL_RGBA, GL_UNSIGNED_BYTE);
-        memcpy(image2->data(), &data[0], data.size());
+        memcpy(image2->data(), data.data(), data.size());
 
-        for (const auto & exploredCell : mContext->mExploredCells)
+        for (const auto& exploredCell : mContext->mExploredCells)
         {
             if (exploredCell.first > mContext->mGlobalMapState.mBounds.mMaxX
-                    || exploredCell.first < mContext->mGlobalMapState.mBounds.mMinX
-                    || exploredCell.second > mContext->mGlobalMapState.mBounds.mMaxY
-                    || exploredCell.second < mContext->mGlobalMapState.mBounds.mMinY)
+                || exploredCell.first < mContext->mGlobalMapState.mBounds.mMinX
+                || exploredCell.second > mContext->mGlobalMapState.mBounds.mMaxY
+                || exploredCell.second < mContext->mGlobalMapState.mBounds.mMinY)
             {
                 // out of bounds, I think this could happen, since the original engine had a fixed-size map
                 continue;
             }
 
-            int imageLeftSrc = mGlobalMapImage->s()/2;
-            int imageTopSrc = mGlobalMapImage->t()/2;
+            int imageLeftSrc = mGlobalMapImage->s() / 2;
+            int imageTopSrc = mGlobalMapImage->t() / 2;
             imageLeftSrc += exploredCell.first * cellSize;
             imageTopSrc -= exploredCell.second * cellSize;
-            int imageLeftDst = width/2;
-            int imageTopDst = height/2;
+            int imageLeftDst = width / 2;
+            int imageTopDst = height / 2;
             imageLeftDst += exploredCell.first * cellSize;
             imageTopDst -= exploredCell.second * cellSize;
-            for (int x=0; x<cellSize; ++x)
-                for (int y=0; y<cellSize; ++y)
+            for (int x = 0; x < cellSize; ++x)
+                for (int y = 0; y < cellSize; ++y)
                 {
-                    unsigned int col = *(unsigned int*)mGlobalMapImage->data(imageLeftSrc+x, imageTopSrc+y, 0);
-                    *(unsigned int*)image2->data(imageLeftDst+x, imageTopDst+y, 0) = col;
+                    unsigned int col = *(unsigned int*)mGlobalMapImage->data(imageLeftSrc + x, imageTopSrc + y, 0);
+                    *(unsigned int*)image2->data(imageLeftDst + x, imageTopDst + y, 0) = col;
                 }
         }
 
@@ -177,7 +175,8 @@ namespace ESSImport
         osgDB::ReaderWriter::WriteResult result = readerwriter->writeImage(*image2, ostream);
         if (!result.success())
         {
-            std::cerr << "Error: can't write global map image: " << result.message() << " code " << result.status() << std::endl;
+            std::cerr << "Error: can't write global map image: " << result.message() << " code " << result.status()
+                      << std::endl;
             return;
         }
 
@@ -189,7 +188,7 @@ namespace ESSImport
         esm.endRecord(ESM::REC_GMAP);
     }
 
-    void ConvertCell::read(ESM::ESMReader &esm)
+    void ConvertCell::read(ESM::ESMReader& esm)
     {
         ESM::Cell cell;
         bool isDeleted = false;
@@ -203,9 +202,9 @@ namespace ESSImport
         }
 
         // note if the player is in a nameless exterior cell, we will assign the cellId later based on player position
-        if (cell.mName == mContext->mPlayerCellName)
+        if (Misc::StringUtils::ciEqual(cell.mName, mContext->mPlayerCellName))
         {
-            mContext->mPlayer.mCellId = cell.getCellId();
+            mContext->mPlayer.mCellId = cell.mId;
         }
 
         Cell newcell;
@@ -234,15 +233,15 @@ namespace ESSImport
 
             esm.getExact(nam8, 32);
 
-            newcell.mFogOfWar.reserve(16*16);
-            for (int x=0; x<16; ++x)
+            newcell.mFogOfWar.reserve(16 * 16);
+            for (int x = 0; x < 16; ++x)
             {
-                for (int y=0; y<16; ++y)
+                for (int y = 0; y < 16; ++y)
                 {
-                    size_t pos = x*16+y;
-                    size_t bytepos = pos/8;
-                    assert(bytepos<32);
-                    int bit = pos%8;
+                    size_t pos = x * 16 + y;
+                    size_t bytepos = pos / 8;
+                    assert(bytepos < 32);
+                    int bit = pos % 8;
                     newcell.mFogOfWar.push_back(((nam8[bytepos] >> bit) & (0x1)) ? 0xffffffff : 0x000000ff);
                 }
             }
@@ -252,7 +251,8 @@ namespace ESSImport
                 std::ostringstream filename;
                 filename << "fog_" << cell.mData.mX << "_" << cell.mData.mY << ".tga";
 
-                convertImage((char*)&newcell.mFogOfWar[0], newcell.mFogOfWar.size()*4, 16, 16, GL_RGBA, filename.str());
+                convertImage(
+                    (char*)&newcell.mFogOfWar[0], newcell.mFogOfWar.size() * 4, 16, 16, GL_RGBA, filename.str());
             }
         }
 
@@ -268,17 +268,17 @@ namespace ESSImport
         }
 
         std::vector<CellRef> cellrefs;
-        while (esm.hasMoreSubs() && esm.isNextSub("FRMR"))
+        while (esm.hasMoreSubs() && esm.peekNextSub("FRMR"))
         {
             CellRef ref;
-            ref.load (esm);
+            ref.load(esm);
             cellrefs.push_back(ref);
         }
 
         while (esm.isNextSub("MPCD"))
         {
             float notepos[3];
-            esm.getHT(notepos, 3*sizeof(float));
+            esm.getHTSized<3 * sizeof(float)>(notepos);
 
             // Markers seem to be arranged in a 32*32 grid, notepos has grid-indices.
             // This seems to be the reason markers can't be placed everywhere in interior cells,
@@ -301,12 +301,11 @@ namespace ESSImport
             marker.mWorldX = notepos[0];
             marker.mWorldY = notepos[1];
             marker.mNote = note;
-            marker.mCell = cell.getCellId();
+            marker.mCell = cell.mId;
             mMarkers.push_back(marker);
         }
 
         newcell.mRefs = cellrefs;
-
 
         if (cell.isExterior())
             mExtCells[std::make_pair(cell.mData.mX, cell.mData.mY)] = newcell;
@@ -314,22 +313,25 @@ namespace ESSImport
             mIntCells[cell.mName] = newcell;
     }
 
-    void ConvertCell::writeCell(const Cell &cell, ESM::ESMWriter& esm)
+    void ConvertCell::writeCell(const Cell& cell, ESM::ESMWriter& esm)
     {
         ESM::Cell esmcell = cell.mCell;
         esm.startRecord(ESM::REC_CSTA);
         ESM::CellState csta;
         csta.mHasFogOfWar = 0;
-        csta.mId = esmcell.getCellId();
-        csta.mId.save(esm);
+        csta.mLastRespawn.mDay = 0;
+        csta.mLastRespawn.mHour = 0;
+        csta.mId = esmcell.mId;
+        csta.mIsInterior = !esmcell.isExterior();
+        esm.writeCellId(csta.mId);
         // TODO csta.mLastRespawn;
         // shouldn't be needed if we respawn on global schedule like in original MW
         csta.mWaterLevel = esmcell.mWater;
         csta.save(esm);
 
-        for (const auto & cellref : cell.mRefs)
+        for (const auto& cellref : cell.mRefs)
         {
-            ESM::CellRef out (cellref);
+            ESM::CellRef out(cellref);
 
             // TODO: use mContext->mCreatures/mNpcs
 
@@ -337,88 +339,90 @@ namespace ESSImport
             {
                 // non-indexed RefNum, i.e. no CREC/NPCC/CNTC record associated with it
                 // this could be any type of object really (even creatures/npcs too)
-                out.mRefID = cellref.mIndexedRefId;
-                std::string idLower = Misc::StringUtils::lowerCase(out.mRefID);
+                out.mRefID = ESM::RefId::stringRefId(cellref.mIndexedRefId);
 
                 ESM::ObjectState objstate;
                 objstate.blank();
                 objstate.mRef = out;
-                objstate.mRef.mRefID = idLower;
+                objstate.mRef.mRefID = out.mRefID;
                 objstate.mHasCustomState = false;
                 convertCellRef(cellref, objstate);
-                esm.writeHNT ("OBJE", 0);
+                esm.writeHNT("OBJE", 0);
                 objstate.save(esm);
                 continue;
             }
             else
             {
-                int refIndex;
-                splitIndexedRefId(cellref.mIndexedRefId, refIndex, out.mRefID);
+                int refIndex = 0;
+                std::string outStringId;
+                splitIndexedRefId(cellref.mIndexedRefId, refIndex, outStringId);
+                out.mRefID = ESM::RefId::stringRefId(outStringId);
 
-                std::string idLower = Misc::StringUtils::lowerCase(out.mRefID);
-
-                std::map<std::pair<int, std::string>, NPCC>::const_iterator npccIt = mContext->mNpcChanges.find(
-                            std::make_pair(refIndex, out.mRefID));
+                auto npccIt = mContext->mNpcChanges.find(std::make_pair(refIndex, out.mRefID));
                 if (npccIt != mContext->mNpcChanges.end())
                 {
                     ESM::NpcState objstate;
                     objstate.blank();
                     objstate.mRef = out;
-                    objstate.mRef.mRefID = idLower;
+                    objstate.mRef.mRefID = out.mRefID;
                     // TODO: need more micromanagement here so we don't overwrite values
                     // from the ESM with default values
-                    if (cellref.mHasACDT)
-                        convertACDT(cellref.mACDT, objstate.mCreatureStats);
-                    if (cellref.mHasACSC)
-                        convertACSC(cellref.mACSC, objstate.mCreatureStats);
-                    convertNpcData(cellref, objstate.mNpcStats);
+                    if (cellref.mActorData.mHasACDT)
+                        convertACDT(cellref.mActorData.mACDT, objstate.mCreatureStats);
+                    else
+                        objstate.mCreatureStats.mMissingACDT = true;
+                    if (cellref.mActorData.mHasACSC)
+                        convertACSC(cellref.mActorData.mACSC, objstate.mCreatureStats);
+                    convertNpcData(cellref.mActorData, objstate.mNpcStats);
                     convertNPCC(npccIt->second, objstate);
                     convertCellRef(cellref, objstate);
 
                     objstate.mCreatureStats.mActorId = mContext->generateActorId();
-                    mContext->mActorIdMap.insert(std::make_pair(std::make_pair(refIndex, out.mRefID), objstate.mCreatureStats.mActorId));
+                    mContext->mActorIdMap.insert(
+                        std::make_pair(std::make_pair(refIndex, out.mRefID), objstate.mCreatureStats.mActorId));
 
-                    esm.writeHNT ("OBJE", ESM::REC_NPC_);
+                    esm.writeHNT("OBJE", ESM::REC_NPC_);
                     objstate.save(esm);
                     continue;
                 }
 
-                std::map<std::pair<int, std::string>, CNTC>::const_iterator cntcIt = mContext->mContainerChanges.find(
-                            std::make_pair(refIndex, out.mRefID));
+                auto cntcIt = mContext->mContainerChanges.find(std::make_pair(refIndex, out.mRefID));
                 if (cntcIt != mContext->mContainerChanges.end())
                 {
                     ESM::ContainerState objstate;
                     objstate.blank();
                     objstate.mRef = out;
-                    objstate.mRef.mRefID = idLower;
+                    objstate.mRef.mRefID = out.mRefID;
                     convertCNTC(cntcIt->second, objstate);
                     convertCellRef(cellref, objstate);
-                    esm.writeHNT ("OBJE", ESM::REC_CONT);
+                    esm.writeHNT("OBJE", ESM::REC_CONT);
                     objstate.save(esm);
                     continue;
                 }
 
-                std::map<std::pair<int, std::string>, CREC>::const_iterator crecIt = mContext->mCreatureChanges.find(
-                            std::make_pair(refIndex, out.mRefID));
+                auto crecIt = mContext->mCreatureChanges.find(std::make_pair(refIndex, out.mRefID));
                 if (crecIt != mContext->mCreatureChanges.end())
                 {
                     ESM::CreatureState objstate;
                     objstate.blank();
                     objstate.mRef = out;
-                    objstate.mRef.mRefID = idLower;
+                    objstate.mRef.mRefID = out.mRefID;
                     // TODO: need more micromanagement here so we don't overwrite values
                     // from the ESM with default values
-                    if (cellref.mHasACDT)
-                        convertACDT(cellref.mACDT, objstate.mCreatureStats);
-                    if (cellref.mHasACSC)
-                        convertACSC(cellref.mACSC, objstate.mCreatureStats);
+                    if (cellref.mActorData.mHasACDT)
+                        convertACDT(cellref.mActorData.mACDT, objstate.mCreatureStats);
+                    else
+                        objstate.mCreatureStats.mMissingACDT = true;
+                    if (cellref.mActorData.mHasACSC)
+                        convertACSC(cellref.mActorData.mACSC, objstate.mCreatureStats);
                     convertCREC(crecIt->second, objstate);
                     convertCellRef(cellref, objstate);
 
                     objstate.mCreatureStats.mActorId = mContext->generateActorId();
-                    mContext->mActorIdMap.insert(std::make_pair(std::make_pair(refIndex, out.mRefID), objstate.mCreatureStats.mActorId));
+                    mContext->mActorIdMap.insert(
+                        std::make_pair(std::make_pair(refIndex, out.mRefID), objstate.mCreatureStats.mActorId));
 
-                    esm.writeHNT ("OBJE", ESM::REC_CREA);
+                    esm.writeHNT("OBJE", ESM::REC_CREA);
                     objstate.save(esm);
                     continue;
                 }
@@ -432,15 +436,15 @@ namespace ESSImport
         esm.endRecord(ESM::REC_CSTA);
     }
 
-    void ConvertCell::write(ESM::ESMWriter &esm)
+    void ConvertCell::write(ESM::ESMWriter& esm)
     {
-        for (const auto & cell : mIntCells)
+        for (const auto& cell : mIntCells)
             writeCell(cell.second, esm);
 
-        for (const auto & cell : mExtCells)
+        for (const auto& cell : mExtCells)
             writeCell(cell.second, esm);
 
-        for (const auto & marker : mMarkers)
+        for (const auto& marker : mMarkers)
         {
             esm.startRecord(ESM::REC_MARK);
             marker.save(esm);
@@ -462,7 +466,7 @@ namespace ESSImport
                 ESM::ProjectileState out;
                 convertBaseState(out, pnam);
 
-                out.mBowId = pnam.mBowId.toString();
+                out.mBowId = ESM::RefId::stringRefId(pnam.mBowId.toString());
                 out.mVelocity = pnam.mVelocity;
                 out.mAttackStrength = pnam.mAttackStrength;
 
@@ -476,16 +480,18 @@ namespace ESSImport
                 convertBaseState(out, pnam);
 
                 auto it = std::find_if(mContext->mActiveSpells.begin(), mContext->mActiveSpells.end(),
-                                       [&pnam](const SPLM::ActiveSpell& spell) -> bool { return spell.mIndex == pnam.mSplmIndex; });
+                    [&pnam](const SPLM::ActiveSpell& spell) -> bool { return spell.mIndex == pnam.mSplmIndex; });
 
                 if (it == mContext->mActiveSpells.end())
                 {
-                    std::cerr << "Warning: Skipped conversion for magic projectile \"" << pnam.mArrowId.toString() << "\" (invalid spell link)" << std::endl;
+                    std::cerr << "Warning: Skipped conversion for magic projectile \"" << pnam.mArrowId.toString()
+                              << "\" (invalid spell link)" << std::endl;
                     continue;
                 }
 
-                out.mSpellId = it->mSPDT.mId.toString();
+                out.mSpellId = ESM::RefId::stringRefId(it->mSPDT.mId.toString());
                 out.mSpeed = pnam.mSpeed * 0.001f; // not sure where this factor comes from
+                out.mSlot = 0;
 
                 esm.startRecord(ESM::REC_MPRJ);
                 out.save(esm);
@@ -496,11 +502,11 @@ namespace ESSImport
 
     void ConvertPROJ::convertBaseState(ESM::BaseProjectileState& base, const PROJ::PNAM& pnam)
     {
-        base.mId = pnam.mArrowId.toString();
+        base.mId = ESM::RefId::stringRefId(pnam.mArrowId.toString());
         base.mPosition = pnam.mPosition;
 
         osg::Quat orient;
-        orient.makeRotate(osg::Vec3f(0,1,0), pnam.mVelocity);
+        orient.makeRotate(osg::Vec3f(0, 1, 0), pnam.mVelocity);
         base.mOrientation = orient;
 
         base.mActorId = convertActorId(pnam.mActorId.toString(), *mContext);

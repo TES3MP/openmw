@@ -4,6 +4,11 @@
 #include <osg/MatrixTransform>
 #include <osg/NodeVisitor>
 
+#include <string_view>
+#include <unordered_map>
+
+#include <components/misc/strings/algorithm.hpp>
+
 // Commonly used scene graph visitors
 namespace SceneUtil
 {
@@ -13,7 +18,7 @@ namespace SceneUtil
     class FindByNameVisitor : public osg::NodeVisitor
     {
     public:
-        FindByNameVisitor(const std::string& nameToFind)
+        FindByNameVisitor(std::string_view nameToFind)
             : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
             , mNameToFind(nameToFind)
             , mFoundNode(nullptr)
@@ -26,44 +31,32 @@ namespace SceneUtil
 
         bool checkGroup(osg::Group& group);
 
-        std::string mNameToFind;
+        std::string_view mNameToFind;
         osg::Group* mFoundNode;
     };
 
     class FindByClassVisitor : public osg::NodeVisitor
     {
     public:
-        FindByClassVisitor(const std::string& nameToFind)
+        FindByClassVisitor(std::string_view nameToFind)
             : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
             , mNameToFind(nameToFind)
         {
         }
 
-        void apply(osg::Node &node) override;
+        void apply(osg::Node& node) override;
 
-        std::string mNameToFind;
-        std::vector<osg::Node *> mFoundNodes;
-    };
-
-    // Disable freezeOnCull for all visited particlesystems
-    class DisableFreezeOnCullVisitor : public osg::NodeVisitor
-    {
-    public:
-        DisableFreezeOnCullVisitor()
-            : osg::NodeVisitor(TRAVERSE_ALL_CHILDREN)
-        {
-        }
-
-        void apply(osg::MatrixTransform& node) override;
-
-        void apply(osg::Drawable& drw) override;
+        std::string_view mNameToFind;
+        std::vector<osg::Node*> mFoundNodes;
     };
 
     /// Maps names to nodes
     class NodeMapVisitor : public osg::NodeVisitor
     {
     public:
-        typedef std::map<std::string, osg::ref_ptr<osg::MatrixTransform> > NodeMap;
+        typedef std::unordered_map<std::string, osg::ref_ptr<osg::MatrixTransform>, Misc::StringUtils::CiHash,
+            Misc::StringUtils::CiEqual>
+            NodeMap;
 
         NodeMapVisitor(NodeMap& map)
             : osg::NodeVisitor(osg::NodeVisitor::TRAVERSE_ALL_CHILDREN)
@@ -92,8 +85,8 @@ namespace SceneUtil
 
     protected:
         // <node to remove, parent node to remove it from>
-        typedef std::vector<std::pair<osg::Node*, osg::Group*> > RemoveVec;
-        std::vector<std::pair<osg::Node*, osg::Group*> > mToRemove;
+        typedef std::vector<std::pair<osg::Node*, osg::Group*>> RemoveVec;
+        std::vector<std::pair<osg::Node*, osg::Group*>> mToRemove;
     };
 
     // Removes all drawables from a graph.

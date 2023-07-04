@@ -3,8 +3,13 @@
 
 #include "navigator.hpp"
 #include "navmeshmanager.hpp"
+#include "updateguard.hpp"
 
-#include <set>
+#include <map>
+#include <memory>
+#include <optional>
+#include <string_view>
+#include <unordered_map>
 
 namespace DetourNavigator
 {
@@ -15,67 +20,89 @@ namespace DetourNavigator
          * @brief Navigator constructor initializes all internal data. Constructed object is ready to build a scene.
          * @param settings allows to customize navigator work. Constructor is only place to set navigator settings.
          */
-        explicit NavigatorImpl(const Settings& settings);
+        explicit NavigatorImpl(const Settings& settings, std::unique_ptr<NavMeshDb>&& db);
 
-        void addAgent(const osg::Vec3f& agentHalfExtents) override;
+        ScopedUpdateGuard makeUpdateGuard() override { return mNavMeshManager.makeUpdateGuard(); }
 
-        void removeAgent(const osg::Vec3f& agentHalfExtents) override;
+        bool addAgent(const AgentBounds& agentBounds) override;
 
+<<<<<<< HEAD
         bool addObject(const ObjectId id, const osg::ref_ptr<const osg::Object>& holder,
             const btHeightfieldTerrainShape& shape, const btTransform& transform) override;
+=======
+        void removeAgent(const AgentBounds& agentBounds) override;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
-        bool addObject(const ObjectId id, const ObjectShapes& shapes, const btTransform& transform) override;
+        void setWorldspace(std::string_view worldspace, const UpdateGuard* guard) override;
 
-        bool addObject(const ObjectId id, const DoorShapes& shapes, const btTransform& transform) override;
+        void updateBounds(const osg::Vec3f& playerPosition, const UpdateGuard* guard) override;
 
+<<<<<<< HEAD
         bool updateObject(const ObjectId id, const ObjectShapes& shapes, const btTransform& transform) override;
+=======
+        void addObject(const ObjectId id, const ObjectShapes& shapes, const btTransform& transform,
+            const UpdateGuard* guard) override;
 
-        bool updateObject(const ObjectId id, const DoorShapes& shapes, const btTransform& transform) override;
+        void addObject(const ObjectId id, const DoorShapes& shapes, const btTransform& transform,
+            const UpdateGuard* guard) override;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
 
-        bool removeObject(const ObjectId id) override;
+        void updateObject(const ObjectId id, const ObjectShapes& shapes, const btTransform& transform,
+            const UpdateGuard* guard) override;
 
-        bool addWater(const osg::Vec2i& cellPosition, const int cellSize, const btScalar level,
-            const btTransform& transform) override;
+        void updateObject(const ObjectId id, const DoorShapes& shapes, const btTransform& transform,
+            const UpdateGuard* guard) override;
 
-        bool removeWater(const osg::Vec2i& cellPosition) override;
+        void removeObject(const ObjectId id, const UpdateGuard* guard) override;
+
+        void addWater(const osg::Vec2i& cellPosition, int cellSize, float level, const UpdateGuard* guard) override;
+
+        void removeWater(const osg::Vec2i& cellPosition, const UpdateGuard* guard) override;
+
+        void addHeightfield(const osg::Vec2i& cellPosition, int cellSize, const HeightfieldShape& shape,
+            const UpdateGuard* guard) override;
+
+        void removeHeightfield(const osg::Vec2i& cellPosition, const UpdateGuard* guard) override;
 
         void addPathgrid(const ESM::Cell& cell, const ESM::Pathgrid& pathgrid) override;
 
         void removePathgrid(const ESM::Pathgrid& pathgrid) override;
 
-        void update(const osg::Vec3f& playerPosition) override;
+        void update(const osg::Vec3f& playerPosition, const UpdateGuard* guard) override;
 
-        void updatePlayerPosition(const osg::Vec3f& playerPosition) override;
+        void wait(WaitConditionType waitConditionType, Loading::Listener* listener) override;
 
-        void setUpdatesEnabled(bool enabled) override;
+        SharedNavMeshCacheItem getNavMesh(const AgentBounds& agentBounds) const override;
 
-        void wait(Loading::Listener& listener, WaitConditionType waitConditionType) override;
-
-        SharedNavMeshCacheItem getNavMesh(const osg::Vec3f& agentHalfExtents) const override;
-
-        std::map<osg::Vec3f, SharedNavMeshCacheItem> getNavMeshes() const override;
+        std::map<AgentBounds, SharedNavMeshCacheItem> getNavMeshes() const override;
 
         const Settings& getSettings() const override;
 
-        void reportStats(unsigned int frameNumber, osg::Stats& stats) const override;
+        Stats getStats() const override;
 
-        RecastMeshTiles getRecastMeshTiles() override;
+        RecastMeshTiles getRecastMeshTiles() const override;
 
         float getMaxNavmeshAreaRealRadius() const override;
 
     private:
         Settings mSettings;
         NavMeshManager mNavMeshManager;
-        bool mUpdatesEnabled;
         std::optional<TilePosition> mLastPlayerPosition;
-        std::map<osg::Vec3f, std::size_t> mAgents;
+        std::map<AgentBounds, std::size_t> mAgents;
         std::unordered_map<ObjectId, ObjectId> mAvoidIds;
         std::unordered_map<ObjectId, ObjectId> mWaterIds;
 
-        void updateAvoidShapeId(const ObjectId id, const ObjectId avoidId);
-        void updateWaterShapeId(const ObjectId id, const ObjectId waterId);
-        void updateId(const ObjectId id, const ObjectId waterId, std::unordered_map<ObjectId, ObjectId>& ids);
-        void removeUnusedNavMeshes();
+        inline bool addObjectImpl(
+            const ObjectId id, const ObjectShapes& shapes, const btTransform& transform, const UpdateGuard* guard);
+
+        inline void updateAvoidShapeId(const ObjectId id, const ObjectId avoidId, const UpdateGuard* guard);
+
+        inline void updateId(const ObjectId id, const ObjectId waterId, std::unordered_map<ObjectId, ObjectId>& ids,
+            const UpdateGuard* guard);
+
+        inline void removeUnusedNavMeshes();
+
+        friend class UpdateGuard;
     };
 }
 

@@ -1,14 +1,16 @@
 #ifndef OPENMW_COMPONENTS_NIFOSG_PARTICLE_H
 #define OPENMW_COMPONENTS_NIFOSG_PARTICLE_H
 
-#include <osgParticle/Particle>
-#include <osgParticle/Shooter>
-#include <osgParticle/Operator>
-#include <osgParticle/Emitter>
-#include <osgParticle/Placer>
-#include <osgParticle/Counter>
+#include <optional>
 
-#include <osg/NodeCallback>
+#include <osgParticle/Counter>
+#include <osgParticle/Emitter>
+#include <osgParticle/Operator>
+#include <osgParticle/Particle>
+#include <osgParticle/Placer>
+#include <osgParticle/Shooter>
+
+#include <components/sceneutil/nodecallback.hpp>
 
 #include "controller.hpp" // ValueInterpolator
 
@@ -32,7 +34,7 @@ namespace NifOsg
 
         META_Object(NifOsg, ParticleSystem)
 
-        osgParticle::Particle* createParticle(const osgParticle::Particle *ptemplate) override;
+        osgParticle::Particle* createParticle(const osgParticle::Particle* ptemplate) override;
 
         void setQuota(int quota);
 
@@ -57,27 +59,26 @@ namespace NifOsg
     // Node callback used to set the inverse of the parent's world matrix on the MatrixTransform
     // that the callback is attached to. Used for certain particle systems,
     // so that the particles do not move with the node they are attached to.
-    class InverseWorldMatrix : public osg::NodeCallback
+    class InverseWorldMatrix : public SceneUtil::NodeCallback<InverseWorldMatrix, osg::MatrixTransform*>
     {
     public:
-        InverseWorldMatrix()
-        {
-        }
-        InverseWorldMatrix(const InverseWorldMatrix& copy, const osg::CopyOp& op)
-            : osg::Object(), osg::NodeCallback()
+        InverseWorldMatrix() {}
+        InverseWorldMatrix(const InverseWorldMatrix& copy, const osg::CopyOp& copyop)
+            : osg::Object(copy, copyop)
+            , SceneUtil::NodeCallback<InverseWorldMatrix, osg::MatrixTransform*>(copy, copyop)
         {
         }
 
         META_Object(NifOsg, InverseWorldMatrix)
 
-        void operator()(osg::Node* node, osg::NodeVisitor* nv) override;
+        void operator()(osg::MatrixTransform* node, osg::NodeVisitor* nv);
     };
 
     class ParticleShooter : public osgParticle::Shooter
     {
     public:
-        ParticleShooter(float minSpeed, float maxSpeed, float horizontalDir, float horizontalAngle, float verticalDir, float verticalAngle,
-                        float lifetime, float lifetimeRandom);
+        ParticleShooter(float minSpeed, float maxSpeed, float horizontalDir, float horizontalAngle, float verticalDir,
+            float verticalAngle, float lifetime, float lifetimeRandom);
         ParticleShooter();
         ParticleShooter(const ParticleShooter& copy, const osg::CopyOp& copyop = osg::CopyOp::SHALLOW_COPY);
 
@@ -102,7 +103,7 @@ namespace NifOsg
     {
     public:
         PlanarCollider(const Nif::NiPlanarCollider* collider);
-        PlanarCollider();
+        PlanarCollider() = default;
         PlanarCollider(const PlanarCollider& copy, const osg::CopyOp& copyop);
 
         META_Object(NifOsg, PlanarCollider)
@@ -111,9 +112,12 @@ namespace NifOsg
         void operate(osgParticle::Particle* particle, double dt) override;
 
     private:
-        float mBounceFactor;
-        osg::Plane mPlane;
-        osg::Plane mPlaneInParticleSpace;
+        float mBounceFactor{ 0.f };
+        osg::Vec2f mExtents;
+        osg::Vec3f mPosition, mPositionInParticleSpace;
+        osg::Vec3f mXVector, mXVectorInParticleSpace;
+        osg::Vec3f mYVector, mYVectorInParticleSpace;
+        osg::Plane mPlane, mPlaneInParticleSpace;
     };
 
     class SphericalCollider : public osgParticle::Operator
@@ -127,6 +131,7 @@ namespace NifOsg
 
         void beginOperate(osgParticle::Program* program) override;
         void operate(osgParticle::Particle* particle, double dt) override;
+
     private:
         float mBounceFactor;
         osg::BoundingSphere mSphere;
@@ -183,11 +188,12 @@ namespace NifOsg
         META_Object(NifOsg, GravityAffector)
 
         void operate(osgParticle::Particle* particle, double dt) override;
-        void beginOperate(osgParticle::Program *) override ;
+        void beginOperate(osgParticle::Program*) override;
 
     private:
         float mForce;
-        enum ForceType {
+        enum ForceType
+        {
             Type_Wind,
             Type_Point
         };
@@ -206,7 +212,7 @@ namespace NifOsg
     public:
         FindGroupByRecIndex(unsigned int recIndex);
 
-        void apply(osg::Node &node) override;
+        void apply(osg::Node& node) override;
 
         // Technically not required as the default implementation would trickle down to apply(Node&) anyway,
         // but we'll shortcut instead to avoid the chain of virtual function calls
@@ -217,11 +223,13 @@ namespace NifOsg
 
         osg::Group* mFound;
         osg::NodePath mFoundPath;
+
     private:
         unsigned int mRecIndex;
     };
 
-    // Subclass emitter to support randomly choosing one of the child node's transforms for the emit position of new particles.
+    // Subclass emitter to support randomly choosing one of the child node's transforms for the emit position of new
+    // particles.
     class Emitter : public osgParticle::Emitter
     {
     public:
@@ -233,9 +241,11 @@ namespace NifOsg
 
         void emitParticles(double dt) override;
 
-        void setShooter(osgParticle::Shooter* shooter);
-        void setPlacer(osgParticle::Placer* placer);
-        void setCounter(osgParticle::Counter* counter);
+        void setShooter(osgParticle::Shooter* shooter) { mShooter = shooter; }
+        void setPlacer(osgParticle::Placer* placer) { mPlacer = placer; }
+        void setCounter(osgParticle::Counter* counter) { mCounter = counter; }
+        void setGeometryEmitterTarget(std::optional<int> recIndex) { mGeometryEmitterTarget = recIndex; }
+        void setFlags(int flags) { mFlags = flags; }
 
     private:
         // NIF Record indices
@@ -244,6 +254,11 @@ namespace NifOsg
         osg::ref_ptr<osgParticle::Placer> mPlacer;
         osg::ref_ptr<osgParticle::Shooter> mShooter;
         osg::ref_ptr<osgParticle::Counter> mCounter;
+
+        int mFlags;
+
+        std::optional<int> mGeometryEmitterTarget;
+        osg::observer_ptr<osg::Vec3Array> mCachedGeometryEmitter;
     };
 
 }

@@ -3,8 +3,7 @@
 
 #include <osg/Vec3f>
 
-#include "constants.hpp"
-#include "../mwworld/ptr.hpp"
+#include <components/misc/constants.hpp>
 
 class btCollisionWorld;
 
@@ -16,33 +15,37 @@ namespace MWWorld
 namespace MWPhysics
 {
     /// Vector projection
-    static inline osg::Vec3f project(const osg::Vec3f& u, const osg::Vec3f &v)
+    static inline osg::Vec3f project(const osg::Vec3f& u, const osg::Vec3f& v)
     {
         return v * (u * v);
     }
 
     /// Vector rejection
-    static inline osg::Vec3f reject(const osg::Vec3f& direction, const osg::Vec3f &planeNormal)
+    static inline osg::Vec3f reject(const osg::Vec3f& direction, const osg::Vec3f& planeNormal)
     {
         return direction - project(direction, planeNormal);
     }
 
     template <class Vec3>
-    static bool isWalkableSlope(const Vec3 &normal)
+    static bool isWalkableSlope(const Vec3& normal)
     {
-        static const float sMaxSlopeCos = std::cos(osg::DegreesToRadians(sMaxSlope));
+        static const float sMaxSlopeCos = std::cos(osg::DegreesToRadians(Constants::sMaxSlope));
         return (normal.z() > sMaxSlopeCos);
     }
 
     class Actor;
     struct ActorFrameData;
+    struct ProjectileFrameData;
     struct WorldFrameData;
 
     class MovementSolver
     {
     public:
-        static osg::Vec3f traceDown(const MWWorld::Ptr &ptr, const osg::Vec3f& position, Actor* actor, btCollisionWorld* collisionWorld, float maxHeight);
-        static void move(ActorFrameData& actor, float time, const btCollisionWorld* collisionWorld, WorldFrameData& worldData);
+        static osg::Vec3f traceDown(const MWWorld::Ptr& ptr, const osg::Vec3f& position, Actor* actor,
+            btCollisionWorld* collisionWorld, float maxHeight);
+        static void move(
+            ActorFrameData& actor, float time, const btCollisionWorld* collisionWorld, const WorldFrameData& worldData);
+        static void move(ProjectileFrameData& projectile, float time, const btCollisionWorld* collisionWorld);
         static void unstuck(ActorFrameData& actor, const btCollisionWorld* collisionWorld);
     };
 }

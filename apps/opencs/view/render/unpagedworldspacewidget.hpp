@@ -1,17 +1,37 @@
 #ifndef OPENCS_VIEW_UNPAGEDWORLDSPACEWIDGET_H
 #define OPENCS_VIEW_UNPAGEDWORLDSPACEWIDGET_H
 
-#include <string>
 #include <memory>
+#include <string>
+#include <vector>
 
-#include "worldspacewidget.hpp"
+#include <apps/opencs/model/world/universalid.hpp>
+#include <apps/opencs/view/render/instancedragmodes.hpp>
+
+#include <osg/Vec3d>
+
 #include "cell.hpp"
+#include "worldspacewidget.hpp"
 
 class QModelIndex;
+class QObject;
+class QWidget;
+
+namespace osg
+{
+    class Vec3f;
+    template <class T>
+    class ref_ptr;
+}
 
 namespace CSMDoc
 {
     class Document;
+}
+
+namespace CSVWidget
+{
+    class SceneToolToggle2;
 }
 
 namespace CSMWorld
@@ -22,103 +42,99 @@ namespace CSMWorld
 
 namespace CSVRender
 {
+    class TagBase;
+
     class UnpagedWorldspaceWidget : public WorldspaceWidget
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            CSMDoc::Document& mDocument;
-            std::string mCellId;
-            CSMWorld::IdTable *mCellsModel;
-            CSMWorld::IdTable *mReferenceablesModel;
-            std::unique_ptr<Cell> mCell;
+        CSMDoc::Document& mDocument;
+        std::string mCellId;
+        CSMWorld::IdTable* mCellsModel;
+        CSMWorld::IdTable* mReferenceablesModel;
+        std::unique_ptr<Cell> mCell;
 
-            void update();
+        void update();
 
-        public:
+    public:
+        UnpagedWorldspaceWidget(const std::string& cellId, CSMDoc::Document& document, QWidget* parent);
 
-            UnpagedWorldspaceWidget (const std::string& cellId, CSMDoc::Document& document,
-                                     QWidget *parent);
+        dropRequirments getDropRequirements(DropType type) const override;
 
-            dropRequirments getDropRequirements(DropType type) const override;
+        /// \return Drop handled?
+        bool handleDrop(const std::vector<CSMWorld::UniversalId>& data, DropType type) override;
 
-            /// \return Drop handled?
-            bool handleDrop (const std::vector<CSMWorld::UniversalId>& data,
-                DropType type) override;
+        /// \param elementMask Elements to be affected by the clear operation
+        void clearSelection(int elementMask) override;
 
-            /// \param elementMask Elements to be affected by the clear operation
-            void clearSelection (int elementMask) override;
+        /// \param elementMask Elements to be affected by the select operation
+        void invertSelection(int elementMask) override;
 
-            /// \param elementMask Elements to be affected by the select operation
-            void invertSelection (int elementMask) override;
+        /// \param elementMask Elements to be affected by the select operation
+        void selectAll(int elementMask) override;
 
-            /// \param elementMask Elements to be affected by the select operation
-            void selectAll (int elementMask) override;
+        // Select everything that references the same ID as at least one of the elements
+        // already selected
+        //
+        /// \param elementMask Elements to be affected by the select operation
+        void selectAllWithSameParentId(int elementMask) override;
 
-            // Select everything that references the same ID as at least one of the elements
-            // already selected
-            //
-            /// \param elementMask Elements to be affected by the select operation
-            void selectAllWithSameParentId (int elementMask) override;
+        void selectInsideCube(const osg::Vec3d& pointA, const osg::Vec3d& pointB, DragMode dragMode) override;
 
-            void selectInsideCube(const osg::Vec3d& pointA, const osg::Vec3d& pointB, DragMode dragMode) override;
+        void selectWithinDistance(const osg::Vec3d& point, float distance, DragMode dragMode) override;
 
-            void selectWithinDistance(const osg::Vec3d& point, float distance, DragMode dragMode) override;
+        std::string getCellId(const osg::Vec3f& point) const override;
 
-            std::string getCellId (const osg::Vec3f& point) const override;
+        Cell* getCell(const osg::Vec3d& point) const override;
 
-            Cell* getCell(const osg::Vec3d& point) const override;
+        Cell* getCell(const CSMWorld::CellCoordinates& coords) const override;
 
-            Cell* getCell(const CSMWorld::CellCoordinates& coords) const override;
+        osg::ref_ptr<TagBase> getSnapTarget(unsigned int elementMask) const override;
 
-            std::vector<osg::ref_ptr<TagBase> > getSelection (unsigned int elementMask)
-                const override;
+        std::vector<osg::ref_ptr<TagBase>> getSelection(unsigned int elementMask) const override;
 
-            std::vector<osg::ref_ptr<TagBase> > getEdited (unsigned int elementMask)
-                const override;
+        std::vector<osg::ref_ptr<TagBase>> getEdited(unsigned int elementMask) const override;
 
-            void setSubMode (int subMode, unsigned int elementMask) override;
+        void setSubMode(int subMode, unsigned int elementMask) override;
 
-            /// Erase all overrides and restore the visual representation to its true state.
-            void reset (unsigned int elementMask) override;
+        /// Erase all overrides and restore the visual representation to its true state.
+        void reset(unsigned int elementMask) override;
 
-        private:
+    private:
+        void referenceableDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight) override;
 
-            void referenceableDataChanged (const QModelIndex& topLeft,
-                const QModelIndex& bottomRight) override;
+        void referenceableAboutToBeRemoved(const QModelIndex& parent, int start, int end) override;
 
-            void referenceableAboutToBeRemoved (const QModelIndex& parent, int start, int end) override;
+        void referenceableAdded(const QModelIndex& index, int start, int end) override;
 
-            void referenceableAdded (const QModelIndex& index, int start, int end) override;
+        void referenceDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight) override;
 
-            void referenceDataChanged (const QModelIndex& topLeft, const QModelIndex& bottomRight) override;
+        void referenceAboutToBeRemoved(const QModelIndex& parent, int start, int end) override;
 
-            void referenceAboutToBeRemoved (const QModelIndex& parent, int start, int end) override;
+        void referenceAdded(const QModelIndex& index, int start, int end) override;
 
-            void referenceAdded (const QModelIndex& index, int start, int end) override;
+        void pathgridDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight) override;
 
-            void pathgridDataChanged (const QModelIndex& topLeft, const QModelIndex& bottomRight) override;
+        void pathgridAboutToBeRemoved(const QModelIndex& parent, int start, int end) override;
 
-            void pathgridAboutToBeRemoved (const QModelIndex& parent, int start, int end) override;
+        void pathgridAdded(const QModelIndex& parent, int start, int end) override;
 
-            void pathgridAdded (const QModelIndex& parent, int start, int end) override;
+        std::string getStartupInstruction() override;
 
-            std::string getStartupInstruction()  override;
+    protected:
+        void addVisibilitySelectorButtons(CSVWidget::SceneToolToggle2* tool) override;
 
-        protected:
+    private slots:
 
-            void addVisibilitySelectorButtons (CSVWidget::SceneToolToggle2 *tool) override;
+        void cellDataChanged(const QModelIndex& topLeft, const QModelIndex& bottomRight);
 
-        private slots:
+        void cellRowsAboutToBeRemoved(const QModelIndex& parent, int start, int end);
 
-            void cellDataChanged (const QModelIndex& topLeft, const QModelIndex& bottomRight);
+        void assetTablesChanged();
 
-            void cellRowsAboutToBeRemoved (const QModelIndex& parent, int start, int end);
+    signals:
 
-            void assetTablesChanged ();
-
-        signals:
-
-            void cellChanged(const CSMWorld::UniversalId& id);
+        void cellChanged(const CSMWorld::UniversalId& id);
     };
 }
 

@@ -1,11 +1,11 @@
 #include "importklst.hpp"
 
-#include <components/esm/esmreader.hpp>
+#include <components/esm3/esmreader.hpp>
 
 namespace ESSImport
 {
 
-    void KLST::load(ESM::ESMReader &esm)
+    void KLST::load(ESM::ESMReader& esm)
     {
         while (esm.isNextSub("KNAM"))
         {

@@ -1,10 +1,12 @@
 #include "heightfield.hpp"
 #include "mtphysics.hpp"
 
+#include <components/bullethelpers/heightfield.hpp>
+
 #include <osg/Object>
 
-#include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
 #include <BulletCollision/CollisionDispatch/btCollisionObject.h>
+#include <BulletCollision/CollisionShapes/btHeightfieldTerrainShape.h>
 
 #include <LinearMath/btTransform.h>
 
@@ -19,17 +21,17 @@
 namespace
 {
     template <class T>
-    auto makeHeights(const T* heights, float sqrtVerts)
+    auto makeHeights(const T* heights, int verts)
         -> std::enable_if_t<std::is_same<btScalar, T>::value, std::vector<btScalar>>
     {
         return {};
     }
 
     template <class T>
-    auto makeHeights(const T* heights, float sqrtVerts)
+    auto makeHeights(const T* heights, int verts)
         -> std::enable_if_t<!std::is_same<btScalar, T>::value, std::vector<btScalar>>
     {
-        return std::vector<btScalar>(heights, heights + static_cast<std::ptrdiff_t>(sqrtVerts * sqrtVerts));
+        return std::vector<btScalar>(heights, heights + static_cast<std::ptrdiff_t>(verts * verts));
     }
 
     template <class T>
@@ -50,31 +52,32 @@ namespace
 
 namespace MWPhysics
 {
+<<<<<<< HEAD
     HeightField::HeightField() {}
 
     HeightField::HeightField(const HeightField&, const osg::CopyOp&) {}
 
     HeightField::HeightField(const float* heights, int x, int y, float triSize, float sqrtVerts, float minH, float maxH, const osg::Object* holdObject, PhysicsTaskScheduler* scheduler)
+=======
+    HeightField::HeightField(const float* heights, int x, int y, int size, int verts, float minH, float maxH,
+        const osg::Object* holdObject, PhysicsTaskScheduler* scheduler)
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
         : mHoldObject(holdObject)
 #if BT_BULLET_VERSION < 310
-        , mHeights(makeHeights(heights, sqrtVerts))
+        , mHeights(makeHeights(heights, verts))
 #endif
         , mTaskScheduler(scheduler)
     {
 #if BT_BULLET_VERSION < 310
         mShape = std::make_unique<btHeightfieldTerrainShape>(
-            sqrtVerts, sqrtVerts,
-            getHeights(heights, mHeights),
-            1,
-            minH, maxH, 2,
-            PHY_FLOAT, false
-        );
+            verts, verts, getHeights(heights, mHeights), 1, minH, maxH, 2, PHY_FLOAT, false);
 #else
-        mShape = std::make_unique<btHeightfieldTerrainShape>(
-            sqrtVerts, sqrtVerts, heights, minH, maxH, 2, false);
+        mShape = std::make_unique<btHeightfieldTerrainShape>(verts, verts, heights, minH, maxH, 2, false);
 #endif
         mShape->setUseDiamondSubdivision(true);
-        mShape->setLocalScaling(btVector3(triSize, triSize, 1));
+
+        const float scaling = static_cast<float>(size) / static_cast<float>(verts - 1);
+        mShape->setLocalScaling(btVector3(scaling, scaling, 1));
 
 #if BT_BULLET_VERSION >= 289
         // Accelerates some collision tests.
@@ -85,15 +88,14 @@ namespace MWPhysics
         mShape->buildAccelerator();
 #endif
 
-        btTransform transform(btQuaternion::getIdentity(),
-                                btVector3((x+0.5f) * triSize * (sqrtVerts-1),
-                                          (y+0.5f) * triSize * (sqrtVerts-1),
-                                          (maxH+minH)*0.5f));
+        const btTransform transform(
+            btQuaternion::getIdentity(), BulletHelpers::getHeightfieldShift(x, y, size, minH, maxH));
 
         mCollisionObject = std::make_unique<btCollisionObject>();
         mCollisionObject->setCollisionShape(mShape.get());
         mCollisionObject->setWorldTransform(transform);
-        mTaskScheduler->addCollisionObject(mCollisionObject.get(), CollisionType_HeightMap, CollisionType_Actor|CollisionType_Projectile);
+        mTaskScheduler->addCollisionObject(
+            mCollisionObject.get(), CollisionType_HeightMap, CollisionType_Actor | CollisionType_Projectile);
     }
 
     HeightField::~HeightField()

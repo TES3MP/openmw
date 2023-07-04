@@ -1,63 +1,60 @@
 #ifndef INTERPRETER_RUNTIME_H_INCLUDED
 #define INTERPRETER_RUNTIME_H_INCLUDED
 
+#include <string_view>
 #include <vector>
-#include <string>
 
 #include "types.hpp"
 
 namespace Interpreter
 {
     class Context;
+    struct Program;
 
     /// Runtime data and engine interface
 
     class Runtime
     {
-            Context *mContext;
-            const Type_Code *mCode;
-            int mCodeSize;
-            int mPC;
-            std::vector<Data> mStack;
+        Context* mContext = nullptr;
+        const Program* mProgram = nullptr;
+        int mPC = 0;
+        std::vector<Data> mStack;
 
-        public:
+    public:
+        int getPC() const { return mPC; }
+        ///< return program counter.
 
-            Runtime ();
+        int getIntegerLiteral(int index) const;
 
-            int getPC() const;
-            ///< return program counter.
+        float getFloatLiteral(int index) const;
 
-            int getIntegerLiteral (int index) const;
+        std::string_view getStringLiteral(int index) const;
 
-            float getFloatLiteral (int index) const;
+        void configure(const Program& program, Context& context);
+        ///< \a context and \a code must exist as least until either configure, clear or
+        /// the destructor is called.
 
-            std::string getStringLiteral (int index) const;
+        void clear();
 
-            void configure (const Type_Code *code, int codeSize, Context& context);
-            ///< \a context and \a code must exist as least until either configure, clear or
-            /// the destructor is called. \a codeSize is given in 32-bit words.
+        void setPC(int value) { mPC = value; }
+        ///< set program counter.
 
-            void clear();
+        void push(const Data& data);
+        ///< push data on stack
 
-            void setPC (int PC);
-            ///< set program counter.
+        void push(Type_Integer value);
+        ///< push integer data on stack.
 
-            void push (const Data& data);
-            ///< push data on stack
+        void push(Type_Float value);
+        ///< push float data on stack.
 
-            void push (Type_Integer value);
-            ///< push integer data on stack.
+        void pop();
+        ///< pop stack
 
-            void push (Type_Float value);
-            ///< push float data on stack.
+        Data& operator[](int index);
+        ///< Access stack member, counted from the top.
 
-            void pop();
-            ///< pop stack
-
-            Data& operator[] (int Index);
-            ///< Access stack member, counted from the top.
-
-            Context& getContext();
+        Context& getContext();
     };
 }
 

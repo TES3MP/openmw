@@ -4,9 +4,9 @@
 #include <memory>
 #include <vector>
 
-#include <osg/ref_ptr>
+#include <osg/Vec3d>
 #include <osg/Vec3f>
-#include <osg/Camera>
+#include <osg/ref_ptr>
 
 #include <components/settings/settings.hpp>
 
@@ -16,6 +16,7 @@ namespace osg
     class PositionAttitudeTransform;
     class Geometry;
     class Node;
+    class Callback;
 }
 
 namespace osgUtil
@@ -46,6 +47,7 @@ namespace MWRender
     class Reflection;
     class RippleSimulation;
     class RainIntensityUpdater;
+    class Ripples;
 
     /// Water rendering
     class Water
@@ -63,31 +65,29 @@ namespace MWRender
 
         osg::ref_ptr<Refraction> mRefraction;
         osg::ref_ptr<Reflection> mReflection;
-
-        const std::string mResourcePath;
+        osg::ref_ptr<Ripples> mRipples;
 
         bool mEnabled;
         bool mToggled;
         float mTop;
         bool mInterior;
+        bool mShowWorld;
 
         osg::Callback* mCullCallback;
+        osg::ref_ptr<osg::Callback> mShaderWaterStateSetUpdater;
 
         osg::Vec3f getSceneNodeCoordinates(int gridX, int gridY);
         void updateVisible();
 
         void createSimpleWaterStateSet(osg::Node* node, float alpha);
 
-        /// @param reflection the reflection camera (required)
-        /// @param refraction the refraction camera (optional)
-        void createShaderWaterStateSet(osg::Node* node, Reflection* reflection, Refraction* refraction);
+        void createShaderWaterStateSet(osg::Node* node);
 
         void updateWaterMaterial();
 
     public:
-        Water(osg::Group* parent, osg::Group* sceneRoot,
-              Resource::ResourceSystem* resourceSystem, osgUtil::IncrementalCompileOperation* ico,
-              const std::string& resourcePath);
+        Water(osg::Group* parent, osg::Group* sceneRoot, Resource::ResourceSystem* resourceSystem,
+            osgUtil::IncrementalCompileOperation* ico);
         ~Water();
 
         void setCullCallback(osg::Callback* callback);
@@ -101,9 +101,9 @@ namespace MWRender
         bool isUnderwater(const osg::Vec3f& pos) const;
 
         /// adds an emitter, position will be tracked automatically using its scene node
-        void addEmitter (const MWWorld::Ptr& ptr, float scale = 1.f, float force = 1.f);
-        void removeEmitter (const MWWorld::Ptr& ptr);
-        void updateEmitterPtr (const MWWorld::Ptr& old, const MWWorld::Ptr& ptr);
+        void addEmitter(const MWWorld::Ptr& ptr, float scale = 1.f, float force = 1.f);
+        void removeEmitter(const MWWorld::Ptr& ptr);
+        void updateEmitterPtr(const MWWorld::Ptr& old, const MWWorld::Ptr& ptr);
         void emitRipple(const osg::Vec3f& pos);
 
         void removeCell(const MWWorld::CellStore* store); ///< remove all emitters in this cell
@@ -114,12 +114,16 @@ namespace MWRender
         void setHeight(const float height);
         void setRainIntensity(const float rainIntensity);
 
-        void update(float dt);
+        void update(float dt, bool paused);
 
-        osg::Camera *getReflectionCamera();
-        osg::Camera *getRefractionCamera();
+        osg::Node* getReflectionNode();
+        osg::Node* getRefractionNode();
+
+        osg::Vec3d getPosition() const;
 
         void processChangedSettings(const Settings::CategorySettingVector& settings);
+
+        void showWorld(bool show);
     };
 
 }

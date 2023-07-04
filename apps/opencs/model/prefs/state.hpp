@@ -4,19 +4,15 @@
 #include <map>
 #include <string>
 
-#include <QObject>
 #include <QMutex>
+#include <QObject>
 
 #ifndef Q_MOC_RUN
 #include <components/files/configurationmanager.hpp>
 #endif
 
-#include <components/settings/settings.hpp>
-
 #include "category.hpp"
-#include "setting.hpp"
 #include "enumsetting.hpp"
-#include "stringsetting.hpp"
 #include "shortcutmanager.hpp"
 
 class QColor;
@@ -29,6 +25,8 @@ namespace CSMPrefs
     class ColourSetting;
     class ShortcutSetting;
     class ModifierSetting;
+    class Setting;
+    class StringSetting;
 
     /// \brief User settings state
     ///
@@ -36,87 +34,80 @@ namespace CSMPrefs
     /// been completed.
     class State : public QObject
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            static State *sThis;
+        static State* sThis;
 
-        public:
+    public:
+        typedef std::map<std::string, Category> Collection;
+        typedef Collection::iterator Iterator;
 
-            typedef std::map<std::string, Category> Collection;
-            typedef Collection::iterator Iterator;
+    private:
+        const std::string mConfigFile;
+        const std::string mDefaultConfigFile;
+        const Files::ConfigurationManager& mConfigurationManager;
+        ShortcutManager mShortcutManager;
+        Collection mCategories;
+        Iterator mCurrentCategory;
+        QMutex mMutex;
 
-        private:
+        // not implemented
+        State(const State&);
+        State& operator=(const State&);
 
-            const std::string mConfigFile;
-            const std::string mDefaultConfigFile;
-            const Files::ConfigurationManager& mConfigurationManager;
-            ShortcutManager mShortcutManager;
-            Settings::Manager mSettings;
-            Collection mCategories;
-            Iterator mCurrentCategory;
-            QMutex mMutex;
+    private:
+        void declare();
 
-            // not implemented
-            State (const State&);
-            State& operator= (const State&);
+        void declareCategory(const std::string& key);
 
-        private:
+        IntSetting& declareInt(const std::string& key, const std::string& label, int default_);
+        DoubleSetting& declareDouble(const std::string& key, const std::string& label, double default_);
 
-            void load();
+        BoolSetting& declareBool(const std::string& key, const std::string& label, bool default_);
 
-            void declare();
+        EnumSetting& declareEnum(const std::string& key, const std::string& label, EnumValue default_);
 
-            void declareCategory (const std::string& key);
+        ColourSetting& declareColour(const std::string& key, const std::string& label, QColor default_);
 
-            IntSetting& declareInt (const std::string& key, const std::string& label, int default_);
-            DoubleSetting& declareDouble (const std::string& key, const std::string& label, double default_);
+        ShortcutSetting& declareShortcut(
+            const std::string& key, const std::string& label, const QKeySequence& default_);
 
-            BoolSetting& declareBool (const std::string& key, const std::string& label, bool default_);
+        StringSetting& declareString(const std::string& key, const std::string& label, std::string default_);
 
-            EnumSetting& declareEnum (const std::string& key, const std::string& label, EnumValue default_);
+        ModifierSetting& declareModifier(const std::string& key, const std::string& label, int modifier_);
 
-            ColourSetting& declareColour (const std::string& key, const std::string& label, QColor default_);
+        void declareSeparator();
 
-            ShortcutSetting& declareShortcut (const std::string& key, const std::string& label,
-                const QKeySequence& default_);
+        void declareSubcategory(const std::string& label);
 
-            StringSetting& declareString (const std::string& key, const std::string& label, std::string default_);
+        void setDefault(const std::string& key, const std::string& default_);
 
-            ModifierSetting& declareModifier(const std::string& key, const std::string& label, int modifier_);
+    public:
+        State(const Files::ConfigurationManager& configurationManager);
 
-            void declareSeparator();
+        ~State();
 
-            void declareSubcategory(const std::string& label);
+        void save();
 
-            void setDefault (const std::string& key, const std::string& default_);
+        Iterator begin();
 
-        public:
+        Iterator end();
 
-            State (const Files::ConfigurationManager& configurationManager);
+        ShortcutManager& getShortcutManager();
 
-            ~State();
+        Category& operator[](const std::string& key);
 
-            void save();
+        void update(const Setting& setting);
 
-            Iterator begin();
+        static State& get();
 
-            Iterator end();
+        void resetCategory(const std::string& category);
 
-            ShortcutManager& getShortcutManager();
+        void resetAll();
 
-            Category& operator[](const std::string& key);
+    signals:
 
-            void update (const Setting& setting);
-
-            static State& get();
-
-            void resetCategory(const std::string& category);
-
-            void resetAll();
-
-        signals:
-
-            void settingChanged (const CSMPrefs::Setting *setting);
+        void settingChanged(const CSMPrefs::Setting* setting);
     };
 
     // convenience function

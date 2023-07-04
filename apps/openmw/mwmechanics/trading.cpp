@@ -18,30 +18,30 @@ namespace MWMechanics
     bool Trading::haggle(const MWWorld::Ptr& player, const MWWorld::Ptr& merchant, int playerOffer, int merchantOffer)
     {
         // accept if merchant offer is better than player offer
-        if ( playerOffer <= merchantOffer ) {
+        if (playerOffer <= merchantOffer)
+        {
             return true;
         }
 
         // reject if npc is a creature
-        if ( merchant.getTypeName() != typeid(ESM::NPC).name() ) {
+        if (merchant.getType() != ESM::NPC::sRecordId)
+        {
             return false;
         }
 
-        const MWWorld::Store<ESM::GameSetting> &gmst =
-            MWBase::Environment::get().getWorld()->getStore().get<ESM::GameSetting>();
+        const MWWorld::Store<ESM::GameSetting>& gmst
+            = MWBase::Environment::get().getESMStore()->get<ESM::GameSetting>();
 
         // Is the player buying?
         bool buying = (merchantOffer < 0);
         int a = std::abs(merchantOffer);
         int b = std::abs(playerOffer);
-        int d = (buying)
-            ? int(100 * (a - b) / a)
-            : int(100 * (b - a) / b);
+        int d = (buying) ? int(100 * (a - b) / a) : int(100 * (b - a) / b);
 
         int clampedDisposition = MWBase::Environment::get().getMechanicsManager()->getDerivedDisposition(merchant);
 
-        const MWMechanics::CreatureStats &merchantStats = merchant.getClass().getCreatureStats(merchant);
-        const MWMechanics::CreatureStats &playerStats = player.getClass().getCreatureStats(player);
+        const MWMechanics::CreatureStats& merchantStats = merchant.getClass().getCreatureStats(merchant);
+        const MWMechanics::CreatureStats& playerStats = player.getClass().getCreatureStats(player);
 
         float a1 = static_cast<float>(player.getClass().getSkill(player, ESM::Skill::Mercantile));
         float b1 = 0.1f * playerStats.getAttribute(ESM::Attribute::Luck).getModified();
@@ -54,14 +54,15 @@ namespace MWMechanics
         float pcTerm = (dispositionTerm + a1 + b1 + c1) * playerStats.getFatigueTerm();
         float npcTerm = (d1 + e1 + f1) * merchantStats.getFatigueTerm();
         float x = gmst.find("fBargainOfferMulti")->mValue.getFloat() * d
-            + gmst.find("fBargainOfferBase")->mValue.getFloat()
-            + int(pcTerm - npcTerm);
+            + gmst.find("fBargainOfferBase")->mValue.getFloat() + int(pcTerm - npcTerm);
 
-        int roll = Misc::Rng::rollDice(100) + 1;
+        auto& prng = MWBase::Environment::get().getWorld()->getPrng();
+        int roll = Misc::Rng::rollDice(100, prng) + 1;
 
         // reject if roll fails
         // (or if player tries to buy things and get money)
-        if ( roll > x || (merchantOffer < 0 && 0 < playerOffer) ) {
+        if (roll > x || (merchantOffer < 0 && 0 < playerOffer))
+        {
             return false;
         }
 
@@ -70,11 +71,13 @@ namespace MWMechanics
         int finalPrice = std::abs(playerOffer);
         int initialMerchantOffer = std::abs(merchantOffer);
 
-        if ( !buying && (finalPrice > initialMerchantOffer) ) {
-            skillGain = floor(100.f * (finalPrice - initialMerchantOffer) / finalPrice);
+        if (!buying && (finalPrice > initialMerchantOffer))
+        {
+            skillGain = std::floor(100.f * (finalPrice - initialMerchantOffer) / finalPrice);
         }
-        else if ( buying && (finalPrice < initialMerchantOffer) ) {
-            skillGain = floor(100.f * (initialMerchantOffer - finalPrice) / initialMerchantOffer);
+        else if (buying && (finalPrice < initialMerchantOffer))
+        {
+            skillGain = std::floor(100.f * (initialMerchantOffer - finalPrice) / initialMerchantOffer);
         }
         player.getClass().skillUsageSucceeded(player, ESM::Skill::Mercantile, 0, skillGain);
 

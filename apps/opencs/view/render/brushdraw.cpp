@@ -1,23 +1,37 @@
 #include "brushdraw.hpp"
 
 #include <limits>
+#include <set>
+#include <utility>
 
-#include <osg/Group>
-#include <osg/Geometry>
 #include <osg/Array>
+#include <osg/GL>
+#include <osg/Geometry>
+#include <osg/Group>
+#include <osg/Math>
+#include <osg/PrimitiveSet>
+#include <osg/StateAttribute>
+#include <osg/StateSet>
+#include <osg/Vec4f>
 
+#include <osgUtil/IntersectionVisitor>
 #include <osgUtil/LineSegmentIntersector>
+
+#include <components/esm3/loadland.hpp>
 
 #include "../../model/world/cellcoordinates.hpp"
 #include "../widget/brushshapes.hpp"
 #include "mask.hpp"
 
-CSVRender::BrushDraw::BrushDraw(osg::ref_ptr<osg::Group> parentNode, bool textureMode) :
-    mParentNode(parentNode), mTextureMode(textureMode)
+CSVRender::BrushDraw::BrushDraw(osg::ref_ptr<osg::Group> parentNode, bool textureMode)
+    : mParentNode(parentNode)
+    , mTextureMode(textureMode)
 {
     mBrushDrawNode = new osg::Group();
     mGeometry = new osg::Geometry();
     mBrushDrawNode->addChild(mGeometry);
+    mBrushDrawNode->getOrCreateStateSet()->setMode(GL_DEPTH_TEST, osg::StateAttribute::OFF);
+    mBrushDrawNode->getOrCreateStateSet()->setRenderBinDetails(11, "RenderBin");
     mParentNode->addChild(mBrushDrawNode);
     if (mTextureMode)
         mLandSizeFactor = static_cast<float>(ESM::Land::REAL_SIZE) / static_cast<float>(ESM::Land::LAND_TEXTURE_SIZE);
@@ -31,7 +45,7 @@ CSVRender::BrushDraw::~BrushDraw()
     mParentNode->removeChild(mBrushDrawNode);
 }
 
-float CSVRender::BrushDraw::getIntersectionHeight (const osg::Vec3d& point)
+float CSVRender::BrushDraw::getIntersectionHeight(const osg::Vec3d& point)
 {
     osg::Vec3d start = point;
     osg::Vec3d end = point;
@@ -40,8 +54,8 @@ float CSVRender::BrushDraw::getIntersectionHeight (const osg::Vec3d& point)
     osg::Vec3d direction = end - start;
 
     // Get intersection
-    osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector (new osgUtil::LineSegmentIntersector(
-        osgUtil::Intersector::MODEL, start, end) );
+    osg::ref_ptr<osgUtil::LineSegmentIntersector> intersector(
+        new osgUtil::LineSegmentIntersector(osgUtil::Intersector::MODEL, start, end));
     intersector->setIntersectionLimit(osgUtil::LineSegmentIntersector::NO_LIMIT);
     osgUtil::IntersectionVisitor visitor(intersector);
 
@@ -67,44 +81,28 @@ float CSVRender::BrushDraw::getIntersectionHeight (const osg::Vec3d& point)
 
 void CSVRender::BrushDraw::buildPointGeometry(const osg::Vec3d& point)
 {
-    osg::ref_ptr<osg::Geometry> geom (new osg::Geometry());
-    osg::ref_ptr<osg::Vec3Array> vertices (new osg::Vec3Array());
-    osg::ref_ptr<osg::Vec4Array> colors (new osg::Vec4Array());
-    const float brushOutlineHeight (1.0f);
-    const float crossHeadSize (8.0f);
+    osg::ref_ptr<osg::Geometry> geom(new osg::Geometry());
+    osg::ref_ptr<osg::Vec3Array> vertices(new osg::Vec3Array());
+    osg::ref_ptr<osg::Vec4Array> colors(new osg::Vec4Array());
+    const float brushOutlineHeight(1.0f);
+    const float crossHeadSize(8.0f);
     osg::Vec4f lineColor(1.0f, 1.0f, 1.0f, 0.6f);
 
-    vertices->push_back(osg::Vec3d(
-        point.x() - crossHeadSize,
-        point.y() - crossHeadSize,
-        getIntersectionHeight(osg::Vec3d(
-            point.x() - crossHeadSize,
-            point.y() - crossHeadSize,
-            point.z()) ) + brushOutlineHeight));
+    vertices->push_back(osg::Vec3d(point.x() - crossHeadSize, point.y() - crossHeadSize,
+        getIntersectionHeight(osg::Vec3d(point.x() - crossHeadSize, point.y() - crossHeadSize, point.z()))
+            + brushOutlineHeight));
     colors->push_back(lineColor);
-    vertices->push_back(osg::Vec3d(
-        point.x() + crossHeadSize,
-        point.y() + crossHeadSize,
-        getIntersectionHeight(osg::Vec3d(
-            point.x() + crossHeadSize,
-            point.y() + crossHeadSize,
-            point.z()) ) + brushOutlineHeight));
+    vertices->push_back(osg::Vec3d(point.x() + crossHeadSize, point.y() + crossHeadSize,
+        getIntersectionHeight(osg::Vec3d(point.x() + crossHeadSize, point.y() + crossHeadSize, point.z()))
+            + brushOutlineHeight));
     colors->push_back(lineColor);
-    vertices->push_back(osg::Vec3d(
-        point.x() + crossHeadSize,
-        point.y() - crossHeadSize,
-        getIntersectionHeight(osg::Vec3d(
-            point.x() + crossHeadSize,
-            point.y() - crossHeadSize,
-            point.z()) ) + brushOutlineHeight));
+    vertices->push_back(osg::Vec3d(point.x() + crossHeadSize, point.y() - crossHeadSize,
+        getIntersectionHeight(osg::Vec3d(point.x() + crossHeadSize, point.y() - crossHeadSize, point.z()))
+            + brushOutlineHeight));
     colors->push_back(lineColor);
-    vertices->push_back(osg::Vec3d(
-        point.x() - crossHeadSize,
-        point.y() + crossHeadSize,
-        getIntersectionHeight(osg::Vec3d(
-            point.x() - crossHeadSize,
-            point.y() + crossHeadSize,
-            point.z()) ) + brushOutlineHeight));
+    vertices->push_back(osg::Vec3d(point.x() - crossHeadSize, point.y() + crossHeadSize,
+        getIntersectionHeight(osg::Vec3d(point.x() - crossHeadSize, point.y() + crossHeadSize, point.z()))
+            + brushOutlineHeight));
     colors->push_back(lineColor);
 
     geom->setVertexArray(vertices);
@@ -115,14 +113,21 @@ void CSVRender::BrushDraw::buildPointGeometry(const osg::Vec3d& point)
 
 void CSVRender::BrushDraw::buildSquareGeometry(const float& radius, const osg::Vec3d& point)
 {
-    osg::ref_ptr<osg::Geometry> geom (new osg::Geometry());
-    osg::ref_ptr<osg::Vec3Array> vertices (new osg::Vec3Array());
-    osg::ref_ptr<osg::Vec4Array> colors (new osg::Vec4Array());
+    osg::ref_ptr<osg::Geometry> geom(new osg::Geometry());
+    osg::ref_ptr<osg::Vec3Array> vertices(new osg::Vec3Array());
+    osg::ref_ptr<osg::Vec4Array> colors(new osg::Vec4Array());
 
-    const float brushOutlineHeight (1.0f);
+    const float brushOutlineHeight(1.0f);
     float diameter = radius * 2;
-    int resolution = static_cast<int>(2.f * diameter / mLandSizeFactor); //half a vertex resolution
-    float resAdjustedLandSizeFactor = mLandSizeFactor / 2;
+    int resolution = static_cast<int>(2.f * diameter / mLandSizeFactor); // half a vertex resolution
+    float resAdjustedLandSizeFactor = mLandSizeFactor / 2; // 128
+
+    if (resolution > 128) // limit accuracy for performance
+    {
+        resolution = 128;
+        resAdjustedLandSizeFactor = diameter / resolution;
+    }
+
     osg::Vec4f lineColor(1.0f, 1.0f, 1.0f, 0.6f);
 
     for (int i = 0; i < resolution; i++)
@@ -130,62 +135,30 @@ void CSVRender::BrushDraw::buildSquareGeometry(const float& radius, const osg::V
         int step = i * resAdjustedLandSizeFactor;
         int step2 = (i + 1) * resAdjustedLandSizeFactor;
 
-        osg::Vec3d upHorizontalLinePoint1(
-            point.x() - radius + step,
-            point.y() - radius,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() - radius + step,
-                point.y() - radius,
-                point.z())) + brushOutlineHeight);
-        osg::Vec3d upHorizontalLinePoint2(
-            point.x() - radius + step2,
-            point.y() - radius,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() - radius + step2,
-                point.y() - radius,
-                point.z())) + brushOutlineHeight);
-        osg::Vec3d upVerticalLinePoint1(
-            point.x() - radius,
-            point.y() - radius + step,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() - radius,
-                point.y() - radius + step,
-                point.z())) + brushOutlineHeight);
-        osg::Vec3d upVerticalLinePoint2(
-            point.x() - radius,
-            point.y() - radius + step2,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() - radius,
-                point.y() - radius + step2,
-                point.z())) + brushOutlineHeight);
-        osg::Vec3d downHorizontalLinePoint1(
-            point.x() + radius - step,
-            point.y() + radius,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() + radius - step,
-                point.y() + radius,
-                point.z())) + brushOutlineHeight);
-        osg::Vec3d downHorizontalLinePoint2(
-            point.x() + radius - step2,
-            point.y() + radius,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() + radius - step2,
-                point.y() + radius,
-                point.z())) + brushOutlineHeight);
-        osg::Vec3d downVerticalLinePoint1(
-            point.x() + radius,
-            point.y() + radius - step,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() + radius,
-                point.y() + radius - step,
-                point.z())) + brushOutlineHeight);
-        osg::Vec3d downVerticalLinePoint2(
-            point.x() + radius,
-            point.y() + radius - step2,
-            getIntersectionHeight(osg::Vec3d(
-                point.x() + radius,
-                point.y() + radius - step2,
-                point.z())) + brushOutlineHeight);
+        osg::Vec3d upHorizontalLinePoint1(point.x() - radius + step, point.y() - radius,
+            getIntersectionHeight(osg::Vec3d(point.x() - radius + step, point.y() - radius, point.z()))
+                + brushOutlineHeight);
+        osg::Vec3d upHorizontalLinePoint2(point.x() - radius + step2, point.y() - radius,
+            getIntersectionHeight(osg::Vec3d(point.x() - radius + step2, point.y() - radius, point.z()))
+                + brushOutlineHeight);
+        osg::Vec3d upVerticalLinePoint1(point.x() - radius, point.y() - radius + step,
+            getIntersectionHeight(osg::Vec3d(point.x() - radius, point.y() - radius + step, point.z()))
+                + brushOutlineHeight);
+        osg::Vec3d upVerticalLinePoint2(point.x() - radius, point.y() - radius + step2,
+            getIntersectionHeight(osg::Vec3d(point.x() - radius, point.y() - radius + step2, point.z()))
+                + brushOutlineHeight);
+        osg::Vec3d downHorizontalLinePoint1(point.x() + radius - step, point.y() + radius,
+            getIntersectionHeight(osg::Vec3d(point.x() + radius - step, point.y() + radius, point.z()))
+                + brushOutlineHeight);
+        osg::Vec3d downHorizontalLinePoint2(point.x() + radius - step2, point.y() + radius,
+            getIntersectionHeight(osg::Vec3d(point.x() + radius - step2, point.y() + radius, point.z()))
+                + brushOutlineHeight);
+        osg::Vec3d downVerticalLinePoint1(point.x() + radius, point.y() + radius - step,
+            getIntersectionHeight(osg::Vec3d(point.x() + radius, point.y() + radius - step, point.z()))
+                + brushOutlineHeight);
+        osg::Vec3d downVerticalLinePoint2(point.x() + radius, point.y() + radius - step2,
+            getIntersectionHeight(osg::Vec3d(point.x() + radius, point.y() + radius - step2, point.z()))
+                + brushOutlineHeight);
         vertices->push_back(upHorizontalLinePoint1);
         colors->push_back(lineColor);
         vertices->push_back(upHorizontalLinePoint2);
@@ -212,33 +185,28 @@ void CSVRender::BrushDraw::buildSquareGeometry(const float& radius, const osg::V
 
 void CSVRender::BrushDraw::buildCircleGeometry(const float& radius, const osg::Vec3d& point)
 {
-    osg::ref_ptr<osg::Geometry> geom (new osg::Geometry());
-    osg::ref_ptr<osg::Vec3Array> vertices (new osg::Vec3Array());
-    osg::ref_ptr<osg::Vec4Array> colors (new osg::Vec4Array());
-    const int amountOfPoints = (osg::PI * 2.0f) * radius / 20;
-    const float step ((osg::PI * 2.0f) / static_cast<float>(amountOfPoints));
-    const float brushOutlineHeight (1.0f);
+    osg::ref_ptr<osg::Geometry> geom(new osg::Geometry());
+    osg::ref_ptr<osg::Vec3Array> vertices(new osg::Vec3Array());
+    osg::ref_ptr<osg::Vec4Array> colors(new osg::Vec4Array());
+
+    const int amountOfPoints = 128;
+    const float step((osg::PI * 2.0f) / static_cast<float>(amountOfPoints));
+    const float brushOutlineHeight(1.0f);
     osg::Vec4f lineColor(1.0f, 1.0f, 1.0f, 0.6f);
 
     for (int i = 0; i < amountOfPoints + 2; i++)
     {
-        float angle (i * step);
-        vertices->push_back(osg::Vec3d(
-            point.x() + radius * cosf(angle),
-            point.y() + radius * sinf(angle),
-            getIntersectionHeight(osg::Vec3d(
-                point.x() + radius * cosf(angle),
-                point.y() + radius * sinf(angle),
-                point.z()) ) + brushOutlineHeight));
+        float angle(i * step);
+        vertices->push_back(osg::Vec3d(point.x() + radius * cosf(angle), point.y() + radius * sinf(angle),
+            getIntersectionHeight(
+                osg::Vec3d(point.x() + radius * cosf(angle), point.y() + radius * sinf(angle), point.z()))
+                + brushOutlineHeight));
         colors->push_back(lineColor);
         angle = static_cast<float>(i + 1) * step;
-        vertices->push_back(osg::Vec3d(
-            point.x() + radius * cosf(angle),
-            point.y() + radius * sinf(angle),
-            getIntersectionHeight(osg::Vec3d(
-                point.x() + radius * cosf(angle),
-                point.y() + radius * sinf(angle),
-                point.z()) ) + brushOutlineHeight));
+        vertices->push_back(osg::Vec3d(point.x() + radius * cosf(angle), point.y() + radius * sinf(angle),
+            getIntersectionHeight(
+                osg::Vec3d(point.x() + radius * cosf(angle), point.y() + radius * sinf(angle), point.z()))
+                + brushOutlineHeight));
         colors->push_back(lineColor);
     }
 
@@ -262,36 +230,32 @@ void CSVRender::BrushDraw::update(osg::Vec3d point, int brushSize, CSVWidget::Br
     if (mTextureMode)
     {
         std::pair<int, int> snapToGridXY = CSMWorld::CellCoordinates::toTextureCoords(point);
-        float offsetToMiddle =  mLandSizeFactor * 0.5f;
+        float offsetToMiddle = mLandSizeFactor * 0.5f;
         snapToGridPoint = osg::Vec3d(
             CSMWorld::CellCoordinates::textureGlobalXToWorldCoords(snapToGridXY.first) + offsetToMiddle,
-            CSMWorld::CellCoordinates::textureGlobalYToWorldCoords(snapToGridXY.second) + offsetToMiddle,
-            point.z());
+            CSMWorld::CellCoordinates::textureGlobalYToWorldCoords(snapToGridXY.second) + offsetToMiddle, point.z());
     }
     else
     {
         std::pair<int, int> snapToGridXY = CSMWorld::CellCoordinates::toVertexCoords(point);
-        snapToGridPoint = osg::Vec3d(
-            CSMWorld::CellCoordinates::vertexGlobalToWorldCoords(snapToGridXY.first),
-            CSMWorld::CellCoordinates::vertexGlobalToWorldCoords(snapToGridXY.second),
-            point.z());
+        snapToGridPoint = osg::Vec3d(CSMWorld::CellCoordinates::vertexGlobalToWorldCoords(snapToGridXY.first),
+            CSMWorld::CellCoordinates::vertexGlobalToWorldCoords(snapToGridXY.second), point.z());
     }
-
 
     switch (toolShape)
     {
-        case (CSVWidget::BrushShape_Point) :
+        case (CSVWidget::BrushShape_Point):
             buildPointGeometry(snapToGridPoint);
             break;
-        case (CSVWidget::BrushShape_Square) :
+        case (CSVWidget::BrushShape_Square):
             buildSquareGeometry(radius, snapToGridPoint);
             break;
-        case (CSVWidget::BrushShape_Circle) :
+        case (CSVWidget::BrushShape_Circle):
             buildCircleGeometry(radius, snapToGridPoint);
             break;
-        case (CSVWidget::BrushShape_Custom) :
+        case (CSVWidget::BrushShape_Custom):
             buildSquareGeometry(1, snapToGridPoint);
-            //buildCustomGeometry
+            // buildCustomGeometry
             break;
     }
 

@@ -3,7 +3,12 @@
 
 #include <string>
 
-#include <components/esm/loadltex.hpp>
+#include <components/esm3/loadltex.hpp>
+
+namespace ESM
+{
+    class ESMReader;
+}
 
 namespace CSMWorld
 {
@@ -12,7 +17,7 @@ namespace CSMWorld
     {
         int mPluginIndex;
 
-        void load (ESM::ESMReader &esm, bool &isDeleted);
+        void load(ESM::ESMReader& esm, bool& isDeleted);
 
         /// Returns a string identifier that will be unique to any LandTexture.
         static std::string createUniqueRecordId(int plugin, int index);

@@ -1,5 +1,5 @@
 Navigator Settings
-################
+##################
 
 Main settings
 *************
@@ -43,7 +43,7 @@ Increasing this value may decrease performance.
     It's a limitation of `Recastnavigation <https://github.com/recastnavigation/recastnavigation>`_ library.
 
 wait until min distance to player
-------------------------------
+---------------------------------
 
 :Type:		integer
 :Range:		>= 0
@@ -54,6 +54,35 @@ Allows to complete cell loading only when minimal navigation mesh area is genera
 nearby the player. Increasing this value will keep loading screen longer but will slightly increase nav mesh generation
 speed on systems bound by CPU. Zero means no waiting.
 
+enable nav mesh disk cache
+--------------------------
+
+:Type:		boolean
+:Range:		True/False
+:Default:	True
+
+If true navmesh cache stored on disk will be used in addition to memory cache.
+If navmesh tile is not present in memory cache, it will be looked up in the disk cache.
+If it's not found there it will be generated.
+
+write to navmeshdb
+------------------
+
+:Type:		boolean
+:Range:		True/False
+:Default:	True
+
+If true generated navmesh tiles will be stored into disk cache while game is running.
+
+max navmeshdb file size
+-----------------------
+
+:Type:		unsigned 64-bit integer
+:Range:		> 0
+:Default:	2147483648
+
+Approximate maximum file size of navigation mesh cache stored on disk in bytes (value > 0).
+
 Advanced settings
 *****************
 
@@ -62,7 +91,7 @@ This section is for advanced PC uses who understands concepts of OS thread and m
 async nav mesh updater threads
 ------------------------------
 
-:Type:		integer
+:Type:		platform dependant unsigned integer
 :Range:		>= 1
 :Default:	1
 
@@ -74,7 +103,7 @@ Don't expect twice better latency by doubling this value.
 max nav mesh tiles cache size
 -----------------------------
 
-:Type:		integer
+:Type:		platform dependant unsigned integer
 :Range:		>= 0
 :Default:	268435456
 
@@ -87,7 +116,7 @@ Memory will be consumed in approximately linear dependency from number of nav me
 But only for new locations or already dropped from cache.
 
 min update interval ms
-----------------
+----------------------
 
 :Type:		integer
 :Range:		>= 0
@@ -124,7 +153,7 @@ enable write nav mesh to file
 :Default:	False
 
 Write nav mesh to file to be able to open by RecastDemo application.
-Usually it is more usefull to have both enable write recast mesh to file and this options enabled.
+Usually it is more useful to have both enable write recast mesh to file and this options enabled.
 RecastDemo supports .obj files.
 Potentially decreases performance.
 
@@ -175,13 +204,24 @@ enable nav mesh render
 :Range:		True/False
 :Default:	False
 
-Render nav mesh.
+Render navigation mesh.
 Allows to do in-game debug.
-Every nav mesh is visible and every update is noticable.
+Every nav mesh is visible and every update is noticeable.
 Potentially decreases performance.
 
+nav mesh render mode
+--------------------
+
+:Type:		string
+:Range:		"area type", "update frequency"
+:Default:	"area type"
+
+Render navigation mesh in specific mode.
+"area type" - show area types using different colours.
+"update frequency" - show tiles update frequency as a heatmap.
+
 enable agents paths render
--------------------
+--------------------------
 
 :Type:		boolean
 :Range:		True/False
@@ -193,7 +233,7 @@ Works even if Navigator is disabled.
 Potentially decreases performance.
 
 enable recast mesh render
-----------------------
+-------------------------
 
 :Type:		boolean
 :Range:		True/False
@@ -205,6 +245,17 @@ Little difference can be a result of floating point error.
 Absent pieces usually mean a bug in recast mesh tiles building.
 Allows to do in-game debug.
 Potentially decreases performance.
+
+nav mesh version
+----------------
+
+:Type:		integer
+:Range:		> 0
+:Default:	1
+
+Version of navigation mesh generation algorithm.
+Should be increased each time there is a difference between output of makeNavMeshTileData function for the same input.
+Changing the value will invalidate navmesh disk cache.
 
 Expert settings
 ***************
@@ -228,7 +279,7 @@ Pay attention to slopes and roofs when change it. Increasing this value will red
 max polygon path size
 ---------------------
 
-:Type:		integer
+:Type:		platform dependant unsigned integer
 :Range:		> 0
 :Default:	1024
 
@@ -237,7 +288,7 @@ Maximum size of path over polygons.
 max smooth path size
 --------------------
 
-:Type:		integer
+:Type:		platform dependant unsigned integer
 :Range:		> 0
 :Default:	1024
 
@@ -365,20 +416,20 @@ max verts per poly
 
 The maximum number of vertices allowed for polygons generated during the contour to polygon conversion process.
 
-region merge size
+region merge area
 -----------------
 
 :Type:		integer
 :Range:		>= 0
-:Default:	20
+:Default:	400
 
 Any regions with a span count smaller than this value will, if possible, be merged with larger regions.
 
-region min size
+region min area
 ---------------
 
 :Type:		integer
 :Range:		>= 0
-:Default:	8
+:Default:	64
 
 The minimum number of cells allowed to form isolated island areas.

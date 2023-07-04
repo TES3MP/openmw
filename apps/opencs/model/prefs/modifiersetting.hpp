@@ -1,45 +1,46 @@
 #ifndef CSM_PREFS_MODIFIERSETTING_H
 #define CSM_PREFS_MODIFIERSETTING_H
 
-#include <QKeySequence>
-
 #include "setting.hpp"
 
+#include <string>
+#include <utility>
+
+class QMutex;
+class QObject;
+class QWidget;
 class QEvent;
 class QPushButton;
 
 namespace CSMPrefs
 {
+    class Category;
     class ModifierSetting : public Setting
     {
-            Q_OBJECT
+        Q_OBJECT
 
-        public:
+    public:
+        ModifierSetting(Category* parent, QMutex* mutex, const std::string& key, const std::string& label);
 
-            ModifierSetting(Category* parent, Settings::Manager* values, QMutex* mutex, const std::string& key,
-                const std::string& label);
+        std::pair<QWidget*, QWidget*> makeWidgets(QWidget* parent) override;
 
-            std::pair<QWidget*, QWidget*> makeWidgets(QWidget* parent) override;
+        void updateWidget() override;
 
-            void updateWidget() override;
+    protected:
+        bool eventFilter(QObject* target, QEvent* event) override;
 
-        protected:
+    private:
+        bool handleEvent(QObject* target, int mod, int value);
 
-            bool eventFilter(QObject* target, QEvent* event) override;
+        void storeValue(int modifier);
+        void resetState();
 
-        private:
+        QPushButton* mButton;
+        bool mEditorActive;
 
-            bool handleEvent(QObject* target, int mod, int value);
+    private slots:
 
-            void storeValue(int modifier);
-            void resetState();
-
-            QPushButton* mButton;
-            bool mEditorActive;
-
-        private slots:
-
-            void buttonToggled(bool checked);
+        void buttonToggled(bool checked);
     };
 }
 

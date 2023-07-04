@@ -4,6 +4,7 @@
 #include <sstream>
 
 #include <components/compiler/locals.hpp>
+#include <components/esm/records.hpp>
 
 /*
     Start of tes3mp addition
@@ -23,23 +24,24 @@
 #include "../mwworld/esmstore.hpp"
 
 #include "../mwbase/environment.hpp"
-#include "../mwbase/world.hpp"
+#include "../mwbase/inputmanager.hpp"
+#include "../mwbase/luamanager.hpp"
 #include "../mwbase/scriptmanager.hpp"
 #include "../mwbase/windowmanager.hpp"
-#include "../mwbase/inputmanager.hpp"
+#include "../mwbase/world.hpp"
 
 #include "../mwworld/action.hpp"
-#include "../mwworld/class.hpp"
 #include "../mwworld/cellstore.hpp"
-#include "../mwworld/containerstore.hpp"
+#include "../mwworld/class.hpp"
 
 #include "../mwmechanics/npcstats.hpp"
 
-#include "locals.hpp"
 #include "globalscripts.hpp"
+#include "locals.hpp"
 
 namespace MWScript
 {
+<<<<<<< HEAD
     /*
         Start of tes3mp addition
 
@@ -71,10 +73,13 @@ namespace MWScript
 
     const MWWorld::Ptr InterpreterContext::getReferenceImp (
         const std::string& id, bool activeOnly, bool doThrow) const
+=======
+    const MWWorld::Ptr InterpreterContext::getReferenceImp(const ESM::RefId& id, bool activeOnly, bool doThrow) const
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     {
         if (!id.empty())
         {
-            return MWBase::Environment::get().getWorld()->getPtr (id, activeOnly);
+            return MWBase::Environment::get().getWorld()->getPtr(id, activeOnly);
         }
         else
         {
@@ -88,56 +93,52 @@ namespace MWScript
         }
     }
 
-    const Locals& InterpreterContext::getMemberLocals (std::string& id, bool global)
-        const
+    const Locals& InterpreterContext::getMemberLocals(bool global, ESM::RefId& id) const
     {
         if (global)
         {
-            return MWBase::Environment::get().getScriptManager()->getGlobalScripts().
-                getLocals (id);
+            return MWBase::Environment::get().getScriptManager()->getGlobalScripts().getLocals(id);
         }
         else
         {
-            const MWWorld::Ptr ptr = getReferenceImp (id, false);
+            const MWWorld::Ptr ptr = getReferenceImp(id, false);
 
-            id = ptr.getClass().getScript (ptr);
+            id = ptr.getClass().getScript(ptr);
 
-            ptr.getRefData().setLocals (
-                *MWBase::Environment::get().getWorld()->getStore().get<ESM::Script>().find (id));
+            ptr.getRefData().setLocals(*MWBase::Environment::get().getESMStore()->get<ESM::Script>().find(id));
 
             return ptr.getRefData().getLocals();
         }
     }
 
-    Locals& InterpreterContext::getMemberLocals (std::string& id, bool global)
+    Locals& InterpreterContext::getMemberLocals(bool global, ESM::RefId& id)
     {
         if (global)
         {
-            return MWBase::Environment::get().getScriptManager()->getGlobalScripts().
-                getLocals (id);
+            return MWBase::Environment::get().getScriptManager()->getGlobalScripts().getLocals(id);
         }
         else
         {
-            const MWWorld::Ptr ptr = getReferenceImp (id, false);
+            const MWWorld::Ptr ptr = getReferenceImp(id, false);
 
-            id = ptr.getClass().getScript (ptr);
+            id = ptr.getClass().getScript(ptr);
 
-            ptr.getRefData().setLocals (
-                *MWBase::Environment::get().getWorld()->getStore().get<ESM::Script>().find (id));
+            ptr.getRefData().setLocals(*MWBase::Environment::get().getESMStore()->get<ESM::Script>().find(id));
 
             return ptr.getRefData().getLocals();
         }
     }
 
-    MissingImplicitRefError::MissingImplicitRefError() : std::runtime_error("no implicit reference") {}
-
-    int InterpreterContext::findLocalVariableIndex (const std::string& scriptId,
-        const std::string& name, char type) const
+    MissingImplicitRefError::MissingImplicitRefError()
+        : std::runtime_error("no implicit reference")
     {
-        int index = MWBase::Environment::get().getScriptManager()->getLocals (scriptId).
-            searchIndex (type, name);
+    }
 
-        if (index!=-1)
+    int InterpreterContext::findLocalVariableIndex(const ESM::RefId& scriptId, std::string_view name, char type) const
+    {
+        int index = MWBase::Environment::get().getScriptManager()->getLocals(scriptId).searchIndex(type, name);
+
+        if (index != -1)
             return index;
 
         std::ostringstream stream;
@@ -146,22 +147,30 @@ namespace MWScript
 
         switch (type)
         {
-            case 's': stream << "short"; break;
-            case 'l': stream << "long"; break;
-            case 'f': stream << "float"; break;
+            case 's':
+                stream << "short";
+                break;
+            case 'l':
+                stream << "long";
+                break;
+            case 'f':
+                stream << "float";
+                break;
         }
 
         stream << " member variable " << name << " in script " << scriptId;
 
-        throw std::runtime_error (stream.str().c_str());
+        throw std::runtime_error(stream.str().c_str());
     }
 
-    InterpreterContext::InterpreterContext (MWScript::Locals *locals, const MWWorld::Ptr& reference)
-    : mLocals (locals), mReference (reference)
-    {}
+    InterpreterContext::InterpreterContext(MWScript::Locals* locals, const MWWorld::Ptr& reference)
+        : mLocals(locals)
+        , mReference(reference)
+    {
+    }
 
-    InterpreterContext::InterpreterContext (std::shared_ptr<GlobalScriptDesc> globalScriptDesc)
-    : mLocals (&(globalScriptDesc->mLocals))
+    InterpreterContext::InterpreterContext(std::shared_ptr<GlobalScriptDesc> globalScriptDesc)
+        : mLocals(&(globalScriptDesc->mLocals))
     {
         const MWWorld::Ptr* ptr = globalScriptDesc->getPtrIfPresent();
         // A nullptr here signifies that the script's target has not yet been resolved after loading the game.
@@ -173,35 +182,37 @@ namespace MWScript
             mGlobalScriptDesc = globalScriptDesc;
     }
 
-    int InterpreterContext::getLocalShort (int index) const
+    ESM::RefId InterpreterContext::getTarget() const
     {
-        if (!mLocals)
-            throw std::runtime_error ("local variables not available in this context");
-
-        return mLocals->mShorts.at (index);
+        if (!mReference.isEmpty())
+            return mReference.mRef->mRef.getRefId();
+        else if (mGlobalScriptDesc)
+            return mGlobalScriptDesc->getId();
+        return ESM::RefId();
     }
 
-    int InterpreterContext::getLocalLong (int index) const
+    int InterpreterContext::getLocalShort(int index) const
     {
         if (!mLocals)
-            throw std::runtime_error ("local variables not available in this context");
+            throw std::runtime_error("local variables not available in this context");
 
-        return mLocals->mLongs.at (index);
+        return mLocals->mShorts.at(index);
     }
 
-    float InterpreterContext::getLocalFloat (int index) const
+    int InterpreterContext::getLocalLong(int index) const
     {
         if (!mLocals)
-            throw std::runtime_error ("local variables not available in this context");
+            throw std::runtime_error("local variables not available in this context");
 
-        return mLocals->mFloats.at (index);
+        return mLocals->mLongs.at(index);
     }
 
-    void InterpreterContext::setLocalShort (int index, int value)
+    float InterpreterContext::getLocalFloat(int index) const
     {
         if (!mLocals)
-            throw std::runtime_error ("local variables not available in this context");
+            throw std::runtime_error("local variables not available in this context");
 
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -232,13 +243,17 @@ namespace MWScript
         /*
             End of tes3mp addition
         */
+=======
+        return mLocals->mFloats.at(index);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 
-    void InterpreterContext::setLocalLong (int index, int value)
+    void InterpreterContext::setLocalShort(int index, int value)
     {
         if (!mLocals)
-            throw std::runtime_error ("local variables not available in this context");
+            throw std::runtime_error("local variables not available in this context");
 
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -269,13 +284,17 @@ namespace MWScript
         /*
             End of tes3mp addition
         */
+=======
+        mLocals->mShorts.at(index) = value;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 
-    void InterpreterContext::setLocalFloat (int index, float value)
+    void InterpreterContext::setLocalLong(int index, int value)
     {
         if (!mLocals)
-            throw std::runtime_error ("local variables not available in this context");
+            throw std::runtime_error("local variables not available in this context");
 
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -312,39 +331,48 @@ namespace MWScript
         /*
             End of tes3mp addition
         */
+=======
+        mLocals->mLongs.at(index) = value;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 
-    void InterpreterContext::messageBox (const std::string& message,
-        const std::vector<std::string>& buttons)
+    void InterpreterContext::setLocalFloat(int index, float value)
+    {
+        if (!mLocals)
+            throw std::runtime_error("local variables not available in this context");
+
+        mLocals->mFloats.at(index) = value;
+    }
+
+    void InterpreterContext::messageBox(std::string_view message, const std::vector<std::string>& buttons)
     {
         if (buttons.empty())
-            MWBase::Environment::get().getWindowManager()->messageBox (message);
+            MWBase::Environment::get().getWindowManager()->messageBox(message);
         else
             MWBase::Environment::get().getWindowManager()->interactiveMessageBox(message, buttons);
     }
 
-    void InterpreterContext::report (const std::string& message)
+    void InterpreterContext::report(const std::string& message) {}
+
+    int InterpreterContext::getGlobalShort(std::string_view name) const
     {
+        return MWBase::Environment::get().getWorld()->getGlobalInt(name);
     }
 
-    int InterpreterContext::getGlobalShort (const std::string& name) const
-    {
-        return MWBase::Environment::get().getWorld()->getGlobalInt (name);
-    }
-
-    int InterpreterContext::getGlobalLong (const std::string& name) const
+    int InterpreterContext::getGlobalLong(std::string_view name) const
     {
         // a global long is internally a float.
-        return MWBase::Environment::get().getWorld()->getGlobalInt (name);
+        return MWBase::Environment::get().getWorld()->getGlobalInt(name);
     }
 
-    float InterpreterContext::getGlobalFloat (const std::string& name) const
+    float InterpreterContext::getGlobalFloat(std::string_view name) const
     {
-        return MWBase::Environment::get().getWorld()->getGlobalFloat (name);
+        return MWBase::Environment::get().getWorld()->getGlobalFloat(name);
     }
 
-    void InterpreterContext::setGlobalShort (const std::string& name, int value)
+    void InterpreterContext::setGlobalShort(std::string_view name, int value)
     {
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -371,10 +399,14 @@ namespace MWScript
         */
 
         MWBase::Environment::get().getWorld()->setGlobalInt (name, value);
+=======
+        MWBase::Environment::get().getWorld()->setGlobalInt(name, value);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 
-    void InterpreterContext::setGlobalLong (const std::string& name, int value)
+    void InterpreterContext::setGlobalLong(std::string_view name, int value)
     {
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -401,10 +433,14 @@ namespace MWScript
         */
 
         MWBase::Environment::get().getWorld()->setGlobalInt (name, value);
+=======
+        MWBase::Environment::get().getWorld()->setGlobalInt(name, value);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 
-    void InterpreterContext::setGlobalFloat (const std::string& name, float value)
+    void InterpreterContext::setGlobalFloat(std::string_view name, float value)
     {
+<<<<<<< HEAD
         /*
             Start of tes3mp addition
 
@@ -436,41 +472,43 @@ namespace MWScript
         */
 
         MWBase::Environment::get().getWorld()->setGlobalFloat (name, value);
+=======
+        MWBase::Environment::get().getWorld()->setGlobalFloat(name, value);
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 
     std::vector<std::string> InterpreterContext::getGlobals() const
     {
-        const MWWorld::Store<ESM::Global>& globals =
-            MWBase::Environment::get().getWorld()->getStore().get<ESM::Global>();
+        const MWWorld::Store<ESM::Global>& globals = MWBase::Environment::get().getESMStore()->get<ESM::Global>();
 
         std::vector<std::string> ids;
-        for (auto& globalVariable : globals)
+        for (const auto& globalVariable : globals)
         {
-            ids.emplace_back(globalVariable.mId);
+            ids.emplace_back(globalVariable.mId.getRefIdString());
         }
 
         return ids;
     }
 
-    char InterpreterContext::getGlobalType (const std::string& name) const
+    char InterpreterContext::getGlobalType(std::string_view name) const
     {
-        MWBase::World *world = MWBase::Environment::get().getWorld();
+        MWBase::World* world = MWBase::Environment::get().getWorld();
         return world->getGlobalVariableType(name);
     }
 
-    std::string InterpreterContext::getActionBinding(const std::string& targetAction) const
+    std::string InterpreterContext::getActionBinding(std::string_view targetAction) const
     {
         MWBase::InputManager* input = MWBase::Environment::get().getInputManager();
-        std::vector<int> actions = input->getActionKeySorting ();
+        const auto& actions = input->getActionKeySorting();
         for (const int action : actions)
         {
-            std::string desc = input->getActionDescription (action);
-            if(desc == "")
+            std::string_view desc = input->getActionDescription(action);
+            if (desc.empty())
                 continue;
 
-            if(desc == targetAction)
+            if (desc == targetAction)
             {
-                if(input->joystickLastUsed())
+                if (input->joystickLastUsed())
                     return input->getActionControllerBindingName(action);
                 else
                     return input->getActionKeyBindingName(action);
@@ -480,7 +518,7 @@ namespace MWScript
         return "None";
     }
 
-    std::string InterpreterContext::getActorName() const
+    std::string_view InterpreterContext::getActorName() const
     {
         const MWWorld::Ptr& ptr = getReferenceImp();
         if (ptr.getClass().isNpc())
@@ -493,31 +531,31 @@ namespace MWScript
         return creature->mName;
     }
 
-    std::string InterpreterContext::getNPCRace() const
+    std::string_view InterpreterContext::getNPCRace() const
     {
-        ESM::NPC npc = *getReferenceImp().get<ESM::NPC>()->mBase;
-        const ESM::Race* race = MWBase::Environment::get().getWorld()->getStore().get<ESM::Race>().find(npc.mRace);
+        const ESM::NPC* npc = getReferenceImp().get<ESM::NPC>()->mBase;
+        const ESM::Race* race = MWBase::Environment::get().getESMStore()->get<ESM::Race>().find(npc->mRace);
         return race->mName;
     }
 
-    std::string InterpreterContext::getNPCClass() const
+    std::string_view InterpreterContext::getNPCClass() const
     {
-        ESM::NPC npc = *getReferenceImp().get<ESM::NPC>()->mBase;
-        const ESM::Class* class_ = MWBase::Environment::get().getWorld()->getStore().get<ESM::Class>().find(npc.mClass);
+        const ESM::NPC* npc = getReferenceImp().get<ESM::NPC>()->mBase;
+        const ESM::Class* class_ = MWBase::Environment::get().getESMStore()->get<ESM::Class>().find(npc->mClass);
         return class_->mName;
     }
 
-    std::string InterpreterContext::getNPCFaction() const
+    std::string_view InterpreterContext::getNPCFaction() const
     {
-        ESM::NPC npc = *getReferenceImp().get<ESM::NPC>()->mBase;
-        const ESM::Faction* faction = MWBase::Environment::get().getWorld()->getStore().get<ESM::Faction>().find(npc.mFaction);
+        const ESM::NPC* npc = getReferenceImp().get<ESM::NPC>()->mBase;
+        const ESM::Faction* faction = MWBase::Environment::get().getESMStore()->get<ESM::Faction>().find(npc->mFaction);
         return faction->mName;
     }
 
-    std::string InterpreterContext::getNPCRank() const
+    std::string_view InterpreterContext::getNPCRank() const
     {
         const MWWorld::Ptr& ptr = getReferenceImp();
-        std::string faction = ptr.getClass().getPrimaryFaction(ptr);
+        const ESM::RefId& faction = ptr.getClass().getPrimaryFaction(ptr);
         if (faction.empty())
             throw std::runtime_error("getNPCRank(): NPC is not in a faction");
 
@@ -525,44 +563,43 @@ namespace MWScript
         if (rank < 0 || rank > 9)
             throw std::runtime_error("getNPCRank(): invalid rank");
 
-        MWBase::World *world = MWBase::Environment::get().getWorld();
-        const MWWorld::ESMStore &store = world->getStore();
-        const ESM::Faction *fact = store.get<ESM::Faction>().find(faction);
+        MWBase::World* world = MWBase::Environment::get().getWorld();
+        const MWWorld::ESMStore& store = world->getStore();
+        const ESM::Faction* fact = store.get<ESM::Faction>().find(faction);
         return fact->mRanks[rank];
     }
 
-    std::string InterpreterContext::getPCName() const
+    std::string_view InterpreterContext::getPCName() const
     {
-        MWBase::World *world = MWBase::Environment::get().getWorld();
-        ESM::NPC player = *world->getPlayerPtr().get<ESM::NPC>()->mBase;
-        return player.mName;
+        MWBase::World* world = MWBase::Environment::get().getWorld();
+        return world->getPlayerPtr().get<ESM::NPC>()->mBase->mName;
     }
 
-    std::string InterpreterContext::getPCRace() const
+    std::string_view InterpreterContext::getPCRace() const
     {
-        MWBase::World *world = MWBase::Environment::get().getWorld();
-        std::string race = world->getPlayerPtr().get<ESM::NPC>()->mBase->mRace;
+        MWBase::World* world = MWBase::Environment::get().getWorld();
+        const ESM::RefId& race = world->getPlayerPtr().get<ESM::NPC>()->mBase->mRace;
         return world->getStore().get<ESM::Race>().find(race)->mName;
     }
 
-    std::string InterpreterContext::getPCClass() const
+    std::string_view InterpreterContext::getPCClass() const
     {
-        MWBase::World *world = MWBase::Environment::get().getWorld();
-        std::string class_ = world->getPlayerPtr().get<ESM::NPC>()->mBase->mClass;
+        MWBase::World* world = MWBase::Environment::get().getWorld();
+        const ESM::RefId& class_ = world->getPlayerPtr().get<ESM::NPC>()->mBase->mClass;
         return world->getStore().get<ESM::Class>().find(class_)->mName;
     }
 
-    std::string InterpreterContext::getPCRank() const
+    std::string_view InterpreterContext::getPCRank() const
     {
-        MWBase::World *world = MWBase::Environment::get().getWorld();
+        MWBase::World* world = MWBase::Environment::get().getWorld();
         MWWorld::Ptr player = world->getPlayerPtr();
 
-        std::string factionId = getReferenceImp().getClass().getPrimaryFaction(getReferenceImp());
+        const ESM::RefId& factionId = getReferenceImp().getClass().getPrimaryFaction(getReferenceImp());
         if (factionId.empty())
             throw std::runtime_error("getPCRank(): NPC is not in a faction");
 
-        const std::map<std::string, int>& ranks = player.getClass().getNpcStats (player).getFactionRanks();
-        std::map<std::string, int>::const_iterator it = ranks.find(Misc::StringUtils::lowerCase(factionId));
+        const auto& ranks = player.getClass().getNpcStats(player).getFactionRanks();
+        auto it = ranks.find(factionId);
         int rank = -1;
         if (it != ranks.end())
             rank = it->second;
@@ -572,26 +609,26 @@ namespace MWScript
         if (rank == -1)
             rank = 0;
 
-        const MWWorld::ESMStore &store = world->getStore();
-        const ESM::Faction *faction = store.get<ESM::Faction>().find(factionId);
+        const MWWorld::ESMStore& store = world->getStore();
+        const ESM::Faction* faction = store.get<ESM::Faction>().find(factionId);
 
-        if(rank < 0 || rank > 9) // there are only 10 ranks
-            return "";
+        if (rank < 0 || rank > 9) // there are only 10 ranks
+            return {};
 
         return faction->mRanks[rank];
     }
 
-    std::string InterpreterContext::getPCNextRank() const
+    std::string_view InterpreterContext::getPCNextRank() const
     {
-        MWBase::World *world = MWBase::Environment::get().getWorld();
+        MWBase::World* world = MWBase::Environment::get().getWorld();
         MWWorld::Ptr player = world->getPlayerPtr();
 
-        std::string factionId = getReferenceImp().getClass().getPrimaryFaction(getReferenceImp());
+        const ESM::RefId& factionId = getReferenceImp().getClass().getPrimaryFaction(getReferenceImp());
         if (factionId.empty())
             throw std::runtime_error("getPCNextRank(): NPC is not in a faction");
 
-        const std::map<std::string, int>& ranks = player.getClass().getNpcStats (player).getFactionRanks();
-        std::map<std::string, int>::const_iterator it = ranks.find(Misc::StringUtils::lowerCase(factionId));
+        const auto& ranks = player.getClass().getNpcStats(player).getFactionRanks();
+        auto it = ranks.find(factionId);
         int rank = -1;
         if (it != ranks.end())
             rank = it->second;
@@ -602,72 +639,74 @@ namespace MWScript
         if (rank > 9)
             rank = 9;
 
-        const MWWorld::ESMStore &store = world->getStore();
-        const ESM::Faction *faction = store.get<ESM::Faction>().find(factionId);
+        const MWWorld::ESMStore& store = world->getStore();
+        const ESM::Faction* faction = store.get<ESM::Faction>().find(factionId);
 
-        if(rank < 0)
-            return "";
+        if (rank < 0)
+            return {};
 
         return faction->mRanks[rank];
     }
 
     int InterpreterContext::getPCBounty() const
     {
-        MWBase::World *world = MWBase::Environment::get().getWorld();
+        MWBase::World* world = MWBase::Environment::get().getWorld();
         MWWorld::Ptr player = world->getPlayerPtr();
-        return player.getClass().getNpcStats (player).getBounty();
+        return player.getClass().getNpcStats(player).getBounty();
     }
 
-    std::string InterpreterContext::getCurrentCellName() const
+    std::string_view InterpreterContext::getCurrentCellName() const
     {
-        return  MWBase::Environment::get().getWorld()->getCellName();
+        return MWBase::Environment::get().getWorld()->getCellName();
     }
 
-    void InterpreterContext::executeActivation(MWWorld::Ptr ptr, MWWorld::Ptr actor)
+    void InterpreterContext::executeActivation(const MWWorld::Ptr& ptr, const MWWorld::Ptr& actor)
     {
-        std::shared_ptr<MWWorld::Action> action = (ptr.getClass().activate(ptr, actor));
-        action->execute (actor);
+        // MWScripted activations don't go through Lua because 1-frame delay can brake mwscripts.
+#if 0
+        MWBase::Environment::get().getLuaManager()->objectActivated(ptr, actor);
+
+        // TODO: Enable this branch after implementing one of the options:
+        // 1) Pause this mwscript (or maybe all mwscripts) for one frame and continue from the same
+        //     command when the activation is processed by Lua script.
+        // 2) Force Lua scripts to handle a zero-length extra frame right now, so when control
+        //     returns to the mwscript, the activation is already processed.
+#else
+        std::unique_ptr<MWWorld::Action> action = (ptr.getClass().activate(ptr, actor));
+        action->execute(actor);
         if (action->getTarget() != MWWorld::Ptr() && action->getTarget() != ptr)
         {
             updatePtr(ptr, action->getTarget());
         }
+#endif
     }
 
-    int InterpreterContext::getMemberShort (const std::string& id, const std::string& name,
-        bool global) const
+    int InterpreterContext::getMemberShort(ESM::RefId id, std::string_view name, bool global) const
     {
-        std::string scriptId (id);
+        const Locals& locals = getMemberLocals(global, id);
 
-        const Locals& locals = getMemberLocals (scriptId, global);
-
-        return locals.mShorts[findLocalVariableIndex (scriptId, name, 's')];
+        return locals.mShorts[findLocalVariableIndex(id, name, 's')];
     }
 
-    int InterpreterContext::getMemberLong (const std::string& id, const std::string& name,
-        bool global) const
+    int InterpreterContext::getMemberLong(ESM::RefId id, std::string_view name, bool global) const
     {
-        std::string scriptId (id);
+        const Locals& locals = getMemberLocals(global, id);
 
-        const Locals& locals = getMemberLocals (scriptId, global);
-
-        return locals.mLongs[findLocalVariableIndex (scriptId, name, 'l')];
+        return locals.mLongs[findLocalVariableIndex(id, name, 'l')];
     }
 
-    float InterpreterContext::getMemberFloat (const std::string& id, const std::string& name,
-        bool global) const
+    float InterpreterContext::getMemberFloat(ESM::RefId id, std::string_view name, bool global) const
     {
-        std::string scriptId (id);
+        const Locals& locals = getMemberLocals(global, id);
 
-        const Locals& locals = getMemberLocals (scriptId, global);
-
-        return locals.mFloats[findLocalVariableIndex (scriptId, name, 'f')];
+        return locals.mFloats[findLocalVariableIndex(id, name, 'f')];
     }
 
-    void InterpreterContext::setMemberShort (const std::string& id, const std::string& name,
-        int value, bool global)
+    void InterpreterContext::setMemberShort(ESM::RefId id, std::string_view name, int value, bool global)
     {
-        std::string scriptId (id);
+        Locals& locals = getMemberLocals(global, id);
 
+<<<<<<< HEAD
         Locals& locals = getMemberLocals (scriptId, global);
 
         /*
@@ -700,29 +739,28 @@ namespace MWScript
         /*
             End of tes3mp addition
         */
+=======
+        locals.mShorts[findLocalVariableIndex(id, name, 's')] = value;
+>>>>>>> 8a33edd64a6f0e9fe3962c88618e8b27aad1b7a7
     }
 
-    void InterpreterContext::setMemberLong (const std::string& id, const std::string& name, int value, bool global)
+    void InterpreterContext::setMemberLong(ESM::RefId id, std::string_view name, int value, bool global)
     {
-        std::string scriptId (id);
+        Locals& locals = getMemberLocals(global, id);
 
-        Locals& locals = getMemberLocals (scriptId, global);
-
-        locals.mLongs[findLocalVariableIndex (scriptId, name, 'l')] = value;
+        locals.mLongs[findLocalVariableIndex(id, name, 'l')] = value;
     }
 
-    void InterpreterContext::setMemberFloat (const std::string& id, const std::string& name, float value, bool global)
+    void InterpreterContext::setMemberFloat(ESM::RefId id, std::string_view name, float value, bool global)
     {
-        std::string scriptId (id);
+        Locals& locals = getMemberLocals(global, id);
 
-        Locals& locals = getMemberLocals (scriptId, global);
-
-        locals.mFloats[findLocalVariableIndex (scriptId, name, 'f')] = value;
+        locals.mFloats[findLocalVariableIndex(id, name, 'f')] = value;
     }
 
-    MWWorld::Ptr InterpreterContext::getReference(bool required)
+    MWWorld::Ptr InterpreterContext::getReference(bool required) const
     {
-        return getReferenceImp ("", true, required);
+        return getReferenceImp({}, true, required);
     }
 
     void InterpreterContext::updatePtr(const MWWorld::Ptr& base, const MWWorld::Ptr& updated)

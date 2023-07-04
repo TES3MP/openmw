@@ -1,51 +1,48 @@
 #include "coloreditor.hpp"
 
-#include <QApplication>
-#include <QColorDialog>
-#include <QDesktopWidget>
+#include <QGuiApplication>
 #include <QPainter>
-#include <QShowEvent>
 #include <QScreen>
 
 #include "colorpickerpopup.hpp"
 
-CSVWidget::ColorEditor::ColorEditor(const QColor &color, QWidget *parent, const bool popupOnStart)
+class QShowEvent;
+
+CSVWidget::ColorEditor::ColorEditor(const QColor& color, QWidget* parent, const bool popupOnStart)
     : ColorEditor(parent, popupOnStart)
 {
     setColor(color);
 }
 
-CSVWidget::ColorEditor::ColorEditor(const int colorInt, QWidget *parent, const bool popupOnStart)
+CSVWidget::ColorEditor::ColorEditor(const int colorInt, QWidget* parent, const bool popupOnStart)
     : ColorEditor(parent, popupOnStart)
 {
     setColor(colorInt);
 }
 
-CSVWidget::ColorEditor::ColorEditor(QWidget *parent, const bool popupOnStart)
-    : QPushButton(parent),
-      mColorPicker(new ColorPickerPopup(this)),
-      mPopupOnStart(popupOnStart)
+CSVWidget::ColorEditor::ColorEditor(QWidget* parent, const bool popupOnStart)
+    : QPushButton(parent)
+    , mColorPicker(new ColorPickerPopup(this))
+    , mPopupOnStart(popupOnStart)
 {
-    connect(this, SIGNAL(clicked()), this, SLOT(showPicker()));
-    connect(mColorPicker, SIGNAL(colorChanged(const QColor &)), this, SLOT(pickerColorChanged(const QColor &)));
+    connect(this, &ColorEditor::clicked, this, &ColorEditor::showPicker);
+    connect(mColorPicker, &ColorPickerPopup::colorChanged, this, &ColorEditor::pickerColorChanged);
 }
 
-void CSVWidget::ColorEditor::paintEvent(QPaintEvent *event)
+void CSVWidget::ColorEditor::paintEvent(QPaintEvent* event)
 {
     QPushButton::paintEvent(event);
 
     QRect buttonRect = rect();
     QRect coloredRect(buttonRect.x() + qRound(buttonRect.width() / 4.0),
-                      buttonRect.y() + qRound(buttonRect.height() / 4.0),
-                      buttonRect.width() / 2,
-                      buttonRect.height() / 2);
+        buttonRect.y() + qRound(buttonRect.height() / 4.0), buttonRect.width() / 2, buttonRect.height() / 2);
     QPainter painter(this);
     painter.fillRect(coloredRect, mColor);
     painter.setPen(Qt::black);
     painter.drawRect(coloredRect);
 }
 
-void CSVWidget::ColorEditor::showEvent(QShowEvent *event)
+void CSVWidget::ColorEditor::showEvent(QShowEvent* event)
 {
     QPushButton::showEvent(event);
     if (isVisible() && mPopupOnStart)
@@ -66,7 +63,7 @@ int CSVWidget::ColorEditor::colorInt() const
     return (mColor.blue() << 16) | (mColor.green() << 8) | (mColor.red());
 }
 
-void CSVWidget::ColorEditor::setColor(const QColor &color)
+void CSVWidget::ColorEditor::setColor(const QColor& color)
 {
     mColor = color;
     update();
@@ -86,7 +83,7 @@ void CSVWidget::ColorEditor::showPicker()
     emit pickingFinished();
 }
 
-void CSVWidget::ColorEditor::pickerColorChanged(const QColor &color)
+void CSVWidget::ColorEditor::pickerColorChanged(const QColor& color)
 {
     mColor = color;
     update();

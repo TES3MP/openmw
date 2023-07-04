@@ -137,17 +137,6 @@ Normally environment map reflections aren't affected by lighting, which makes en
 Morrowind Code Patch includes an option to remedy that by doing environment-mapping before applying lighting, this is the equivalent of that option.
 Affected objects will use shaders.
 
-radial fog
-----------
-
-:Type:		boolean
-:Range:		True/False
-:Default:	False
-
-By default, the fog becomes thicker proportionally to your distance from the clipping plane set at the clipping distance, which causes distortion at the edges of the screen.
-This setting makes the fog use the actual eye point distance (or so called Euclidean distance) to calculate the fog, which makes the fog look less artificial, especially if you have a wide FOV.
-Note that the rendering will act as if you have 'force shaders' option enabled with this on, which means that shaders will be used to render all objects and the terrain.
-
 lighting method
 ---------------
 
@@ -161,7 +150,7 @@ Sets the internal handling of light sources.
 pipeline compatible lighting.
 
 'shaders compatibility' removes the light limit controllable through :ref:`max
-lights` and follows a modifed attenuation formula which can drastically reduce
+lights` and follows a modified attenuation formula which can drastically reduce
 light popping and seams. This mode also enables lighting on groundcover and a
 configurable light fade. It is recommended to use this with older hardware and a
 light limit closer to 8. Because of its wide range of compatibility it is set as
@@ -241,7 +230,7 @@ lighting` is on.
 This setting has no effect if :ref:`lighting method` is 'legacy'.
 
 minimum interior brightness
-------------------------
+---------------------------
 
 :Type:		float
 :Range:		0.0-1.0
@@ -260,7 +249,7 @@ aforementioned changes in visuals.
 This setting has no effect if :ref:`lighting method` is 'legacy'.
 
 antialias alpha test
----------------------------------------
+--------------------
 
 :Type:		boolean
 :Range:		True/False
@@ -269,3 +258,47 @@ antialias alpha test
 Convert the alpha test (cutout/punchthrough alpha) to alpha-to-coverage when :ref:`antialiasing` is on.
 This allows MSAA to work with alpha-tested meshes, producing better-looking edges without pixelation.
 When MSAA is off, this setting will have no visible effect, but might have a performance cost.
+
+
+adjust coverage for alpha test
+------------------------------
+
+:Type:		boolean
+:Range:		True/False
+:Default:	True
+
+Attempt to simulate coverage-preserving mipmaps in textures created without them which are used for alpha testing anyway.
+This will somewhat mitigate these objects appearing to shrink as they get further from the camera, but isn't perfect.
+Better results can be achieved by generating more appropriate mipmaps in the first place, but if this workaround is used with such textures, affected objects will appear to grow as they get further from the camera.
+It is recommended that mod authors specify how this setting should be set, and mod users follow their advice.
+
+soft particles
+--------------
+
+:Type:		boolean
+:Range:		True/False
+:Default:	False
+
+Enables soft particles for particle effects. This technique softens the
+intersection between individual particles and other opaque geometry by blending
+between them. Note, this relies on overriding specific properties of particle
+systems that potentially differ from the source content, this setting may change
+the look of some particle systems.
+
+Note that the rendering will act as if you have 'force shaders' option enabled.
+This means that shaders will be used to render all objects and the terrain.
+
+weather particle occlusion
+--------------------------
+
+:Type:		boolean
+:Range:		True/False
+:Default:	False
+
+Enables particle occlusion for rain and snow particle effects.
+When enabled, rain and snow will not clip through ceilings and overhangs.
+Currently this relies on an additional render pass, which may lead to a performance hit.
+
+.. warning::
+    This is an experimental feature that may cause visual oddities, especially when using default rain settings.
+    It is recommended to at least double the rain diameter through `openmw.cfg`.`

@@ -1,21 +1,22 @@
 #ifndef GAME_MWCLASS_ITEMLEVLIST_H
 #define GAME_MWCLASS_ITEMLEVLIST_H
 
-#include "../mwworld/class.hpp"
+#include "../mwworld/registeredclass.hpp"
 
 namespace MWClass
 {
-    class ItemLevList : public MWWorld::Class
+    class ItemLevList : public MWWorld::RegisteredClass<ItemLevList>
     {
-        public:
+        friend MWWorld::RegisteredClass<ItemLevList>;
 
-            std::string getName (const MWWorld::ConstPtr& ptr) const override;
-            ///< \return name or ID; can return an empty string.
+        ItemLevList();
 
-            bool hasToolTip (const MWWorld::ConstPtr& ptr) const override;
-            ///< @return true if this object has a tooltip when focused (default implementation: true)
+    public:
+        std::string_view getName(const MWWorld::ConstPtr& ptr) const override;
+        ///< \return name or ID; can return an empty string.
 
-            static void registerSelf();
+        bool hasToolTip(const MWWorld::ConstPtr& ptr) const override;
+        ///< @return true if this object has a tooltip when focused (default implementation: true)
     };
 }
 

@@ -6,12 +6,12 @@ namespace DetourNavigator
     enum class Status
     {
         Success,
+        PartialPath,
         NavMeshNotFound,
         StartPolygonNotFound,
         EndPolygonNotFound,
         MoveAlongSurfaceFailed,
         FindPathOverPolygonsFailed,
-        GetPolyHeightFailed,
         InitNavMeshQueryFailed,
     };
 
@@ -21,6 +21,8 @@ namespace DetourNavigator
         {
             case Status::Success:
                 return "success";
+            case Status::PartialPath:
+                return "partial path is found";
             case Status::NavMeshNotFound:
                 return "navmesh is not found";
             case Status::StartPolygonNotFound:
@@ -31,8 +33,6 @@ namespace DetourNavigator
                 return "move along surface on navmesh is failed";
             case Status::FindPathOverPolygonsFailed:
                 return "path over navmesh polygons is not found";
-            case Status::GetPolyHeightFailed:
-                return "failed to get polygon height";
             case Status::InitNavMeshQueryFailed:
                 return "failed to init navmesh query";
         }

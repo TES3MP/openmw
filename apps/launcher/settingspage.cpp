@@ -1,275 +1,446 @@
 #include "settingspage.hpp"
 
-#include <QFileDialog>
-#include <QMessageBox>
-#include <QDir>
+#include <array>
+#include <cmath>
+#include <string>
 
-#include <components/files/configurationmanager.hpp>
+#include <QCompleter>
+#include <QFileDialog>
+#include <QString>
 
 #include <components/config/gamesettings.hpp>
-#include <components/config/launchersettings.hpp>
 
-#include "utils/textinputdialog.hpp"
-#include "datafilespage.hpp"
+#include <components/settings/values.hpp>
 
-using namespace Process;
+#include "utils/openalutil.hpp"
 
-Launcher::SettingsPage::SettingsPage(Files::ConfigurationManager &cfg,
-                                     Config::GameSettings &gameSettings,
-                                     Config::LauncherSettings &launcherSettings, MainDialog *parent)
-    : QWidget(parent)
-    , mCfgMgr(cfg)
-    , mGameSettings(gameSettings)
-    , mLauncherSettings(launcherSettings)
-    , mMain(parent)
+namespace
 {
-    setupUi(this);
-
-    QStringList languages;
-    languages << tr("English")
-              << tr("French")
-              << tr("German")
-              << tr("Italian")
-              << tr("Polish")
-              << tr("Russian")
-              << tr("Spanish");
-
-    languageComboBox->addItems(languages);
-
-    mWizardInvoker = new ProcessInvoker();
-    mImporterInvoker = new ProcessInvoker();
-    resetProgressBar();
-
-    connect(mWizardInvoker->getProcess(), SIGNAL(started()),
-            this, SLOT(wizardStarted()));
-
-    connect(mWizardInvoker->getProcess(), SIGNAL(finished(int,QProcess::ExitStatus)),
-            this, SLOT(wizardFinished(int,QProcess::ExitStatus)));
-
-    connect(mImporterInvoker->getProcess(), SIGNAL(started()),
-            this, SLOT(importerStarted()));
-
-    connect(mImporterInvoker->getProcess(), SIGNAL(finished(int,QProcess::ExitStatus)),
-            this, SLOT(importerFinished(int,QProcess::ExitStatus)));
-
-    mProfileDialog = new TextInputDialog(tr("New Content List"), tr("Content List name:"), this);
-
-    connect(mProfileDialog->lineEdit(), SIGNAL(textChanged(QString)),
-            this, SLOT(updateOkButton(QString)));
-
-    // Detect Morrowind configuration files
-    QStringList iniPaths;
-
-    for (const QString &path : mGameSettings.getDataDirs())
+    void loadSettingBool(const Settings::SettingValue<bool>& value, QCheckBox& checkbox)
     {
-        QDir dir(path);
-        dir.setPath(dir.canonicalPath()); // Resolve symlinks
-
-        if (dir.exists(QString("Morrowind.ini")))
-            iniPaths.append(dir.absoluteFilePath(QString("Morrowind.ini")));
-        else
-        {
-            if (!dir.cdUp())
-                continue; // Cannot move from Data Files
-
-            if (dir.exists(QString("Morrowind.ini")))
-                iniPaths.append(dir.absoluteFilePath(QString("Morrowind.ini")));
-        }
+        checkbox.setCheckState(value ? Qt::Checked : Qt::Unchecked);
     }
 
-    if (!iniPaths.isEmpty()) {
-        settingsComboBox->addItems(iniPaths);
-        importerButton->setEnabled(true);
-    } else {
-        importerButton->setEnabled(false);
+    void saveSettingBool(const QCheckBox& checkbox, Settings::SettingValue<bool>& value)
+    {
+        value.set(checkbox.checkState() == Qt::Checked);
+    }
+
+    void loadSettingInt(const Settings::SettingValue<int>& value, QComboBox& comboBox)
+    {
+        comboBox.setCurrentIndex(value);
+    }
+
+    void loadSettingInt(const Settings::SettingValue<DetourNavigator::CollisionShapeType>& value, QComboBox& comboBox)
+    {
+        comboBox.setCurrentIndex(static_cast<int>(value.get()));
+    }
+
+    void saveSettingInt(const QComboBox& comboBox, Settings::SettingValue<int>& value)
+    {
+        value.set(comboBox.currentIndex());
+    }
+
+    void saveSettingInt(const QComboBox& comboBox, Settings::SettingValue<DetourNavigator::CollisionShapeType>& value)
+    {
+        value.set(static_cast<DetourNavigator::CollisionShapeType>(comboBox.currentIndex()));
+    }
+
+    void loadSettingInt(const Settings::SettingValue<int>& value, QSpinBox& spinBox)
+    {
+        spinBox.setValue(value);
+    }
+
+    void saveSettingInt(const QSpinBox& spinBox, Settings::SettingValue<int>& value)
+    {
+        value.set(spinBox.value());
+    }
+}
+
+Launcher::SettingsPage::SettingsPage(Config::GameSettings& gameSettings, QWidget* parent)
+    : QWidget(parent)
+    , mGameSettings(gameSettings)
+{
+    setObjectName("SettingsPage");
+    setupUi(this);
+
+    for (const std::string& name : Launcher::enumerateOpenALDevices())
+    {
+        audioDeviceSelectorComboBox->addItem(QString::fromStdString(name), QString::fromStdString(name));
+    }
+    for (const std::string& name : Launcher::enumerateOpenALDevicesHrtf())
+    {
+        hrtfProfileSelectorComboBox->addItem(QString::fromStdString(name), QString::fromStdString(name));
     }
 
     loadSettings();
+
+    mCellNameCompleter.setModel(&mCellNameCompleterModel);
+    startDefaultCharacterAtField->setCompleter(&mCellNameCompleter);
 }
 
-Launcher::SettingsPage::~SettingsPage()
+void Launcher::SettingsPage::loadCellsForAutocomplete(QStringList cellNames)
 {
-    delete mWizardInvoker;
-    delete mImporterInvoker;
+    // Update the list of suggestions for the "Start default character at" field
+    mCellNameCompleterModel.setStringList(cellNames);
+    mCellNameCompleter.setCompletionMode(QCompleter::PopupCompletion);
+    mCellNameCompleter.setCaseSensitivity(Qt::CaseSensitivity::CaseInsensitive);
 }
 
-void Launcher::SettingsPage::on_wizardButton_clicked()
+void Launcher::SettingsPage::on_skipMenuCheckBox_stateChanged(int state)
 {
-    mMain->writeSettings();
-
-    if (!mWizardInvoker->startProcess(QLatin1String("openmw-wizard"), false))
-        return;
+    startDefaultCharacterAtLabel->setEnabled(state == Qt::Checked);
+    startDefaultCharacterAtField->setEnabled(state == Qt::Checked);
 }
 
-void Launcher::SettingsPage::on_importerButton_clicked()
+void Launcher::SettingsPage::on_runScriptAfterStartupBrowseButton_clicked()
 {
-    mMain->writeSettings();
+    QString scriptFile = QFileDialog::getOpenFileName(
+        this, QObject::tr("Select script file"), QDir::currentPath(), QString(tr("Text file (*.txt)")));
 
-    // Create the file if it doesn't already exist, else the importer will fail
-    QString path(QString::fromUtf8(mCfgMgr.getUserConfigPath().string().c_str()));
-    path.append(QLatin1String("openmw.cfg"));
-    QFile file(path);
-
-    if (!file.exists()) {
-        if (!file.open(QIODevice::ReadWrite)) {
-            // File cannot be created
-            QMessageBox msgBox;
-            msgBox.setWindowTitle(tr("Error writing OpenMW configuration file"));
-            msgBox.setIcon(QMessageBox::Critical);
-            msgBox.setStandardButtons(QMessageBox::Ok);
-            msgBox.setText(tr("<html><head/><body><p><b>Could not open or create %1 for writing </b></p> \
-                              <p>Please make sure you have the right permissions \
-                              and try again.</p></body></html>").arg(file.fileName()));
-            msgBox.exec();
-            return;
-        }
-
-        file.close();
-    }
-
-    // Construct the arguments to run the importer
-    QStringList arguments;
-
-    if (addonsCheckBox->isChecked())
-        arguments.append(QString("--game-files"));
-
-    arguments.append(QString("--encoding"));
-    arguments.append(mGameSettings.value(QString("encoding"), QString("win1252")));
-    arguments.append(QString("--ini"));
-    arguments.append(settingsComboBox->currentText());
-    arguments.append(QString("--cfg"));
-    arguments.append(path);
-
-    qDebug() << "arguments " << arguments;
-
-    // start the progress bar as a "bouncing ball"
-    progressBar->setMaximum(0);
-    progressBar->setValue(0);
-    if (!mImporterInvoker->startProcess(QLatin1String("openmw-iniimporter"), arguments, false))
-    {
-        resetProgressBar();
-    }
-}
-
-void Launcher::SettingsPage::on_browseButton_clicked()
-{
-    QString iniFile = QFileDialog::getOpenFileName(
-                this,
-                QObject::tr("Select configuration file"),
-                QDir::currentPath(),
-                QString(tr("Morrowind configuration file (*.ini)")));
-
-
-    if (iniFile.isEmpty())
+    if (scriptFile.isEmpty())
         return;
 
-    QFileInfo info(iniFile);
+    QFileInfo info(scriptFile);
 
     if (!info.exists() || !info.isReadable())
         return;
 
     const QString path(QDir::toNativeSeparators(info.absoluteFilePath()));
-
-    if (settingsComboBox->findText(path) == -1) {
-        settingsComboBox->addItem(path);
-        settingsComboBox->setCurrentIndex(settingsComboBox->findText(path));
-        importerButton->setEnabled(true);
-    }
+    runScriptAfterStartupField->setText(path);
 }
 
-void Launcher::SettingsPage::wizardStarted()
+namespace
 {
-    mMain->hide(); // Hide the launcher
+    constexpr double CellSizeInUnits = 8192;
 
-    wizardButton->setEnabled(false);
-}
-
-void Launcher::SettingsPage::wizardFinished(int exitCode, QProcess::ExitStatus exitStatus)
-{
-    if (exitCode != 0 || exitStatus == QProcess::CrashExit)
-        return qApp->quit();
-
-    mMain->reloadSettings();
-    wizardButton->setEnabled(true);
-
-    mMain->show(); // Show the launcher again
-}
-
-void Launcher::SettingsPage::importerStarted()
-{
-    importerButton->setEnabled(false);
-}
-
-void Launcher::SettingsPage::importerFinished(int exitCode, QProcess::ExitStatus exitStatus)
-{
-    if (exitCode != 0 || exitStatus == QProcess::CrashExit)
+    double convertToCells(double unitRadius)
     {
-        resetProgressBar();
-
-        QMessageBox msgBox;
-        msgBox.setWindowTitle(tr("Importer finished"));
-        msgBox.setStandardButtons(QMessageBox::Ok);
-        msgBox.setIcon(QMessageBox::Warning);
-        msgBox.setText(tr("Failed to import settings from INI file."));
-        msgBox.exec();
+        return unitRadius / CellSizeInUnits;
     }
-    else
+
+    int convertToUnits(double CellGridRadius)
     {
-        // indicate progress finished
-        progressBar->setMaximum(1);
-        progressBar->setValue(1);
-
-        // Importer may have changed settings, so refresh
-        mMain->reloadSettings();
-    }
-
-    importerButton->setEnabled(true);
-}
-
-void Launcher::SettingsPage::resetProgressBar()
-{
-    // set progress bar to 0 %
-    progressBar->reset();
-}
-
-void Launcher::SettingsPage::updateOkButton(const QString &text)
-{
-    // We do this here because we need to access the profiles
-    if (text.isEmpty()) {
-         mProfileDialog->setOkButtonEnabled(false);
-         return;
-    }
-
-    const QStringList profiles(mLauncherSettings.getContentLists());
-
-    (profiles.contains(text))
-            ? mProfileDialog->setOkButtonEnabled(false)
-            : mProfileDialog->setOkButtonEnabled(true);
-}
-
-void Launcher::SettingsPage::saveSettings()
-{
-    QString language(languageComboBox->currentText());
-
-    mLauncherSettings.setValue(QLatin1String("Settings/language"), language);
-
-    if (language == QLatin1String("Polish")) {
-        mGameSettings.setValue(QLatin1String("encoding"), QLatin1String("win1250"));
-    } else if (language == QLatin1String("Russian")) {
-        mGameSettings.setValue(QLatin1String("encoding"), QLatin1String("win1251"));
-    }  else {
-        mGameSettings.setValue(QLatin1String("encoding"), QLatin1String("win1252"));
+        return static_cast<int>(CellSizeInUnits * CellGridRadius);
     }
 }
 
 bool Launcher::SettingsPage::loadSettings()
 {
-    QString language(mLauncherSettings.value(QLatin1String("Settings/language")));
+    // Game mechanics
+    {
+        loadSettingBool(Settings::game().mCanLootDuringDeathAnimation, *canLootDuringDeathAnimationCheckBox);
+        loadSettingBool(Settings::game().mFollowersAttackOnSight, *followersAttackOnSightCheckBox);
+        loadSettingBool(Settings::game().mRebalanceSoulGemValues, *rebalanceSoulGemValuesCheckBox);
+        loadSettingBool(Settings::game().mEnchantedWeaponsAreMagical, *enchantedWeaponsMagicalCheckBox);
+        loadSettingBool(
+            Settings::game().mBarterDispositionChangeIsPermanent, *permanentBarterDispositionChangeCheckBox);
+        loadSettingBool(Settings::game().mClassicReflectedAbsorbSpellsBehavior, *classicReflectedAbsorbSpellsCheckBox);
+        loadSettingBool(Settings::game().mClassicCalmSpellsBehavior, *classicCalmSpellsCheckBox);
+        loadSettingBool(
+            Settings::game().mOnlyAppropriateAmmunitionBypassesResistance, *requireAppropriateAmmunitionCheckBox);
+        loadSettingBool(Settings::game().mUncappedDamageFatigue, *uncappedDamageFatigueCheckBox);
+        loadSettingBool(Settings::game().mNormaliseRaceSpeed, *normaliseRaceSpeedCheckBox);
+        loadSettingBool(Settings::game().mSwimUpwardCorrection, *swimUpwardCorrectionCheckBox);
+        loadSettingBool(Settings::game().mNPCsAvoidCollisions, *avoidCollisionsCheckBox);
+        loadSettingInt(Settings::game().mStrengthInfluencesHandToHand, *unarmedFactorsStrengthComboBox);
+        loadSettingBool(Settings::game().mAlwaysAllowStealingFromKnockedOutActors, *stealingFromKnockedOutCheckBox);
+        loadSettingBool(Settings::navigator().mEnable, *enableNavigatorCheckBox);
+        loadSettingInt(Settings::physics().mAsyncNumThreads, *physicsThreadsSpinBox);
+        loadSettingBool(
+            Settings::game().mAllowActorsToFollowOverWaterSurface, *allowNPCToFollowOverWaterSurfaceCheckBox);
+        loadSettingBool(
+            Settings::game().mUnarmedCreatureAttacksDamageArmor, *unarmedCreatureAttacksDamageArmorCheckBox);
+        loadSettingInt(Settings::game().mActorCollisionShapeType, *actorCollisonShapeTypeComboBox);
+    }
 
-    int index = languageComboBox->findText(language);
+    // Visuals
+    {
+        loadSettingBool(Settings::shaders().mAutoUseObjectNormalMaps, *autoUseObjectNormalMapsCheckBox);
+        loadSettingBool(Settings::shaders().mAutoUseObjectSpecularMaps, *autoUseObjectSpecularMapsCheckBox);
+        loadSettingBool(Settings::shaders().mAutoUseTerrainNormalMaps, *autoUseTerrainNormalMapsCheckBox);
+        loadSettingBool(Settings::shaders().mAutoUseTerrainSpecularMaps, *autoUseTerrainSpecularMapsCheckBox);
+        loadSettingBool(Settings::shaders().mApplyLightingToEnvironmentMaps, *bumpMapLocalLightingCheckBox);
+        loadSettingBool(Settings::shaders().mSoftParticles, *softParticlesCheckBox);
+        loadSettingBool(Settings::shaders().mAntialiasAlphaTest, *antialiasAlphaTestCheckBox);
+        if (Settings::shaders().mAntialiasAlphaTest == 0)
+            antialiasAlphaTestCheckBox->setCheckState(Qt::Unchecked);
+        loadSettingBool(Settings::shaders().mAdjustCoverageForAlphaTest, *adjustCoverageForAlphaTestCheckBox);
+        loadSettingBool(Settings::shaders().mWeatherParticleOcclusion, *weatherParticleOcclusionCheckBox);
+        loadSettingBool(Settings::game().mUseMagicItemAnimations, *magicItemAnimationsCheckBox);
+        connect(animSourcesCheckBox, &QCheckBox::toggled, this, &SettingsPage::slotAnimSourcesToggled);
+        loadSettingBool(Settings::game().mUseAdditionalAnimSources, *animSourcesCheckBox);
+        if (animSourcesCheckBox->checkState() != Qt::Unchecked)
+        {
+            loadSettingBool(Settings::game().mWeaponSheathing, *weaponSheathingCheckBox);
+            loadSettingBool(Settings::game().mShieldSheathing, *shieldSheathingCheckBox);
+        }
+        loadSettingBool(Settings::game().mTurnToMovementDirection, *turnToMovementDirectionCheckBox);
+        loadSettingBool(Settings::game().mSmoothMovement, *smoothMovementCheckBox);
 
-    if (index != -1)
-        languageComboBox->setCurrentIndex(index);
+        distantLandCheckBox->setCheckState(
+            Settings::terrain().mDistantTerrain && Settings::terrain().mObjectPaging ? Qt::Checked : Qt::Unchecked);
 
+        loadSettingBool(Settings::terrain().mObjectPagingActiveGrid, *activeGridObjectPagingCheckBox);
+        viewingDistanceComboBox->setValue(convertToCells(Settings::camera().mViewingDistance));
+        objectPagingMinSizeComboBox->setValue(Settings::terrain().mObjectPagingMinSize);
+
+        loadSettingBool(Settings::game().mDayNightSwitches, *nightDaySwitchesCheckBox);
+
+        connect(postprocessEnabledCheckBox, &QCheckBox::toggled, this, &SettingsPage::slotPostProcessToggled);
+        loadSettingBool(Settings::postProcessing().mEnabled, *postprocessEnabledCheckBox);
+        loadSettingBool(Settings::postProcessing().mTransparentPostpass, *postprocessTransparentPostpassCheckBox);
+        postprocessHDRTimeComboBox->setValue(Settings::postProcessing().mAutoExposureSpeed);
+
+        connect(skyBlendingCheckBox, &QCheckBox::toggled, this, &SettingsPage::slotSkyBlendingToggled);
+        loadSettingBool(Settings::fog().mRadialFog, *radialFogCheckBox);
+        loadSettingBool(Settings::fog().mExponentialFog, *exponentialFogCheckBox);
+        loadSettingBool(Settings::fog().mSkyBlending, *skyBlendingCheckBox);
+        skyBlendingStartComboBox->setValue(Settings::fog().mSkyBlendingStart);
+    }
+
+    // Audio
+    {
+        const std::string& selectedAudioDevice = Settings::sound().mDevice;
+        if (selectedAudioDevice.empty() == false)
+        {
+            int audioDeviceIndex = audioDeviceSelectorComboBox->findData(QString::fromStdString(selectedAudioDevice));
+            if (audioDeviceIndex != -1)
+            {
+                audioDeviceSelectorComboBox->setCurrentIndex(audioDeviceIndex);
+            }
+        }
+        const int hrtfEnabledIndex = Settings::sound().mHrtfEnable;
+        if (hrtfEnabledIndex >= -1 && hrtfEnabledIndex <= 1)
+        {
+            enableHRTFComboBox->setCurrentIndex(hrtfEnabledIndex + 1);
+        }
+        const std::string& selectedHRTFProfile = Settings::sound().mHrtf;
+        if (selectedHRTFProfile.empty() == false)
+        {
+            int hrtfProfileIndex = hrtfProfileSelectorComboBox->findData(QString::fromStdString(selectedHRTFProfile));
+            if (hrtfProfileIndex != -1)
+            {
+                hrtfProfileSelectorComboBox->setCurrentIndex(hrtfProfileIndex);
+            }
+        }
+    }
+
+    // Interface Changes
+    {
+        loadSettingBool(Settings::game().mShowEffectDuration, *showEffectDurationCheckBox);
+        loadSettingBool(Settings::game().mShowEnchantChance, *showEnchantChanceCheckBox);
+        loadSettingBool(Settings::game().mShowMeleeInfo, *showMeleeInfoCheckBox);
+        loadSettingBool(Settings::game().mShowProjectileDamage, *showProjectileDamageCheckBox);
+        loadSettingBool(Settings::gui().mColorTopicEnable, *changeDialogTopicsCheckBox);
+        showOwnedComboBox->setCurrentIndex(Settings::game().mShowOwned);
+        loadSettingBool(Settings::gui().mStretchMenuBackground, *stretchBackgroundCheckBox);
+        loadSettingBool(Settings::map().mAllowZooming, *useZoomOnMapCheckBox);
+        loadSettingBool(Settings::game().mGraphicHerbalism, *graphicHerbalismCheckBox);
+        scalingSpinBox->setValue(Settings::gui().mScalingFactor);
+        fontSizeSpinBox->setValue(Settings::gui().mFontSize);
+    }
+
+    // Bug fixes
+    {
+        loadSettingBool(Settings::game().mPreventMerchantEquipping, *preventMerchantEquippingCheckBox);
+        loadSettingBool(
+            Settings::game().mTrainersTrainingSkillsBasedOnBaseSkill, *trainersTrainingSkillsBasedOnBaseSkillCheckBox);
+    }
+
+    // Miscellaneous
+    {
+        // Saves
+        loadSettingBool(Settings::saves().mTimeplayed, *timePlayedCheckbox);
+        loadSettingInt(Settings::saves().mMaxQuicksaves, *maximumQuicksavesComboBox);
+
+        // Other Settings
+        QString screenshotFormatString = QString::fromStdString(Settings::general().mScreenshotFormat).toUpper();
+        if (screenshotFormatComboBox->findText(screenshotFormatString) == -1)
+            screenshotFormatComboBox->addItem(screenshotFormatString);
+        screenshotFormatComboBox->setCurrentIndex(screenshotFormatComboBox->findText(screenshotFormatString));
+
+        loadSettingBool(Settings::general().mNotifyOnSavedScreenshot, *notifyOnSavedScreenshotCheckBox);
+    }
+
+    // Testing
+    {
+        loadSettingBool(Settings::input().mGrabCursor, *grabCursorCheckBox);
+
+        bool skipMenu = mGameSettings.value("skip-menu").toInt() == 1;
+        if (skipMenu)
+        {
+            skipMenuCheckBox->setCheckState(Qt::Checked);
+        }
+        startDefaultCharacterAtLabel->setEnabled(skipMenu);
+        startDefaultCharacterAtField->setEnabled(skipMenu);
+
+        startDefaultCharacterAtField->setText(mGameSettings.value("start"));
+        runScriptAfterStartupField->setText(mGameSettings.value("script-run"));
+    }
     return true;
+}
+
+void Launcher::SettingsPage::saveSettings()
+{
+    // Game mechanics
+    {
+        saveSettingBool(*canLootDuringDeathAnimationCheckBox, Settings::game().mCanLootDuringDeathAnimation);
+        saveSettingBool(*followersAttackOnSightCheckBox, Settings::game().mFollowersAttackOnSight);
+        saveSettingBool(*rebalanceSoulGemValuesCheckBox, Settings::game().mRebalanceSoulGemValues);
+        saveSettingBool(*enchantedWeaponsMagicalCheckBox, Settings::game().mEnchantedWeaponsAreMagical);
+        saveSettingBool(
+            *permanentBarterDispositionChangeCheckBox, Settings::game().mBarterDispositionChangeIsPermanent);
+        saveSettingBool(*classicReflectedAbsorbSpellsCheckBox, Settings::game().mClassicReflectedAbsorbSpellsBehavior);
+        saveSettingBool(*classicCalmSpellsCheckBox, Settings::game().mClassicCalmSpellsBehavior);
+        saveSettingBool(
+            *requireAppropriateAmmunitionCheckBox, Settings::game().mOnlyAppropriateAmmunitionBypassesResistance);
+        saveSettingBool(*uncappedDamageFatigueCheckBox, Settings::game().mUncappedDamageFatigue);
+        saveSettingBool(*normaliseRaceSpeedCheckBox, Settings::game().mNormaliseRaceSpeed);
+        saveSettingBool(*swimUpwardCorrectionCheckBox, Settings::game().mSwimUpwardCorrection);
+        saveSettingBool(*avoidCollisionsCheckBox, Settings::game().mNPCsAvoidCollisions);
+        saveSettingInt(*unarmedFactorsStrengthComboBox, Settings::game().mStrengthInfluencesHandToHand);
+        saveSettingBool(*stealingFromKnockedOutCheckBox, Settings::game().mAlwaysAllowStealingFromKnockedOutActors);
+        saveSettingBool(*enableNavigatorCheckBox, Settings::navigator().mEnable);
+        saveSettingInt(*physicsThreadsSpinBox, Settings::physics().mAsyncNumThreads);
+        saveSettingBool(
+            *allowNPCToFollowOverWaterSurfaceCheckBox, Settings::game().mAllowActorsToFollowOverWaterSurface);
+        saveSettingBool(
+            *unarmedCreatureAttacksDamageArmorCheckBox, Settings::game().mUnarmedCreatureAttacksDamageArmor);
+        saveSettingInt(*actorCollisonShapeTypeComboBox, Settings::game().mActorCollisionShapeType);
+    }
+
+    // Visuals
+    {
+        saveSettingBool(*autoUseObjectNormalMapsCheckBox, Settings::shaders().mAutoUseObjectNormalMaps);
+        saveSettingBool(*autoUseObjectSpecularMapsCheckBox, Settings::shaders().mAutoUseObjectSpecularMaps);
+        saveSettingBool(*autoUseTerrainNormalMapsCheckBox, Settings::shaders().mAutoUseTerrainNormalMaps);
+        saveSettingBool(*autoUseTerrainSpecularMapsCheckBox, Settings::shaders().mAutoUseTerrainSpecularMaps);
+        saveSettingBool(*bumpMapLocalLightingCheckBox, Settings::shaders().mApplyLightingToEnvironmentMaps);
+        saveSettingBool(*radialFogCheckBox, Settings::fog().mRadialFog);
+        saveSettingBool(*softParticlesCheckBox, Settings::shaders().mSoftParticles);
+        saveSettingBool(*antialiasAlphaTestCheckBox, Settings::shaders().mAntialiasAlphaTest);
+        saveSettingBool(*adjustCoverageForAlphaTestCheckBox, Settings::shaders().mAdjustCoverageForAlphaTest);
+        saveSettingBool(*weatherParticleOcclusionCheckBox, Settings::shaders().mWeatherParticleOcclusion);
+        saveSettingBool(*magicItemAnimationsCheckBox, Settings::game().mUseMagicItemAnimations);
+        saveSettingBool(*animSourcesCheckBox, Settings::game().mUseAdditionalAnimSources);
+        saveSettingBool(*weaponSheathingCheckBox, Settings::game().mWeaponSheathing);
+        saveSettingBool(*shieldSheathingCheckBox, Settings::game().mShieldSheathing);
+        saveSettingBool(*turnToMovementDirectionCheckBox, Settings::game().mTurnToMovementDirection);
+        saveSettingBool(*smoothMovementCheckBox, Settings::game().mSmoothMovement);
+
+        const bool wantDistantLand = distantLandCheckBox->checkState() == Qt::Checked;
+        if (wantDistantLand != (Settings::terrain().mDistantTerrain && Settings::terrain().mObjectPaging))
+        {
+            Settings::terrain().mDistantTerrain.set(wantDistantLand);
+            Settings::terrain().mObjectPaging.set(wantDistantLand);
+        }
+
+        saveSettingBool(*activeGridObjectPagingCheckBox, Settings::terrain().mObjectPagingActiveGrid);
+        Settings::camera().mViewingDistance.set(convertToUnits(viewingDistanceComboBox->value()));
+        Settings::terrain().mObjectPagingMinSize.set(objectPagingMinSizeComboBox->value());
+        saveSettingBool(*nightDaySwitchesCheckBox, Settings::game().mDayNightSwitches);
+        saveSettingBool(*postprocessEnabledCheckBox, Settings::postProcessing().mEnabled);
+        saveSettingBool(*postprocessTransparentPostpassCheckBox, Settings::postProcessing().mTransparentPostpass);
+        Settings::postProcessing().mAutoExposureSpeed.set(postprocessHDRTimeComboBox->value());
+        saveSettingBool(*radialFogCheckBox, Settings::fog().mRadialFog);
+        saveSettingBool(*exponentialFogCheckBox, Settings::fog().mExponentialFog);
+        saveSettingBool(*skyBlendingCheckBox, Settings::fog().mSkyBlending);
+        Settings::fog().mSkyBlendingStart.set(skyBlendingStartComboBox->value());
+    }
+
+    // Audio
+    {
+        if (audioDeviceSelectorComboBox->currentIndex() != 0)
+            Settings::sound().mDevice.set(audioDeviceSelectorComboBox->currentText().toStdString());
+        else
+            Settings::sound().mDevice.set({});
+
+        Settings::sound().mHrtfEnable.set(enableHRTFComboBox->currentIndex() - 1);
+
+        if (hrtfProfileSelectorComboBox->currentIndex() != 0)
+            Settings::sound().mHrtf.set(hrtfProfileSelectorComboBox->currentText().toStdString());
+        else
+            Settings::sound().mHrtf.set({});
+    }
+
+    // Interface Changes
+    {
+        saveSettingBool(*showEffectDurationCheckBox, Settings::game().mShowEffectDuration);
+        saveSettingBool(*showEnchantChanceCheckBox, Settings::game().mShowEnchantChance);
+        saveSettingBool(*showMeleeInfoCheckBox, Settings::game().mShowMeleeInfo);
+        saveSettingBool(*showProjectileDamageCheckBox, Settings::game().mShowProjectileDamage);
+        saveSettingBool(*changeDialogTopicsCheckBox, Settings::gui().mColorTopicEnable);
+        saveSettingInt(*showOwnedComboBox, Settings::game().mShowOwned);
+        saveSettingBool(*stretchBackgroundCheckBox, Settings::gui().mStretchMenuBackground);
+        saveSettingBool(*useZoomOnMapCheckBox, Settings::map().mAllowZooming);
+        saveSettingBool(*graphicHerbalismCheckBox, Settings::game().mGraphicHerbalism);
+        Settings::gui().mScalingFactor.set(scalingSpinBox->value());
+        Settings::gui().mFontSize.set(fontSizeSpinBox->value());
+    }
+
+    // Bug fixes
+    {
+        saveSettingBool(*preventMerchantEquippingCheckBox, Settings::game().mPreventMerchantEquipping);
+        saveSettingBool(
+            *trainersTrainingSkillsBasedOnBaseSkillCheckBox, Settings::game().mTrainersTrainingSkillsBasedOnBaseSkill);
+    }
+
+    // Miscellaneous
+    {
+        // Saves Settings
+        saveSettingBool(*timePlayedCheckbox, Settings::saves().mTimeplayed);
+        saveSettingInt(*maximumQuicksavesComboBox, Settings::saves().mMaxQuicksaves);
+
+        // Other Settings
+        Settings::general().mScreenshotFormat.set(screenshotFormatComboBox->currentText().toLower().toStdString());
+        saveSettingBool(*notifyOnSavedScreenshotCheckBox, Settings::general().mNotifyOnSavedScreenshot);
+    }
+
+    // Testing
+    {
+        saveSettingBool(*grabCursorCheckBox, Settings::input().mGrabCursor);
+
+        int skipMenu = skipMenuCheckBox->checkState() == Qt::Checked;
+        if (skipMenu != mGameSettings.value("skip-menu").toInt())
+            mGameSettings.setValue("skip-menu", QString::number(skipMenu));
+
+        QString startCell = startDefaultCharacterAtField->text();
+        if (startCell != mGameSettings.value("start"))
+        {
+            mGameSettings.setValue("start", startCell);
+        }
+        QString scriptRun = runScriptAfterStartupField->text();
+        if (scriptRun != mGameSettings.value("script-run"))
+            mGameSettings.setValue("script-run", scriptRun);
+    }
+}
+
+void Launcher::SettingsPage::slotLoadedCellsChanged(QStringList cellNames)
+{
+    loadCellsForAutocomplete(cellNames);
+}
+
+void Launcher::SettingsPage::slotAnimSourcesToggled(bool checked)
+{
+    weaponSheathingCheckBox->setEnabled(checked);
+    shieldSheathingCheckBox->setEnabled(checked);
+    if (!checked)
+    {
+        weaponSheathingCheckBox->setCheckState(Qt::Unchecked);
+        shieldSheathingCheckBox->setCheckState(Qt::Unchecked);
+    }
+}
+
+void Launcher::SettingsPage::slotPostProcessToggled(bool checked)
+{
+    postprocessTransparentPostpassCheckBox->setEnabled(checked);
+    postprocessHDRTimeComboBox->setEnabled(checked);
+    postprocessHDRTimeLabel->setEnabled(checked);
+}
+
+void Launcher::SettingsPage::slotSkyBlendingToggled(bool checked)
+{
+    skyBlendingStartComboBox->setEnabled(checked);
+    skyBlendingStartLabel->setEnabled(checked);
 }

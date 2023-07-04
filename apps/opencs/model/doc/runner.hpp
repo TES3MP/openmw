@@ -1,86 +1,81 @@
 #ifndef CSM_DOC_RUNNER_H
 #define CSM_DOC_RUNNER_H
 
-#include <vector>
 #include <string>
-
-#include <boost/filesystem/path.hpp>
+#include <vector>
 
 #include <QObject>
 #include <QProcess>
 #include <QTextDocument>
 
-#include <components/esm/debugprofile.hpp>
+#include <components/esm3/debugprofile.hpp>
+
+#include <filesystem>
 
 class QTemporaryFile;
 
 namespace CSMDoc
 {
     class OperationHolder;
-    
+
     class Runner : public QObject
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            QProcess mProcess;
-            bool mRunning;
-            ESM::DebugProfile mProfile;
-            std::vector<std::string> mContentFiles;
-            std::string mStartupInstruction;
-            QTemporaryFile *mStartup;
-            QTextDocument mLog;
-            boost::filesystem::path mProjectPath;
+        QProcess mProcess;
+        bool mRunning;
+        ESM::DebugProfile mProfile;
+        std::vector<std::filesystem::path> mContentFiles;
+        std::string mStartupInstruction;
+        QTemporaryFile* mStartup;
+        QTextDocument mLog;
+        std::filesystem::path mProjectPath;
 
-        public:
+    public:
+        Runner(std::filesystem::path projectPath);
 
-            Runner (const boost::filesystem::path& projectPath);
+        ~Runner();
 
-            ~Runner();
+        /// \param delayed Flag as running but do not start the OpenMW process yet (the
+        /// process must be started by another call of start with delayed==false)
+        void start(bool delayed = false);
 
-            /// \param delayed Flag as running but do not start the OpenMW process yet (the
-            /// process must be started by another call of start with delayed==false)
-            void start (bool delayed = false);
+        void stop();
 
-            void stop();
+        /// \note Running state is entered when the start function is called. This
+        /// is not necessarily identical to the moment the child process is started.
+        bool isRunning() const;
 
-            /// \note Running state is entered when the start function is called. This
-            /// is not necessarily identical to the moment the child process is started.
-            bool isRunning() const;
+        void configure(const ESM::DebugProfile& profile, const std::vector<std::filesystem::path>& contentFiles,
+            const std::string& startupInstruction);
 
-            void configure (const ESM::DebugProfile& profile,
-                const std::vector<std::string>& contentFiles,
-                const std::string& startupInstruction);
+        QTextDocument* getLog();
 
-            QTextDocument *getLog();
+    signals:
 
-        signals:
+        void runStateChanged();
 
-            void runStateChanged();
+    private slots:
 
-        private slots:
+        void finished(int exitCode, QProcess::ExitStatus exitStatus);
 
-            void finished (int exitCode, QProcess::ExitStatus exitStatus);
-
-            void readyReadStandardOutput();
+        void readyReadStandardOutput();
     };
-
-    class Operation;
 
     /// \brief Watch for end of save operation and restart or stop runner
     class SaveWatcher : public QObject
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            Runner *mRunner;
+        Runner* mRunner;
 
-        public:
+    public:
+        /// *this attaches itself to runner
+        SaveWatcher(Runner* runner, OperationHolder* operation);
 
-            /// *this attaches itself to runner
-            SaveWatcher (Runner *runner, OperationHolder *operation);
+    private slots:
 
-        private slots:
-
-            void saveDone (int type, bool failed);
+        void saveDone(int type, bool failed);
     };
 }
 

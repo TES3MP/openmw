@@ -3,33 +3,39 @@
 
 #include "setting.hpp"
 
+#include <string>
+#include <utility>
+
 class QLineEdit;
+class QMutex;
+class QObject;
+class QWidget;
 
 namespace CSMPrefs
 {
+    class Category;
     class StringSetting : public Setting
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            std::string mTooltip;
-            std::string mDefault;
-            QLineEdit* mWidget;
+        std::string mTooltip;
+        std::string mDefault;
+        QLineEdit* mWidget;
 
-        public:
+    public:
+        StringSetting(
+            Category* parent, QMutex* mutex, const std::string& key, const std::string& label, std::string default_);
 
-            StringSetting (Category *parent, Settings::Manager *values,
-                QMutex *mutex, const std::string& key, const std::string& label, std::string default_);
+        StringSetting& setTooltip(const std::string& tooltip);
 
-            StringSetting& setTooltip (const std::string& tooltip);
+        /// Return label, input widget.
+        std::pair<QWidget*, QWidget*> makeWidgets(QWidget* parent) override;
 
-            /// Return label, input widget.
-            std::pair<QWidget *, QWidget *> makeWidgets (QWidget *parent) override;
+        void updateWidget() override;
 
-            void updateWidget() override;
+    private slots:
 
-        private slots:
-
-            void textChanged (const QString& text);
+        void textChanged(const QString& text);
     };
 }
 

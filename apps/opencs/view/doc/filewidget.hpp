@@ -1,45 +1,44 @@
 #ifndef CSV_DOC_FILEWIDGET_H
 #define CSV_DOC_FILEWIDGET_H
 
+#include <QString>
 #include <QWidget>
 
 #include <string>
 
 class QLabel;
-class QString;
 class QLineEdit;
 
 namespace CSVDoc
 {
     class FileWidget : public QWidget
     {
-            Q_OBJECT
+        Q_OBJECT
 
-            bool mAddon;
-            QLineEdit *mInput;
-            QLabel *mType;
+        bool mAddon;
+        QLineEdit* mInput;
+        QLabel* mType;
 
-            QString getExtension() const;
+        QString getExtension() const;
 
-        public:
+    public:
+        FileWidget(QWidget* parent = nullptr);
 
-            FileWidget (QWidget *parent = nullptr);
+        void setType(bool addon);
 
-            void setType (bool addon);
+        QString getName() const;
 
-            QString getName() const;
+        void extensionLabelIsVisible(bool visible);
 
-            void extensionLabelIsVisible(bool visible);
+        void setName(const std::string& text);
 
-            void setName (const std::string& text);
+    private slots:
 
-        private slots:
+        void textChanged(const QString& text);
 
-            void textChanged (const QString& text);
+    signals:
 
-        signals:
-
-            void nameChanged (const QString& file, bool addon);
+        void nameChanged(const QString& file, bool addon);
     };
 }
 

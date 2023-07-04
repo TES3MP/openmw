@@ -5,17 +5,21 @@
 #include <QLabel>
 #include <QMouseEvent>
 #include <QPushButton>
-#include <QWidget>
 #include <QString>
+#include <QWidget>
 
-#include "state.hpp"
+#include <components/settings/settings.hpp>
+
+#include <apps/opencs/model/prefs/category.hpp>
+#include <apps/opencs/model/prefs/setting.hpp>
+
 #include "shortcutmanager.hpp"
+#include "state.hpp"
 
 namespace CSMPrefs
 {
-    ShortcutSetting::ShortcutSetting(Category* parent, Settings::Manager* values, QMutex* mutex, const std::string& key,
-        const std::string& label)
-        : Setting(parent, values, mutex, key, label)
+    ShortcutSetting::ShortcutSetting(Category* parent, QMutex* mutex, const std::string& key, const std::string& label)
+        : Setting(parent, mutex, key, label)
         , mButton(nullptr)
         , mEditorActive(false)
         , mEditorPos(0)
@@ -44,7 +48,7 @@ namespace CSMPrefs
 
         mButton = widget;
 
-        connect(widget, SIGNAL(toggled(bool)), this, SLOT(buttonToggled(bool)));
+        connect(widget, &QPushButton::toggled, this, &ShortcutSetting::buttonToggled);
 
         return std::make_pair(label, widget);
     }
@@ -53,7 +57,7 @@ namespace CSMPrefs
     {
         if (mButton)
         {
-            std::string shortcut = getValues().getString(getKey(), getParent()->getKey());
+            const std::string& shortcut = Settings::Manager::getString(getKey(), getParent()->getKey());
 
             QKeySequence sequence;
             State::get().getShortcutManager().convertFromString(shortcut, sequence);
@@ -113,14 +117,7 @@ namespace CSMPrefs
     bool ShortcutSetting::handleEvent(QObject* target, int mod, int value, bool active)
     {
         // Modifiers are handled differently
-        const int Blacklist[] =
-        {
-            Qt::Key_Shift,
-            Qt::Key_Control,
-            Qt::Key_Meta,
-            Qt::Key_Alt,
-            Qt::Key_AltGr
-        };
+        const int Blacklist[] = { Qt::Key_Shift, Qt::Key_Control, Qt::Key_Meta, Qt::Key_Alt, Qt::Key_AltGr };
 
         const size_t BlacklistSize = sizeof(Blacklist) / sizeof(int);
 
@@ -179,7 +176,7 @@ namespace CSMPrefs
 
         {
             QMutexLocker lock(getMutex());
-            getValues().setString(getKey(), getParent()->getKey(), value);
+            Settings::Manager::setString(getKey(), getParent()->getKey(), value);
         }
 
         getParent()->getState()->update(*this);

@@ -3,6 +3,8 @@
 
 #include "ui_intropage.h"
 
+#include <QWizard>
+
 namespace Wizard
 {
     class MainWizard;
@@ -11,12 +13,12 @@ namespace Wizard
     {
         Q_OBJECT
     public:
-        IntroPage(QWidget *parent);
+        IntroPage(QWidget* parent);
 
         int nextId() const override;
 
     private:
-        MainWizard *mWizard;
+        MainWizard* mWizard;
     };
 
 }

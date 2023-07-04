@@ -1,14 +1,15 @@
 #include "shortcut.hpp"
 
 #include <cassert>
+#include <exception>
 
 #include <QAction>
 #include <QWidget>
 
 #include <components/debug/debuglog.hpp>
 
-#include "state.hpp"
 #include "shortcutmanager.hpp"
+#include "state.hpp"
 
 namespace CSMPrefs
 {
@@ -25,7 +26,7 @@ namespace CSMPrefs
         , mModifierStatus(false)
         , mAction(nullptr)
     {
-        assert (parent);
+        assert(parent);
 
         State::get().getShortcutManager().addShortcut(this);
         State::get().getShortcutManager().getSequence(name, mSequence);
@@ -44,7 +45,7 @@ namespace CSMPrefs
         , mModifierStatus(false)
         , mAction(nullptr)
     {
-        assert (parent);
+        assert(parent);
 
         State::get().getShortcutManager().addShortcut(this);
         State::get().getShortcutManager().getSequence(name, mSequence);
@@ -64,7 +65,7 @@ namespace CSMPrefs
         , mModifierStatus(false)
         , mAction(nullptr)
     {
-        assert (parent);
+        assert(parent);
 
         State::get().getShortcutManager().addShortcut(this);
         State::get().getShortcutManager().getSequence(name, mSequence);
@@ -77,7 +78,7 @@ namespace CSMPrefs
         {
             State::get().getShortcutManager().removeShortcut(this);
         }
-        catch(const std::exception& e)
+        catch (const std::exception& e)
         {
             Log(Debug::Error) << "Error in the destructor: " << e.what();
         }
@@ -176,8 +177,8 @@ namespace CSMPrefs
         {
             mAction->setText(mActionText);
 
-            disconnect(this, SIGNAL(activated()), mAction, SLOT(trigger()));
-            disconnect(mAction, SIGNAL(destroyed()), this, SLOT(actionDeleted()));
+            disconnect(this, qOverload<>(&Shortcut::activated), mAction, &QAction::trigger);
+            disconnect(mAction, &QAction::destroyed, this, &Shortcut::actionDeleted);
         }
 
         mAction = action;
@@ -187,8 +188,8 @@ namespace CSMPrefs
             mActionText = mAction->text();
             mAction->setText(mActionText + "\t" + State::get().getShortcutManager().convertToString(mSequence).data());
 
-            connect(this, SIGNAL(activated()), mAction, SLOT(trigger()));
-            connect(mAction, SIGNAL(destroyed()), this, SLOT(actionDeleted()));
+            connect(this, qOverload<>(&Shortcut::activated), mAction, &QAction::trigger);
+            connect(mAction, &QAction::destroyed, this, &Shortcut::actionDeleted);
         }
     }
 
