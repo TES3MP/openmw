@@ -46,6 +46,9 @@ jobs:
         shell: bash
         run: cmake --install .
 
+      - name: SAST-action
+        uses: IvanKuchin/SAST@latest
+
       - name: Create Artifact
         shell: bash
         run: sudo CI/make_package.sh
