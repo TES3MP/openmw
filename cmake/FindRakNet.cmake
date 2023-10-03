@@ -24,7 +24,7 @@ IF(RakNet_INCLUDES)
     SET(RakNet_FOUND TRUE)
 ENDIF(RakNet_INCLUDES)
 
-IF(RakNet_FOUND)
+IF(NOT RakNet_FOUND)
   IF(RakNet_FIND_REQUIRED)
     MESSAGE(STATUS "Could not find RakNet, building from local copy")
 
@@ -48,7 +48,7 @@ IF(RakNet_FOUND)
       message(FATAL_ERROR "The submodules were not downloaded! GIT_SUBMODULE was turned off or failed. Please update submodules and try again.")
     endif()
   ENDIF(RakNet_FIND_REQUIRED)
-ENDIF(RakNet_FOUND)
+ENDIF(NOT RakNet_FOUND)
 
 add_subdirectory(extern/raknet)
 
