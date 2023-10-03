@@ -52,7 +52,7 @@ ENDIF(NOT RakNet_FOUND)
 
 add_subdirectory(extern/raknet)
 
-SET(RakNet_INCLUDES ${RakNet_INCLUDES}/raknet)
+SET(RakNet_INCLUDES ${CMAKE_SOURCE_DIR}/extern/raknet/include/raknet)
   
 IF (CMAKE_CONFIGURATION_TYPES OR CMAKE_BUILD_TYPE)
    SET(RakNet_LIBRARY optimized ${RakNet_LIBRARY_RELEASE} debug ${RakNet_LIBRARY_DEBUG})
