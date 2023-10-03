@@ -37,7 +37,7 @@ jobs:
         run: make -j$(nproc)
 
       - name: Test
-        run: ./openmw_test_suite
+        run: ./build/openmw_test_suite
 
       - name: Install
         shell: bash
