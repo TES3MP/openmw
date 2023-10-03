@@ -48,16 +48,19 @@ LIBRARIES=( \
                        "libtinyxml.so" \
     )
 
-DEFAULTS=( \
+RESOURCES=( \
            "defaults.bin" \
                "openmw.cfg" \
                "gamecontrollerdb.txt" \
                "tes3mp-client-default.cfg" \
                "tes3mp-server-default.cfg" \
-               "tes3mp-credits.md" \
-               "tes3mp-changelog.md" \
-               "AUTHORS.md" \
-               "LICENSE" \
+    )
+
+ROOT=( \
+       "tes3mp-credits.md" \
+           "tes3mp-changelog.md" \
+           "AUTHORS.md" \
+           "LICENSE" \
     )
 
 mkdir tes3mp-build tes3mp-build/lib/ && mv resources/ tes3mp-build/ && cd tes3mp-build
@@ -67,8 +70,12 @@ for LIB in "${LIBRARIES[@]}"; do
     echo -ne "$LIB\033[0K\r"
 done
 
-for DEFAULT in "${DEFAULTS[@]}"; do
-    cp ../"$DEFAULT" .
+for RESOURCE in "${RESOURCES[@]}"; do
+    cp ../build/"$RESOURCE" .
+done
+
+for FILE in "${ROOT[@]}"; do
+    cp ../build/"$FILE" .
 done
 
 for BIN in "${PACKAGE_BINARIES[@]}"; do
