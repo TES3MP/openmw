@@ -6,43 +6,13 @@
 #  RakNet_INCLUDES - the RakNet include directory
 #  RakNet_LIBRARY - Link these to use RakNet
 
-FIND_LIBRARY (RakNet_LIBRARY_RELEASE NAMES RakNetLibStatic
-    PATHS
-    ENV LD_LIBRARY_PATH
-    ENV LIBRARY_PATH
-    /usr/lib64
-    /usr/lib
-    /usr/local/lib64
-    /usr/local/lib
-    /opt/local/lib
-    $ENV{RAKNET_ROOT}/lib
-    $ENV{RAKNET_ROOT}/build/lib/Release
-    ${RAKNET_ROOT}/build/lib/Release
-    )
-	
-FIND_LIBRARY (RakNet_LIBRARY_DEBUG NAMES RakNetLibStaticd
-    PATHS
-    ENV LD_LIBRARY_PATH
-    ENV LIBRARY_PATH
-    /usr/lib64
-    /usr/lib
-    /usr/local/lib64
-    /usr/local/lib
-    /opt/local/lib
-    $ENV{RAKNET_ROOT}/lib
-    $ENV{RAKNET_ROOT}/build/lib/Debug
-    ${RAKNET_ROOT}/build/lib/Debug
-    ${CMAKE_SOURCE_DIR}/extern/raknet/lib/
-    ${CMAKE_SOURCE_DIR}/extern/raknet/build/lib
-    ${CMAKE_SOURCE_DIR}/extern/raknet/Debug/lib/
-    ${CMAKE_SOURCE_DIR}/extern/raknet/build/Debug/lib/
-    )
-
-
-set(RakNet_LIBRARY_DEBUG ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStaticd.a)
-set(RakNet_LIBRARY_RELEASE ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStatic.a)
-
-	
+IF(Win32)
+  set(RakNet_LIBRARY_DEBUG ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStaticd.lib)
+  set(RakNet_LIBRARY_RELEASE ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStatic.lib)
+ELSE()
+  set(RakNet_LIBRARY_DEBUG ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStaticd.a)
+  set(RakNet_LIBRARY_RELEASE ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStatic.a)
+ENDIF(Win32)
 
 FIND_PATH (RakNet_INCLUDES raknet/RakPeer.h ${CMAKE_SOURCE_DIR}/extern/raknet/include)
  
