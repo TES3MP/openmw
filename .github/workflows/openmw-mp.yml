@@ -24,9 +24,6 @@ jobs:
       - name: Install Building Dependencies
         run: sudo CI/install_debian_deps.sh gcc openmw-deps openmw-deps-dynamic
 
-      - name: Build Raknet
-        run: sudo CI/build_raknet.sh
-
       - name: Prime ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
