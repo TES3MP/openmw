@@ -506,53 +506,54 @@ if (APPLE)
         SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
     endif()
 else (APPLE)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OpenMW_BINARY_DIR}")
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OpenMW_BINARY_DIR}")
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OpenMW_BINARY_DIR}/build")
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OpenMW_BINARY_DIR}/lib")
 endif (APPLE)
 
 # Other files
 
-configure_resource_file(${OpenMW_SOURCE_DIR}/files/tes3mp/tes3mp-client-default.cfg
-    "${OpenMW_BINARY_DIR}" "tes3mp-client-default.cfg")
+configure_resource_file(${OpenMW_SOURCE_DIR}/files/dreamweave/dreamweave-client-default.cfg
+    "${OpenMW_BINARY_DIR}/build" "tes3mp-client-default.cfg")
 
-configure_resource_file(${OpenMW_SOURCE_DIR}/files/tes3mp/tes3mp-server-default.cfg
-    "${OpenMW_BINARY_DIR}" "tes3mp-server-default.cfg")
+configure_resource_file(${OpenMW_SOURCE_DIR}/files/dreamweave/dreamweave-server-default.cfg
+    "${OpenMW_BINARY_DIR}/build" "tes3mp-server-default.cfg")
+>>>>>>> Stashed changes
 
 pack_resource_file(${OpenMW_SOURCE_DIR}/files/settings-default.cfg
-    "${OpenMW_BINARY_DIR}" "defaults.bin")
+    "${OpenMW_BINARY_DIR}/build" "defaults.bin")
 
 configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.appdata.xml
-    "${OpenMW_BINARY_DIR}" "openmw.appdata.xml")
+    "${OpenMW_BINARY_DIR}/build" "openmw.appdata.xml")
 
 if (NOT APPLE)
     configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.cfg.local
-        "${OpenMW_BINARY_DIR}" "openmw.cfg")
+        "${OpenMW_BINARY_DIR}/build" "openmw.cfg")
     configure_resource_file(${OpenMW_SOURCE_DIR}/files/openmw.cfg
-        "${OpenMW_BINARY_DIR}" "openmw.cfg.install")
+        "${OpenMW_BINARY_DIR}/build" "openmw.cfg.install")
 else ()
     configure_file(${OpenMW_SOURCE_DIR}/files/openmw.cfg
-        "${OpenMW_BINARY_DIR}/openmw.cfg")
+        "${OpenMW_BINARY_DIR}/build/openmw.cfg")
 endif ()
 
 pack_resource_file(${OpenMW_SOURCE_DIR}/files/openmw-cs.cfg
-    "${OpenMW_BINARY_DIR}" "defaults-cs.bin")
+    "${OpenMW_BINARY_DIR}/build" "defaults-cs.bin")
 
 # Needs the copy version because the configure version assumes the end of the file has been reached when a null character is reached and there are no CMake expressions to evaluate.
 copy_resource_file(${OpenMW_SOURCE_DIR}/files/opencs/defaultfilters
-    "${OpenMW_BINARY_DIR}" "resources/defaultfilters")
+    "${OpenMW_BINARY_DIR}/build" "resources/defaultfilters")
 
 configure_resource_file(${OpenMW_SOURCE_DIR}/files/gamecontrollerdb.txt
-    "${OpenMW_BINARY_DIR}" "gamecontrollerdb.txt")
+    "${OpenMW_BINARY_DIR}/build" "gamecontrollerdb.txt")
 
 if (NOT WIN32 AND NOT APPLE)
     configure_file(${OpenMW_SOURCE_DIR}/files/org.openmw.launcher.desktop
-        "${OpenMW_BINARY_DIR}/org.openmw.launcher.desktop")
+        "${OpenMW_BINARY_DIR}/build/org.openmw.launcher.desktop")
     configure_file(${OpenMW_SOURCE_DIR}/files/openmw.appdata.xml
-        "${OpenMW_BINARY_DIR}/openmw.appdata.xml")
+        "${OpenMW_BINARY_DIR}/build/openmw.appdata.xml")
     configure_file(${OpenMW_SOURCE_DIR}/files/tes3mp-browser.desktop
-	    "${OpenMW_BINARY_DIR}/tes3mp-browser.desktop")
+	    "${OpenMW_BINARY_DIR}/build/tes3mp-browser.desktop")
     configure_file(${OpenMW_SOURCE_DIR}/files/org.openmw.cs.desktop
-        "${OpenMW_BINARY_DIR}/org.openmw.cs.desktop")
+        "${OpenMW_BINARY_DIR}/build/org.openmw.cs.desktop")
 endif()
 
 if(OPENMW_LTO_BUILD)
@@ -901,9 +902,9 @@ if (OPENMW_OSX_DEPLOYMENT AND APPLE)
 elseif(NOT APPLE)
     get_generator_is_multi_config(multi_config)
     if (multi_config)
-        SET(INSTALL_SOURCE "${OpenMW_BINARY_DIR}/$<CONFIG>")
+        SET(INSTALL_SOURCE "${OpenMW_BINARY_DIR}/build/$<CONFIG>")
     else ()
-        SET(INSTALL_SOURCE "${OpenMW_BINARY_DIR}")
+        SET(INSTALL_SOURCE "${OpenMW_BINARY_DIR}/build")
     endif ()
 
     if(WIN32)
@@ -1058,17 +1059,17 @@ elseif(NOT APPLE)
         INSTALL(FILES "files/mygui/DejaVuFontLicense.txt" DESTINATION "${LICDIR}" )
 
         # Install icon and desktop file
-        INSTALL(FILES "${OpenMW_BINARY_DIR}/org.openmw.launcher.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "openmw")
-        INSTALL(FILES "${OpenMW_SOURCE_DIR}/files/launcher/images/openmw.png" DESTINATION "${ICONDIR}" COMPONENT "openmw")
-        INSTALL(FILES "${OpenMW_BINARY_DIR}/openmw.appdata.xml" DESTINATION "${DATAROOTDIR}/metainfo" COMPONENT "openmw")
+        INSTALL(FILES "${OpenMW_BINARY_DIR}/build/org.openmw.launcher.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "openmw")
+        INSTALL(FILES "${OpenMW_SOURCE_DIR}/build/files/launcher/images/openmw.png" DESTINATION "${ICONDIR}" COMPONENT "openmw")
+        INSTALL(FILES "${OpenMW_BINARY_DIR}/build/openmw.appdata.xml" DESTINATION "${DATAROOTDIR}/metainfo" COMPONENT "openmw")
         # Start of tes3mp addition
         IF(BUILD_BROWSER)
-            INSTALL(FILES "${OpenMW_BINARY_DIR}/tes3mp-browser.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "browser")
+            INSTALL(FILES "${OpenMW_BINARY_DIR}/build/tes3mp-browser.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "browser")
         ENDIF(BUILD_BROWSER)
         # End of tes3mp addition
         IF(BUILD_OPENCS)
-            INSTALL(FILES "${OpenMW_BINARY_DIR}/org.openmw.cs.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "opencs")
-            INSTALL(FILES "${OpenMW_SOURCE_DIR}/files/opencs/openmw-cs.png" DESTINATION "${ICONDIR}" COMPONENT "opencs")
+            INSTALL(FILES "${OpenMW_BINARY_DIR}/build/org.openmw.cs.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "opencs")
+            INSTALL(FILES "${OpenMW_SOURCE_DIR}/build/files/opencs/openmw-cs.png" DESTINATION "${ICONDIR}" COMPONENT "opencs")
         ENDIF(BUILD_OPENCS)
 
         # Install global configuration files
@@ -1110,7 +1111,7 @@ if (DOXYGEN_FOUND)
         COMMENT "Generating Doxygen documentation at ${OpenMW_BINARY_DIR}/docs/Doxygen"
         VERBATIM)
     add_custom_target(doc_pages
-        ${DOXYGEN_EXECUTABLE} ${OpenMW_BINARY_DIR}/docs/DoxyfilePages
+        ${DOXYGEN_EXECUTABLE} ${OpenMW_BINARY_DIR}/build/docs/DoxyfilePages
         WORKING_DIRECTORY ${OpenMW_BINARY_DIR}
         COMMENT "Generating documentation for the github-pages at ${DOXYGEN_PAGES_OUTPUT_DIR}" VERBATIM)
 endif ()
