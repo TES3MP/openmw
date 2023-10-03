@@ -2,16 +2,6 @@
 
 set -e
 
-PACKAGE_BINARIES=( \
-                   "tes3mp" \
-                       "tes3mp-browser" \
-                       "tes3mp-server" \
-                       "openmw-launcher" \
-                       "openmw-wizard" \
-                       "openmw-iniimporter" \
-    )
-
-#WARN: Linking libtinyxml shouldn't be needed, no version of openmw uses this and it seems to be something weird caused by GitHub CI. Whether this is a problem is tbd.
 LIBRARIES=( \
                    "libboost_thread.so" \
                        "libboost_system.so" \
@@ -45,15 +35,11 @@ LIBRARIES=( \
                        "libtinfo.so" \
                        "liblua5.1.so" \
                        "libpng16.so" \
-                       "libtinyxml.so" \
     )
 
 RESOURCES=( \
            "defaults.bin" \
-               "openmw.cfg" \
                "gamecontrollerdb.txt" \
-               "tes3mp-client-default.cfg" \
-               "tes3mp-server-default.cfg" \
     )
 
 ROOT=( \
@@ -78,9 +64,7 @@ for FILE in "${ROOT[@]}"; do
     cp ../"$FILE" .
 done
 
-for BIN in "${PACKAGE_BINARIES[@]}"; do
-    cp -r ../$BIN .
-done
+cp -r ../build/tes3mp* ../build/openmw* .
 
 git clone https://github.com/DreamWeave-MP/CoreScripts.git server/
 
