@@ -1059,7 +1059,7 @@ elseif(NOT APPLE)
 
         # Install icon and desktop file
         INSTALL(FILES "${OpenMW_BINARY_DIR}/build/org.openmw.launcher.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "openmw")
-        INSTALL(FILES "${OpenMW_SOURCE_DIR}/build/files/launcher/images/openmw.png" DESTINATION "${ICONDIR}" COMPONENT "openmw")
+        INSTALL(FILES "${OpenMW_SOURCE_DIR}/files/launcher/images/openmw.png" DESTINATION "${ICONDIR}" COMPONENT "openmw")
         INSTALL(FILES "${OpenMW_BINARY_DIR}/build/openmw.appdata.xml" DESTINATION "${DATAROOTDIR}/metainfo" COMPONENT "openmw")
         # Start of tes3mp addition
         IF(BUILD_BROWSER)
@@ -1068,7 +1068,7 @@ elseif(NOT APPLE)
         # End of tes3mp addition
         IF(BUILD_OPENCS)
             INSTALL(FILES "${OpenMW_BINARY_DIR}/build/org.openmw.cs.desktop" DESTINATION "${DATAROOTDIR}/applications" COMPONENT "opencs")
-            INSTALL(FILES "${OpenMW_SOURCE_DIR}/build/files/opencs/openmw-cs.png" DESTINATION "${ICONDIR}" COMPONENT "opencs")
+            INSTALL(FILES "${OpenMW_SOURCE_DIR}/files/opencs/openmw-cs.png" DESTINATION "${ICONDIR}" COMPONENT "opencs")
         ENDIF(BUILD_OPENCS)
 
         # Install global configuration files
