@@ -1,3 +1,6 @@
 [submodule "extern/breakpad"]
 	path = extern/breakpad
 	url = https://chromium.googlesource.com/breakpad/breakpad
+[submodule "extern/raknet"]
+	path = extern/raknet
+	url = https://github.com/DreamWeave-MP/CrabNet.git

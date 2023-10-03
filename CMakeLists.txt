@@ -512,12 +512,11 @@ endif (APPLE)
 
 # Other files
 
-configure_resource_file(${OpenMW_SOURCE_DIR}/files/dreamweave/dreamweave-client-default.cfg
+configure_resource_file(${OpenMW_SOURCE_DIR}/files/tes3mp/tes3mp-client-default.cfg
     "${OpenMW_BINARY_DIR}/build" "tes3mp-client-default.cfg")
 
-configure_resource_file(${OpenMW_SOURCE_DIR}/files/dreamweave/dreamweave-server-default.cfg
+configure_resource_file(${OpenMW_SOURCE_DIR}/files/tes3mp/tes3mp-server-default.cfg
     "${OpenMW_BINARY_DIR}/build" "tes3mp-server-default.cfg")
->>>>>>> Stashed changes
 
 pack_resource_file(${OpenMW_SOURCE_DIR}/files/settings-default.cfg
     "${OpenMW_BINARY_DIR}/build" "defaults.bin")
