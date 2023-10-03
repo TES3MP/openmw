@@ -75,7 +75,7 @@ for RESOURCE in "${RESOURCES[@]}"; do
 done
 
 for FILE in "${ROOT[@]}"; do
-    cp ../build/"$FILE" .
+    cp ../"$FILE" .
 done
 
 for BIN in "${PACKAGE_BINARIES[@]}"; do
