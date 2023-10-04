@@ -1161,12 +1161,6 @@ if [ -n "${TEST_FRAMEWORK}" ]; then
 	add_cmake_opts -DGMOCK_MAIN_LIBRARY_DEBUG="${GOOGLETEST_DIR}/build/lib/Debug/gmock_main.lib"
 fi
 
-# Saint Addition:
-# assume a symlink for googletest and raknet
-RAKNET_ROOT="${DEPS}/raknet"
-add_cmake_opts -DRAKNET_ROOT="$RAKNET_ROOT"
-export RAKNET_ROOT
-
 if [ -n "$ACTIVATE_MSVC" ]; then
 	echo -n "- Activating MSVC in the current shell... "
 	command -v vswhere >/dev/null 2>&1 || { echo "Error: vswhere is not on the path."; wrappedExit 1; }
