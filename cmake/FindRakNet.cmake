@@ -6,13 +6,13 @@
 #  RakNet_INCLUDES - the RakNet include directory
 #  RakNet_LIBRARY - Link these to use RakNet
 
-IF(Win32)
+IF(WIN32)
   set(RakNet_LIBRARY_DEBUG ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStaticd.lib)
   set(RakNet_LIBRARY_RELEASE ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStatic.lib)
 ELSE()
   set(RakNet_LIBRARY_DEBUG ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStaticd.a)
   set(RakNet_LIBRARY_RELEASE ${CMAKE_SOURCE_DIR}/extern/raknet/lib/libRakNetLibStatic.a)
-ENDIF(Win32)
+ENDIF(WIN32)
 
 FIND_PATH (RakNet_INCLUDES raknet/RakPeer.h ${CMAKE_SOURCE_DIR}/extern/raknet/include)
 
