@@ -15,7 +15,7 @@ ELSE()
 ENDIF(Win32)
 
 FIND_PATH (RakNet_INCLUDES raknet/RakPeer.h ${CMAKE_SOURCE_DIR}/extern/raknet/include)
- 
+
 MESSAGE(STATUS ${RakNet_INCLUDES})
 MESSAGE(STATUS ${RakNet_LIBRARY_RELEASE})
 MESSAGE(STATUS ${RakNet_LIBRARY_DEBUG})
@@ -35,11 +35,11 @@ IF(NOT RakNet_FOUND)
       option(GIT_SUBMODULE "Check submodules during build" ON)
       if(GIT_SUBMODULE)
         message(STATUS "Submodule update")
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive
+        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init
                         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/extern/raknet
                         RESULT_VARIABLE GIT_SUBMOD_RESULT)
         if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init --recursive failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
+            message(FATAL_ERROR "git submodule update --init failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
         endif()
       endif()
     endif()
@@ -53,7 +53,7 @@ ENDIF(NOT RakNet_FOUND)
 add_subdirectory(extern/raknet)
 
 SET(RakNet_INCLUDES ${CMAKE_SOURCE_DIR}/extern/raknet/include/raknet)
-  
+
 IF (CMAKE_CONFIGURATION_TYPES OR CMAKE_BUILD_TYPE)
    SET(RakNet_LIBRARY optimized ${RakNet_LIBRARY_RELEASE} debug ${RakNet_LIBRARY_DEBUG})
    IF(WIN32)
