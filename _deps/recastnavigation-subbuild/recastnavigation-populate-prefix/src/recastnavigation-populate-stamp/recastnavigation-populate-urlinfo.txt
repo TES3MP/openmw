@@ -1,0 +1,12 @@
+# This is a generated file and its contents are an internal implementation detail.
+# The download step will be re-executed if anything in this file changes.
+# No other meaning or use of this file is supported.
+
+method=url
+command=/usr/bin/cmake;-P;/home/hebi/Documents/dw/_deps/recastnavigation-subbuild/recastnavigation-populate-prefix/src/recastnavigation-populate-stamp/download-recastnavigation-populate.cmake;COMMAND;/usr/bin/cmake;-P;/home/hebi/Documents/dw/_deps/recastnavigation-subbuild/recastnavigation-populate-prefix/src/recastnavigation-populate-stamp/verify-recastnavigation-populate.cmake;COMMAND;/usr/bin/cmake;-P;/home/hebi/Documents/dw/_deps/recastnavigation-subbuild/recastnavigation-populate-prefix/src/recastnavigation-populate-stamp/extract-recastnavigation-populate.cmake
+source_dir=/home/hebi/Documents/dw/extern/fetched/recastnavigation
+work_dir=/home/hebi/Documents/dw/extern/fetched
+url(s)=https://github.com/recastnavigation/recastnavigation/archive/e75adf86f91eb3082220085e42dda62679f9a3ea.zip
+hash=MD5=af905d121ef9d1cdfa979b0495cba059
+no_extract=
+
