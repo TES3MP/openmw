@@ -862,6 +862,8 @@ fi
 			# check version
 			aqt-venv/${VENV_BIN_DIR}/pip list | grep 'aqtinstall\s*1.1.3' || [ $? -ne 0 ]
 			if [ $? -eq 0 ]; then
+                                echo "  Installing setuptools into virtualenv..."
+                                run_cmd "aqt-venv/${VENV_BIN_DIR}/pip" install setuptools
 				echo "  Installing aqt wheel into virtualenv..."
 				run_cmd "aqt-venv/${VENV_BIN_DIR}/pip" install aqtinstall==1.1.3
 			fi
