@@ -6,6 +6,7 @@
 #include <boost/filesystem/fstream.hpp>
 
 #include <components/debug/debuglog.hpp>
+#include <memory>
 
 namespace osgMyGUI
 {

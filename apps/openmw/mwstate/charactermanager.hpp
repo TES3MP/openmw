@@ -1,6 +1,7 @@
 #ifndef GAME_STATE_CHARACTERMANAGER_H
 #define GAME_STATE_CHARACTERMANAGER_H
 
+#include <list>
 #include <boost/filesystem/path.hpp>
 
 #include "character.hpp"

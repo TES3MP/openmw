@@ -104,7 +104,7 @@ struct ScriptFunctionPointer : public ScriptIdentity
     constexpr ScriptFunctionPointer(Function<R, Types...> addr) : ScriptIdentity(addr), addr((void*)(addr)) {}
 #else
     template<typename R, typename... Types>
-    constexpr ScriptFunctionPointer(Function<R, Types...> addr) : ScriptIdentity(addr), addr(addr) {}
+    constexpr ScriptFunctionPointer(Function<R, Types...> addr) : ScriptIdentity(addr), addr((void*)(addr)) {}
 #endif
 };
 
