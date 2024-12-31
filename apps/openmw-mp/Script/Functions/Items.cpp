@@ -270,6 +270,19 @@ void ItemFunctions::SendItemUse(unsigned short pid) noexcept
     packet->Send(false);
 }
 
+bool ItemFunctions::SetUsedItem(unsigned short pid, const char* refId) noexcept
+{
+    Player* player;
+    GET_PLAYER(pid, player, false);
+    for (int slot = 0; slot < MWWorld::InventoryStore::Slots; slot++) {
+        if (Misc::StringUtils::ciEqual(player->equipmentItems[slot].refId, refId)) {
+            player->usedItem = player->equipmentItems[slot];
+            return true;
+        }
+    }
+    return false;
+}
+
 // All methods below are deprecated versions of methods from above
 
 void ItemFunctions::InitializeInventoryChanges(unsigned short pid) noexcept

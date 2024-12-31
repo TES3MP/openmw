@@ -39,6 +39,7 @@
     {"SendEquipment",                         ItemFunctions::SendEquipment},\
     {"SendInventoryChanges",                  ItemFunctions::SendInventoryChanges},\
     {"SendItemUse",                           ItemFunctions::SendItemUse},\
+    {"SetUsedItem",                           ItemFunctions::SetUsedItem},\
     \
     {"InitializeInventoryChanges",            ItemFunctions::InitializeInventoryChanges},\
     {"AddItem",                               ItemFunctions::AddItem}
@@ -311,6 +312,15 @@ public:
     * \return void
     */
     static void SendItemUse(unsigned short pid) noexcept;
+
+    /**
+    * \brief Update a player's recorded usedItem. Only usable on equipped items.
+    *
+    * \param pid The player ID affected.
+    * \param refId The name of the equipped item.
+    * \return bool
+    */
+    static bool SetUsedItem(unsigned short pid, const char* refId) noexcept;
 
     // All methods below are deprecated versions of methods from above
 
